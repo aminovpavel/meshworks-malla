@@ -46,7 +46,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Global 2025 theme overrides -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/malla.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/malla.css', v=STATIC_VERSION) }}">
 
     <style>
         .navbar-brand {
@@ -255,11 +255,11 @@
     <!-- jQuery (still used by some components) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <!-- URL Filter Manager (global utility) -->
-    <script src="{{ url_for('static', filename='js/url-filter-manager.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/url-filter-manager.js', v=STATIC_VERSION) }}"></script>
     <!-- NodeCache utility (shared across pages) -->
-    <script src="{{ url_for('static', filename='js/node-cache.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/node-cache.js', v=STATIC_VERSION) }}"></script>
     <!-- Dark Mode Toggle -->
-    <script src="{{ url_for('static', filename='js/dark-mode-toggle.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/dark-mode-toggle.js', v=STATIC_VERSION) }}"></script>
 
     <!-- Node tooltip functionality -->
     <script>

@@ -18,6 +18,7 @@ from markupsafe import Markup
 
 # Import application configuration loader
 from .config import AppConfig, get_config
+from . import __version__ as package_version
 
 # Optional CORS support will be checked inline
 # Import configuration and database setup
@@ -99,6 +100,9 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
 
     # Persist config on Flask instance for later use
     app.config["APP_CONFIG"] = cfg
+
+    static_version = os.getenv("MALLA_STATIC_VERSION") or package_version
+    app.config["STATIC_VERSION"] = static_version
 
     # Mirror a few frequently-used values to top-level keys for backwards
     # compatibility with the existing code base. Over time we should migrate
@@ -223,6 +227,7 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
             "APP_NAME": cfg.name,
             "APP_CONFIG": cfg,
             "DATABASE_FILE": cfg.database_file,
+            "STATIC_VERSION": static_version,
         }
 
     # Initialize database
