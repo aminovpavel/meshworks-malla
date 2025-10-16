@@ -239,16 +239,40 @@ def api_packets():
             except ValueError:
                 pass
 
-        # Optional sorting and grouping
-        sort_by = request.args.get("sort_by", default="timestamp")
-        sort_order = request.args.get("sort_order", default="desc")
+        # Optional sorting and grouping (sanitize via allow‑list)
+
+        sort_by = get_str_arg(request, "sort_by", default="timestamp", max_len=32, pattern=r"[\w_]+")
+        # Allowed UI fields → DB columns
+        _allowed_sort_fields = {
+            "timestamp",
+            "size",
+            "gateway",
+            "gateway_count",
+            "from_node",
+            "to_node",
+            "hops",
+        }
+        if sort_by not in _allowed_sort_fields:
+            sort_by = "timestamp"
+        # Map UI fields to actual selectable columns
+        _sort_field_mapping = {
+            "size": "payload_length",
+            "gateway": "gateway_id",
+            "gateway_count": "gateway_id",
+            "from_node": "from_node_id",
+            "to_node": "to_node_id",
+            "hops": "hop_count",
+        }
+        actual_sort_by = _sort_field_mapping.get(sort_by, sort_by)
+
+        sort_order = get_str_arg(request, "sort_order", default="desc", max_len=4, pattern=r"(?i)^(asc|desc)$")
         group_packets = get_bool_arg(request, "group_packets", default=False)
 
         data = PacketRepository.get_packets(
             limit=limit,
             offset=offset,
             filters=filters,
-            order_by=sort_by,
+            order_by=actual_sort_by,
             order_dir=sort_order,
             group_packets=group_packets,
         )

@@ -527,13 +527,28 @@ class PacketRepository:
                 packets = paginated_packets
 
             else:
-                # Original ungrouped behavior
+                # Original ungrouped behavior (defense-in-depth: sanitize ordering)
                 # Get total count first
                 count_query = f"SELECT COUNT(*) FROM packet_history {where_clause}"
                 cursor.execute(count_query, params)
                 total_count = cursor.fetchone()[0]
 
                 # Main query
+                # Allow only known columns in ORDER BY to prevent SQL injection
+                valid_order_columns = {
+                    "timestamp",
+                    "from_node_id",
+                    "to_node_id",
+                    "gateway_id",
+                    "rssi",
+                    "snr",
+                    "payload_length",
+                    "hop_count",
+                }
+                if order_by not in valid_order_columns:
+                    order_by = "timestamp"
+                order_dir_sql = "DESC" if str(order_dir).lower() == "desc" else "ASC"
+
                 query = f"""
                     SELECT
                         id, timestamp, from_node_id, to_node_id, portnum, portnum_name,
@@ -545,7 +560,7 @@ class PacketRepository:
                         (hop_start - hop_limit) as hop_count
                     FROM packet_history
                     {where_clause}
-                    ORDER BY {order_by} {order_dir.upper()}
+                    ORDER BY {order_by} {order_dir_sql}
                     LIMIT ? OFFSET ?
                 """
 
