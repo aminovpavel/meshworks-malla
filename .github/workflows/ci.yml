@@ -42,7 +42,7 @@ jobs:
       - name: Unit tests (exclude e2e/integration/slow)
         env:
           PYTEST_ADDOPTS: -m "not e2e and not integration and not slow"
-        run: uv run pytest --tb=short --durations=10 --maxfail=5
+        run: uv run pytest -n auto --tb=short --durations=10 --maxfail=5
 
   nix-ci:
     name: Full CI (Nix shell)
@@ -76,4 +76,4 @@ jobs:
         run: nix develop --command make lint
 
       - name: Run tests (all markers)
-        run: nix develop --command uv run pytest -n 4 --tb=line --no-header --quiet
+        run: nix develop --command uv run pytest -n auto --tb=line --no-header --quiet
