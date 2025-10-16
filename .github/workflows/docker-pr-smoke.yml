@@ -1,0 +1,27 @@
+name: Docker PR Smoke
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pr-smoke:
+    name: pr-smoke
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build (no push) and smoke test
+        run: |
+          docker buildx build --load --platform linux/amd64 -t malla-pr:${{ github.sha }} .
+          docker run -d --rm -p 5008:5008 --name malla-pr malla-pr:${{ github.sha }}
+          sleep 3
+          curl -fsS http://127.0.0.1:5008/health | jq .
+          docker logs malla-pr --tail 50 || true
+          docker rm -f malla-pr || true
