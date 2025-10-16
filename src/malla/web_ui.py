@@ -118,6 +118,13 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
 
     static_version = os.getenv("MALLA_STATIC_VERSION") or package_version
     app.config["STATIC_VERSION"] = static_version
+    # Bound maximum request body size (bytes) to avoid large uploads (esp. debug endpoints)
+    try:
+        app.config.setdefault(
+            "MAX_CONTENT_LENGTH", int(os.getenv("MALLA_MAX_CONTENT_LENGTH", "1048576"))
+        )
+    except Exception:
+        app.config.setdefault("MAX_CONTENT_LENGTH", 1048576)
 
     # Optionally trust proxy headers for correct scheme/host with Gunicorn behind Nginx
     if getattr(cfg, "trust_proxy_headers", False):
@@ -339,13 +346,17 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
             debugish = False
         script_src = "script-src 'self' https:; " if not debugish else "script-src 'self' 'unsafe-inline' https:; "
         style_src = "style-src 'self' https:; " if not debugish else "style-src 'self' 'unsafe-inline' https:; "
+        # In prod-like, do not allow plain http: for connect-src to avoid mixed content
+        connect_src = (
+            "connect-src 'self' https: wss:; " if not debugish else "connect-src 'self' https: http: wss:; "
+        )
         csp = (
             "default-src 'self'; "
             "img-src 'self' data: blob: https:; "
             f"{style_src}"
             f"{script_src}"
             "font-src 'self' data: https:; "
-            "connect-src 'self' https: http: wss:; "
+            f"{connect_src}"
             "frame-ancestors 'none';"
         )
         response.headers.setdefault("Content-Security-Policy", csp)
