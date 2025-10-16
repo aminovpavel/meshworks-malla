@@ -1,8 +1,10 @@
-# Malla — Meshtastic analysis & web UI
+# MeshWorks Malla — Meshtastic analysis & web UI
 
-Malla (_“mesh”_ in Spanish) is a tool that ingests Meshtastic MQTT packets into SQLite and provides a modern web UI to explore packets, nodes, chat, traceroutes and maps. It’s suitable for personal networks, community deployments and experimentation.
+MeshWorks Malla (_“mesh”_ in Spanish) ingests Meshtastic MQTT packets into SQLite and provides a modern web UI to explore packets, nodes, chat, traceroutes and maps. It’s suitable for personal networks, community deployments and experimentation.
 
 Public Docker images live at **ghcr.io/aminovpavel/meshworks-malla**.
+
+> Attribution: This project originated as a fork of [zenitraM/malla](https://github.com/zenitraM/malla). Many thanks to the upstream authors and community.
 
 ## Quick start
 
