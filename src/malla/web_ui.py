@@ -16,21 +16,17 @@ from pathlib import Path
 from flask import Flask
 from markupsafe import Markup
 
+# First-party imports
+from . import __version__ as package_version
 # Import application configuration loader
 from .config import AppConfig, get_config
-from . import __version__ as package_version
-
-# Optional CORS support will be checked inline
 # Import configuration and database setup
 from .database.connection import init_database
 from .routes import register_routes
 
 # Import utility functions for template filters
 from .utils.formatting import format_node_id, format_time_ago
-from .utils.node_utils import (
-    start_cache_cleanup,
-    stop_cache_cleanup,
-)
+from .utils.node_utils import start_cache_cleanup, stop_cache_cleanup
 
 # Configure logging
 logging.basicConfig(

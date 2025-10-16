@@ -5,7 +5,7 @@ Main routes for the Meshtastic Mesh Health Web UI
 import logging
 import os
 
-from flask import Blueprint, render_template, request, current_app, send_from_directory
+from flask import Blueprint, current_app, render_template, request, send_from_directory
 
 # Import from the new modular architecture
 from ..config import get_config
