@@ -14,6 +14,9 @@ install-dev: ## Install with development dependencies
 test: ## Run tests
 	uv run pytest
 
+sanity: ## Run fast sanity smoke (headers/CSP/clamps/health)
+	uv run python scripts/sanity.py
+
 test-cov: ## Run tests with coverage
 	uv run pytest --cov=src/malla --cov-report=html --cov-report=term
 
@@ -56,6 +59,6 @@ run-capture: ## Run the MQTT capture tool
 dev-setup: install-dev ## Set up development environment
 	uv run pre-commit install
 
-check: lint test ## Run all checks (lint + test)
+check: sanity lint test ## Run all checks (sanity + lint + test)
 
 ci: install-dev check ## Run CI pipeline locally 

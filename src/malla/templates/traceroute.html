@@ -111,13 +111,13 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/url-filter-manager.js') }}"></script>
 <script src="{{ url_for('static', filename='js/filter-store.js') }}"></script>
 <script src="{{ url_for('static', filename='js/table-filter-controller.js') }}"></script>
 <script src="{{ url_for('static', filename='js/node-picker.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modern-table.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    try {
     // Move sidebar content into the actual sidebar FIRST
     const sidebarContent = document.getElementById('sidebarContent');
     const sidebarContainer = document.querySelector('.sidebar-content');
@@ -478,16 +478,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize tooltips after table loads
     table.on('dataLoaded', function() {
-        // Initialize Bootstrap tooltips
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
+        // Initialize Bootstrap tooltips (guard if bootstrap not present in tests)
+        try {
+            if (window.bootstrap && window.bootstrap.Tooltip) {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            }
+        } catch (_) { /* ignore in tests */ }
         updateStats();
+        try { console.warn('traceroute.dataLoaded count=' + (table.state?.data?.length || 0)); } catch (e) {}
     });
 
     // Initialize page
     initializePageWithFilters();
+
+    // Fallback: force initial load if needed
+    setTimeout(() => {
+        try {
+            if (window.table && !window.table.state.loading && (!window.table.state.data || window.table.state.data.length === 0)) {
+                console.warn('traceroute.init: forcing initial load');
+                window.table.loadData();
+            }
+        } catch (e) {
+            console.error('traceroute.init fallback error', e);
+        }
+    }, 500);
+    } catch (e) {
+        console.error('traceroute.init error', e);
+    }
 });
 </script>
 {% endblock %}

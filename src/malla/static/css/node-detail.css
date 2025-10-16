@@ -1,0 +1,73 @@
+/* Node Detail Page Styles (extracted from template) */
+
+.card-metric {
+  text-align: center;
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+.metric-label {
+  color: #6c757d;
+  font-size: 0.875rem;
+}
+
+.signal-indicator {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.protocol-badge {
+  font-size: 0.75rem;
+  padding: 4px 8px;
+}
+
+.neighbor-card {
+  border-left: 4px solid #007bff;
+  margin-bottom: 0.5rem;
+}
+
+.vertical-header {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  padding: 4px 2px;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.matrix-table th,
+.matrix-table td {
+  padding: 2px 4px;
+  font-size: 0.75rem;
+}
+
+.matrix-table td {
+  text-align: center;
+}
+
+/* Map containers */
+#current-location-map {
+  height: 300px;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  margin-bottom: 15px;
+}
+
+#location-history-card {
+  display: none;
+}
+
+#location-history-map {
+  height: 400px;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+}
+
+/* UI helpers */
+.progress-thin {
+  height: 8px;
+}

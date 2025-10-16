@@ -50,7 +50,8 @@ MeshWorks Malla codebase. Keep PRs small, public‑safe, and respectful to upstr
 
 ## Commit messages & PRs
 - Use imperative present (“add X”, “fix Y”). Link issues if relevant.
-- One logical change per PR. If the change is broad, split into stacked PRs.
+- Prefer one consolidated PR per session with closely related changes (docs + small cleanups). Avoid opening many tiny PRs in a row.
+- If the change is truly broad and independent, consider stacked commits but keep the public PR count reasonable.
 - Describe impact and any deploy notes (e.g., requires bumping `MALLA_STATIC_VERSION`).
 
 ## Maintainer context

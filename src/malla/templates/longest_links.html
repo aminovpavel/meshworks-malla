@@ -259,7 +259,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='vendor/chart.js/chart.umd.min.js') }}?v={{ STATIC_VERSION }}"></script>
 <script>
     let currentData = null;
 

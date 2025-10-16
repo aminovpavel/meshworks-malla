@@ -4,8 +4,9 @@
 {% block title %}Packet #{{ packet.id }} - Malla{% endblock %}
 
 {% block extra_css %}
-<!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Leaflet CSS (vendored) -->
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}?v={{ STATIC_VERSION }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/traceroute-graph.css', v=STATIC_VERSION) }}">
 <style>
     .card-metric {
         text-align: center;
@@ -870,10 +871,10 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<!-- D3.js for graph visualisation -->
-<script src="https://d3js.org/d3.v7.min.js"></script>
+<!-- Leaflet JS (vendored) -->
+<script src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}?v={{ STATIC_VERSION }}"></script>
+<!-- D3.js for graph visualisation (vendored) -->
+<script src="{{ url_for('static', filename='vendor/d3/d3.v7.min.js') }}?v={{ STATIC_VERSION }}"></script>
 
 <script>
 // Embed data directly in JavaScript variables to avoid HTML attribute parsing issues

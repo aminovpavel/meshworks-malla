@@ -40,31 +40,31 @@
                         <div class="card-header">
                             <h6 class="card-title mb-0"><i class="bi bi-info-circle"></i> Legend & Paths</h6>
                         </div>
-                        <div class="card-body p-2" style="max-height: 700px; overflow-y: auto;">
+                        <div class="card-body p-2 legend-scroll">
                             <!-- Nodes Section -->
                             <div class="mb-3">
-                                <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Nodes</h6>
+                                <h6 class="text-muted mb-2 legend-title">Nodes</h6>
                                 <div class="legend-item mb-1" data-tooltip="Nodes that route packets through the mesh network">
-                                    <span class="badge bg-primary me-2" style="font-size: 0.7rem;">🔄</span>
+                                    <span class="badge bg-primary me-2 badge-xxs">🔄</span>
                                     <small>Router Node</small>
                                 </div>
                                 <div class="legend-item mb-1" data-tooltip="Nodes that receive packets and can act as internet gateways">
-                                    <span class="badge bg-success me-2" style="font-size: 0.7rem;">📡</span>
+                                    <span class="badge bg-success me-2 badge-xxs">📡</span>
                                     <small>Gateway Node</small>
                                 </div>
                                 <div class="legend-item mb-1" data-tooltip="The node that originated this traceroute packet">
-                                    <span class="badge bg-warning me-2" style="font-size: 0.7rem;">🚀</span>
+                                    <span class="badge bg-warning me-2 badge-xxs">🚀</span>
                                     <small>Source Node</small>
                                 </div>
                                 <div class="legend-item mb-1" data-tooltip="The intended destination of this traceroute packet">
-                                    <span class="badge bg-secondary me-2" style="font-size: 0.7rem;">🎯</span>
+                                    <span class="badge bg-secondary me-2 badge-xxs">🎯</span>
                                     <small>Target Node</small>
                                 </div>
                             </div>
 
                             <!-- Connections Section -->
                             <div class="mb-3">
-                                <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Connections</h6>
+                                <h6 class="text-muted mb-2 legend-title">Connections</h6>
                                 <div class="legend-item mb-1" data-tooltip="Direct radio frequency communication between two nodes">
                                     <div class="legend-line legend-rf-link"></div>
                                     <small>RF Link</small>
@@ -81,7 +81,7 @@
 
                             <!-- Packet Paths Section -->
                             <div class="mb-3">
-                                <h6 class="text-muted mb-2" style="font-size: 0.85rem;">Packet Paths</h6>
+                                <h6 class="text-muted mb-2 legend-title">Packet Paths</h6>
                                 <div id="legend-paths-container">
                                     <small class="text-muted">Loading paths...</small>
                                 </div>
@@ -94,7 +94,7 @@
     </div>
 </div>
 
-<style>
+<!-- Component styles moved to static/css/traceroute-graph.css -->
 .traceroute-graph-container {
     height: 700px;
     width: 100%;
@@ -374,7 +374,7 @@
     overflow-y: auto;
     cursor: default;
 }
-</style>
+
 
 <script>
 // Set graph data from template context

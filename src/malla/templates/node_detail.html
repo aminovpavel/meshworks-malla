@@ -4,47 +4,9 @@
 {% block title %}{{ node.node_name }} - Node Details{% endblock %}
 
 {% block extra_css %}
-<!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<style>
-    .card-metric {
-        text-align: center;
-    }
-    .metric-value {
-        font-size: 2rem;
-        font-weight: bold;
-    }
-    .metric-label {
-        color: #6c757d;
-        font-size: 0.875rem;
-    }
-    .signal-indicator {
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: bold;
-    }
-    .protocol-badge {
-        font-size: 0.75rem;
-        padding: 4px 8px;
-    }
-    .neighbor-card {
-        border-left: 4px solid #007bff;
-        margin-bottom: 0.5rem;
-    }
-    .vertical-header {
-        writing-mode: vertical-rl;
-        transform: rotate(180deg);
-        padding: 4px 2px;
-        white-space: nowrap;
-        text-align: left;
-    }
-    .matrix-table th, .matrix-table td {
-        padding: 2px 4px;
-        font-size: 0.75rem;
-    }
-    .matrix-table td { text-align: center; }
-</style>
+<!-- Leaflet CSS (vendored) -->
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}?v={{ STATIC_VERSION }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/node-detail.css') }}" />
 {% endblock %}
 
 {% block content %}
@@ -270,7 +232,7 @@
 
                     <!-- Current Location Map -->
                     <div class="mt-3">
-                        <div id="current-location-map" style="height: 300px; border: 1px solid #dee2e6; border-radius: 0.375rem; margin-bottom: 15px;"></div>
+                        <div id="current-location-map"></div>
                         <a href="https://www.google.com/maps?q={{ location.latitude }},{{ location.longitude }}"
                            target="_blank" class="btn btn-sm btn-outline-primary">
                             <i class="bi bi-map"></i> View on Google Maps
@@ -281,13 +243,13 @@
             {% endif %}
 
             <!-- Location History Map -->
-            <div class="card mb-4" id="location-history-card" style="display: none;">
+            <div class="card mb-4" id="location-history-card">
                 <div class="card-header">
                     <h5><i class="bi bi-map"></i> Location History Map</h5>
                     <small class="text-muted">Historical GPS coordinates sent by this node</small>
                 </div>
                 <div class="card-body">
-                    <div id="location-history-map" style="height: 400px; border: 1px solid #dee2e6; border-radius: 0.375rem;">
+                    <div id="location-history-map">
                         <div class="d-flex align-items-center justify-content-center h-100">
                             <div class="text-center">
                                 <div class="spinner-border text-primary" role="status">
@@ -350,7 +312,7 @@
                                         {% set percentage = (protocol.count / node.total_packets * 100) %}
                                         {% set percentage_str = "%.1f"|format(percentage) %}
                                         {{ percentage_str }}%
-                                        <div class="progress" style="height: 8px;">
+                                        <div class="progress progress-thin">
                                             <div class="progress-bar" data-width="{{ percentage_str }}"></div>
                                         </div>
                                     </td>
@@ -715,8 +677,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet JS (vendored) -->
+<script src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}?v={{ STATIC_VERSION }}"></script>
 
 <!-- Direct Receptions Chart Component -->
 <script src="{{ url_for('static', filename='js/direct_receptions.js') }}"></script>
@@ -927,7 +889,7 @@ async function loadLocationHistoryMap() {
         mapContainer.innerHTML = `
             <div class="d-flex align-items-center justify-content-center h-100">
                 <div class="text-center text-danger">
-                    <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
+                    <i class="bi bi-exclamation-triangle fs-2"></i>
                     <div class="mt-2">Error loading location history</div>
                     <div class="small">${error.message}</div>
                 </div>

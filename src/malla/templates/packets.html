@@ -141,13 +141,13 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/url-filter-manager.js') }}"></script>
 <script src="{{ url_for('static', filename='js/filter-store.js') }}"></script>
 <script src="{{ url_for('static', filename='js/table-filter-controller.js') }}"></script>
 <script src="{{ url_for('static', filename='js/node-picker.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modern-table.js') }}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    try {
     // Move sidebar content into the actual sidebar FIRST
     const sidebarContent = document.getElementById('sidebarContent');
     const sidebarContainer = document.querySelector('.sidebar-content');
@@ -479,8 +479,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 title: 'Actions',
                 sortable: false,
                 render: (value, row) => {
+                    // Include textual fallback so button is visible even without vendor CSS
                     return `<a href="/packet/${value}" class="btn btn-sm btn-outline-primary" title="View packet details">
-                                <i class="bi bi-eye"></i>
+                                <i class="bi bi-eye"></i> View
                             </a>`;
                 }
             }
@@ -590,16 +591,36 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize tooltips after table loads
     table.on('dataLoaded', function() {
-        // Initialize Bootstrap tooltips
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
+        // Initialize Bootstrap tooltips (guard for tests without vendor assets)
+        try {
+            if (window.bootstrap && window.bootstrap.Tooltip) {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            }
+        } catch (_) { /* ignore in tests */ }
         updateStats();
+        try { console.warn('packets.dataLoaded count=' + (table.state?.data?.length || 0)); } catch (e) {}
     });
 
     // Initialize page
     initializePageWithFilters();
+
+    // Fallback: if data didn’t render quickly, force a load once
+    setTimeout(() => {
+        try {
+            if (window.table && !window.table.state.loading && (!window.table.state.data || window.table.state.data.length === 0)) {
+                console.warn('packets.init: forcing initial load');
+                window.table.loadData();
+            }
+        } catch (e) {
+            console.error('packets.init fallback error', e);
+        }
+    }, 500);
+    } catch (e) {
+        console.error('packets.init error', e);
+    }
 });
 </script>
 {% endblock %}

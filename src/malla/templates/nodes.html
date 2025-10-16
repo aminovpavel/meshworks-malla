@@ -93,7 +93,6 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{{ url_for('static', filename='js/url-filter-manager.js') }}"></script>
 <script src="{{ url_for('static', filename='js/filter-store.js') }}"></script>
 <script src="{{ url_for('static', filename='js/table-filter-controller.js') }}"></script>
 <script src="{{ url_for('static', filename='js/modern-table.js') }}"></script>
@@ -477,13 +476,16 @@ document.addEventListener('DOMContentLoaded', function() {
         table.refresh();
     });
 
-    // Initialize tooltips after table loads
+    // Initialize tooltips after table loads (guard when Bootstrap not present)
     table.on('dataLoaded', function() {
-        // Initialize Bootstrap tooltips
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
+        try {
+            if (window.bootstrap && window.bootstrap.Tooltip) {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            }
+        } catch (_) { /* ignore in tests */ }
     });
 });
 </script>
