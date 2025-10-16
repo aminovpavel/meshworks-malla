@@ -169,6 +169,8 @@ cython_debug/
 # Local development files
 .envrc
 .direnv/
+.cursor/
+.vscode/
 
 # Database files (project-specific)
 *.db

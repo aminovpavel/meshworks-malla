@@ -1,13 +1,13 @@
-# Meshworks Malla Development Guide
+# Development Guide
 
-This document is aimed at Meshworks maintainers. It collects the day-to-day
-instructions for working on the fork – from local development to
-production-style deployments.
+This guide describes local development and production-style deployments for
+MeshWorks Malla. It is intended for all contributors and users; no internal
+infrastructure specifics are required.
 
 ## Local development (uv)
 
 ```bash
-git clone https://git.meshworks.ru/MeshWorks/meshworks-malla.git
+git clone https://github.com/aminovpavel/meshworks-malla.git
 cd meshworks-malla
 curl -LsSf https://astral.sh/uv/install.sh | sh   # install uv once per machine
 uv sync --dev                                    # install dependencies + tooling
@@ -41,7 +41,7 @@ wrap `uv run` for convenience.
 
 ## Testing
 
-Meshworks CI runs the full pytest matrix, including Playwright end-to-end
+CI runs the full pytest matrix, including Playwright end-to-end
 scenarios. Typical local commands:
 
 ```bash
@@ -91,7 +91,7 @@ branches.
 ## Docker / production deployment
 
 ```bash
-git clone https://git.meshworks.ru/MeshWorks/meshworks-malla.git
+git clone https://github.com/aminovpavel/meshworks-malla.git
 cd meshworks-malla
 cp env.example .env                      # provide MQTT credentials
 $EDITOR .env
