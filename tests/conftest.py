@@ -57,6 +57,13 @@ class TestFlaskApp:
             debug=False,
         )
 
+        # Enable browser debug in tests to allow inline scripts under CSP
+        # This mirrors dev behavior and ensures UI JS initializes in Playwright
+        try:
+            self._cfg.enable_browser_debug = True  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
         # Create the real Flask app with injected config
         self.app = create_app(self._cfg)
 

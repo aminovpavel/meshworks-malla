@@ -477,13 +477,16 @@ document.addEventListener('DOMContentLoaded', function() {
         table.refresh();
     });
 
-    // Initialize tooltips after table loads
+    // Initialize tooltips after table loads (guard when Bootstrap not present)
     table.on('dataLoaded', function() {
-        // Initialize Bootstrap tooltips
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
+        try {
+            if (window.bootstrap && window.bootstrap.Tooltip) {
+                const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl);
+                });
+            }
+        } catch (_) { /* ignore in tests */ }
     });
 });
 </script>

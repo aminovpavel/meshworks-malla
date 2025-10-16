@@ -1070,11 +1070,18 @@
     }
 
     if (refreshIntervalSelect) {
-        refreshIntervalSelect.addEventListener('change', () => {
+        const onRefreshIntervalChange = () => {
             const parsed = parseInt(refreshIntervalSelect.value, 10);
             chatState.refreshInterval = Number.isNaN(parsed) ? 30000 : parsed;
+            // Ensure existing timers are stopped and the note updates immediately
+            cancelAutoRefresh();
+            updateAutoRefreshNote();
             scheduleAutoRefresh();
-        });
+        };
+
+        // Handle both change and input to be robust across drivers
+        refreshIntervalSelect.addEventListener('change', onRefreshIntervalChange);
+        refreshIntervalSelect.addEventListener('input', onRefreshIntervalChange);
     }
 
     if (filterForm) {

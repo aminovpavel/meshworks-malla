@@ -32,8 +32,24 @@ def browser_type_launch_args():
 
 @pytest.fixture(scope="function")
 def page(browser: Browser):
-    """Create a new page for each test."""
+    """Create a new page for each test with sane defaults."""
     context = browser.new_context()
     page = context.new_page()
+    # Give DOM operations a bit more time to reduce flakiness
+    try:
+        page.set_default_timeout(5000)
+        page.set_default_navigation_timeout(15000)
+    except Exception:
+        # Some drivers may not support these in older versions; ignore
+        pass
+    
+    # Surface browser console errors/warnings to help triage
+    try:
+        def _log_console(msg):
+            # Print minimal info to pytest output for visibility during triage
+            print(f"[console.{msg.type}] {msg.text}")
+        page.on("console", _log_console)
+    except Exception:
+        pass
     yield page
     context.close()

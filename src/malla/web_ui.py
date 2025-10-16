@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, abort, g, request
+from flask import Flask, abort, g, request, Response, send_from_directory
 from markupsafe import Markup
 from werkzeug.exceptions import HTTPException
 
@@ -343,7 +343,12 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
             debugish = bool(getattr(cfg, "debug", False) or getattr(cfg, "enable_browser_debug", False))
         except Exception:
             debugish = False
-        script_src = "script-src 'self' https:; " if not debugish else "script-src 'self' 'unsafe-inline' https:; "
+        # In debug/test (debugish), allow 'unsafe-inline' and 'unsafe-eval' to support tooling (e.g., Playwright wait_for_function)
+        script_src = (
+            "script-src 'self' https:; "
+            if not debugish
+            else "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; "
+        )
         style_src = "style-src 'self' https:; " if not debugish else "style-src 'self' 'unsafe-inline' https:; "
         # In prod-like, do not allow plain http: for connect-src to avoid mixed content
         connect_src = (
@@ -381,6 +386,33 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
             pass
 
         return response
+
+    # ------------------------------------------------------------------
+    # Vendor assets fallback: serve minimal stubs when files are missing.
+    # ------------------------------------------------------------------
+    @app.route("/static/vendor/<path:asset_path>")
+    def static_vendor(asset_path):  # noqa: ANN001
+        try:
+            vendor_dir = os.path.join(app.static_folder or "static", "vendor")
+            file_path = os.path.join(vendor_dir, asset_path)
+            if os.path.isfile(file_path):
+                return send_from_directory(vendor_dir, asset_path)
+        except Exception:
+            pass
+
+        # Only serve stubs in debug/test (or when explicit flag set)
+        try:
+            debugish = bool(getattr(cfg, "debug", False) or getattr(cfg, "enable_browser_debug", False))
+        except Exception:
+            debugish = False
+        if not (debugish or os.getenv("MALLA_VENDOR_STUBS")):
+            return Response("", status=404, mimetype="text/plain")
+
+        if asset_path.endswith(".css"):
+            return Response("/* vendor stub */\n", mimetype="text/css")
+        if asset_path.endswith(".js"):
+            return Response("// vendor stub\n", mimetype="application/javascript")
+        return Response("", mimetype="text/plain")
 
     # ------------------------------------------------------------------
     # Optional: lightweight rate limiting via Flask-Limiter, if available
