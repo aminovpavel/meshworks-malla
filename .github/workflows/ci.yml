@@ -33,6 +33,9 @@ jobs:
           UV_PYTHON_PREFERENCE: only-system
         run: uv sync --dev
 
+      - name: Sanity smoke
+        run: make sanity
+
       - name: Lint (ruff)
         run: uv run ruff check src tests
 
