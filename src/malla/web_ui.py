@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from flask import Flask, abort, g, request, Response, send_from_directory
+from flask import Flask, Response, abort, g, request, send_from_directory
 from markupsafe import Markup
 from werkzeug.exceptions import HTTPException
 

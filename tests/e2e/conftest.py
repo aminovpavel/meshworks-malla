@@ -42,7 +42,7 @@ def page(browser: Browser):
     except Exception:
         # Some drivers may not support these in older versions; ignore
         pass
-    
+
     # Surface browser console errors/warnings to help triage
     try:
         def _log_console(msg):
