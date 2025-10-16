@@ -1,0 +1,66 @@
+name: Self-Approval Policy
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, edited]
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+  workflow_dispatch:
+
+jobs:
+  policy:
+    name: policy
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Enforce self-approval policy
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.setFailed('No pull_request payload available');
+              return;
+            }
+            const number = pr.number;
+            const author = pr.user.login;
+            const allowedSelf = ['aminovpavel'];
+
+            // Fetch all reviews for the PR
+            const { data: reviews } = await github.rest.pulls.listReviews({ owner, repo, pull_number: number, per_page: 100 });
+
+            // Effective approval per user = their latest review state
+            const latestByUser = new Map();
+            for (const r of reviews) {
+              latestByUser.set(r.user?.login, r.state);
+            }
+            const effectiveApprovers = [...latestByUser.entries()]
+              .filter(([u, s]) => s === 'APPROVED' && !!u)
+              .map(([u]) => u);
+            const approvers = new Set(effectiveApprovers);
+
+            let ok = true;
+            let reason = '';
+            if (approvers.size === 0) {
+              // Allow merge without approvals only for allowlisted author
+              if (allowedSelf.includes(author)) {
+                ok = true;
+              } else {
+                ok = false;
+                reason = 'No approvals present';
+              }
+            } else if (approvers.size === 1 && approvers.has(author)) {
+              // Only self-approval exists
+              ok = allowedSelf.includes(author);
+              if (!ok) reason = `Self-approval by ${author} is not allowed`;
+            }
+
+            if (!ok) {
+              core.setFailed(reason);
+            } else {
+              core.info('Self-approval policy passed');
+            }
