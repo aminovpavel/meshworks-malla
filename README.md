@@ -101,9 +101,43 @@ Wherever possible we keep changes compatible so upstream updates remain easy to 
 
 ## Installation
 
+### Using Docker (public image)
+
+Public images are available on GHCR: `ghcr.io/aminovpavel/meshworks-malla` with tags like `latest` and `sha-<shortsha>` (commit-based).
+
+```bash
+docker pull ghcr.io/aminovpavel/meshworks-malla:latest
+# or pin a specific build
+docker pull ghcr.io/aminovpavel/meshworks-malla:sha-be66ef8
+
+# Run Web UI only (binds 5008)
+docker run -d --name malla-web \
+  -p 5008:5008 \
+  -e MALLA_DATABASE_FILE=/app/data/meshtastic_history.db \
+  -e MALLA_HOST=0.0.0.0 \
+  -e MALLA_PORT=5008 \
+  -v malla_data:/app/data \
+  ghcr.io/aminovpavel/meshworks-malla:sha-be66ef8 \
+  /app/.venv/bin/malla-web
+```
+
+To force-refresh browser caches for static assets, set `MALLA_STATIC_VERSION` (typically the short SHA of the image):
+
+```bash
+docker run -d --name malla-web \
+  -p 5008:5008 \
+  -e MALLA_DATABASE_FILE=/app/data/meshtastic_history.db \
+  -e MALLA_HOST=0.0.0.0 \
+  -e MALLA_PORT=5008 \
+  -e MALLA_STATIC_VERSION=be66ef8 \
+  -v malla_data:/app/data \
+  ghcr.io/aminovpavel/meshworks-malla:sha-be66ef8 \
+  /app/.venv/bin/malla-web
+```
+
 ### Using Docker (build locally)
 
-There is no public container image for this fork. Build it locally and point Docker Compose at the result.
+You can also build an image locally and point Docker Compose at the result.
 
 ```bash
 git clone https://git.meshworks.ru/MeshWorks/meshworks-malla.git
@@ -116,6 +150,12 @@ docker compose up -d
 docker compose logs -f                   # watch containers
 ```
 The compose file ships with a capture + web pair already wired to share `malla_data` volume.
+
+### Image tags
+
+- `latest` – moving tag following the default branch.
+- `sha-<shortsha>` – immutable commit-based pins (recommended for production).
+- Semver `vX.Y.Z` (when releases are cut), plus `X.Y`.
 
 **Manual Docker run (advanced):**
 ```bash
@@ -216,6 +256,11 @@ uv run malla-web
 **Access the web interface:**
 - Local: http://localhost:5008
 
+### Health & info endpoints
+
+- `GET /health` – returns `{ status, service, version }` (used by CI smoke tests)
+- `GET /info` – returns application metadata (name, version, components)
+
 ## Running Both Tools Together
 
 For a complete monitoring setup, run both tools simultaneously:
@@ -235,6 +280,22 @@ uv run malla-web
 ```
 
 Both commands read the same SQLite database and cooperate safely thanks to the repository connection pool.
+
+## Static assets & favicon
+
+### Cache-busting
+
+Static URLs are versioned with a `?v=STATIC_VERSION` query param in templates. The value resolves to:
+
+- `MALLA_STATIC_VERSION` env var, if set (e.g., `be66ef8`).
+- Otherwise, the Python package version from `src/malla/__init__.py`.
+
+This lets you force-refresh client caches without modifying code by setting the env var in Docker/Compose.
+
+### Favicon
+
+- Place your icon at `src/malla/static/icons/favicon.ico`.
+- The app serves `/favicon.ico` directly. If `src/malla/static/icons/favicon.png` exists, it will be used as a fallback when ICO is missing.
 
 ## Further reading
 
