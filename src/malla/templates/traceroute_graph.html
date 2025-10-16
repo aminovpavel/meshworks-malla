@@ -3,6 +3,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/traceroute-graph.css', v=STATIC_VERSION) }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}?v={{ STATIC_VERSION }}">
 {% endblock %}
 
 {% block content %}
@@ -121,7 +122,7 @@
 
 <!-- Page-specific styles moved to static/css/traceroute-graph.css (CSP Phase 2) -->
 
-{{ sidebar_styles() }}
+{# Sidebar styles moved to static/css/sidebar.css (CSP) #}
 
 <script src="{{ url_for('static', filename='vendor/d3/d3.v7.min.js') }}?v={{ STATIC_VERSION }}"></script>
 <script>
