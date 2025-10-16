@@ -28,3 +28,10 @@ This repository uses AI-assisted workflows (coding agents + CI policy) in a tran
 ## Notes on AI assistance
 - We use agents for refactors, docs, CI updates, and maintenance. Agents follow AGENTS.md (TL;DR policies) and add/adjust runbooks in `AGENTS_DOCS/` as needed.
 - Agents never embed secrets. Any operational changes are kept concise, with owner confirmation when in doubt.
+
+## Personal note
+This is a personal repository maintained by @aminovpavel. Day‑to‑day work often uses
+GPT Codex (gpt‑5 high) together with the Cursor editor. The goal is to keep the
+workflow transparent and contributor‑friendly: small PRs, clear CI signals, and
+public‑safe documentation. Upstream authors of the original malla are credited in
+README with thanks.
