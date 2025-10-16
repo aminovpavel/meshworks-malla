@@ -802,6 +802,6 @@ function populateTopNodesTable(topNodes) {
 }
 </script>
 
-<!-- Chart.js for analytics charts -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Chart.js for analytics charts (vendored) -->
+<script src="{{ url_for('static', filename='vendor/chart.js/chart.umd.min.js') }}?v={{ STATIC_VERSION }}"></script>
 {% endblock %}

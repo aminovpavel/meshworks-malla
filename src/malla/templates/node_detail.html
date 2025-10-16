@@ -4,8 +4,8 @@
 {% block title %}{{ node.node_name }} - Node Details{% endblock %}
 
 {% block extra_css %}
-<!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<!-- Leaflet CSS (vendored) -->
+<link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}?v={{ STATIC_VERSION }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/node-detail.css') }}" />
 {% endblock %}
 
@@ -677,8 +677,8 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- Leaflet JS -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Leaflet JS (vendored) -->
+<script src="{{ url_for('static', filename='vendor/leaflet/leaflet.js') }}?v={{ STATIC_VERSION }}"></script>
 
 <!-- Direct Receptions Chart Component -->
 <script src="{{ url_for('static', filename='js/direct_receptions.js') }}"></script>
