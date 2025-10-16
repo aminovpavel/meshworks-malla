@@ -125,6 +125,8 @@ def chat():
 def favicon():
     """Serve favicon for browsers that request /favicon.ico directly."""
     static_folder = current_app.static_folder
+    if not static_folder:
+        return ("", 404)
     icons_dir = os.path.join(static_folder, "icons")
     ico_path = os.path.join(icons_dir, "favicon.ico")
     png_path = os.path.join(icons_dir, "favicon.png")

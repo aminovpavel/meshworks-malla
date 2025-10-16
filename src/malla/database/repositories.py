@@ -14,9 +14,9 @@ from typing import Any
 
 from meshtastic import mesh_pb2
 
-from .connection import get_db_connection
 from ..utils.formatting import format_time_ago
 from ..utils.node_utils import get_bulk_node_names
+from .connection import get_db_connection
 
 logger = logging.getLogger(__name__)
 
@@ -174,6 +174,7 @@ class PacketRepository:
             return None
 
 
+    @staticmethod
     def get_packets(
         limit: int = 100,
         offset: int = 0,
