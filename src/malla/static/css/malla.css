@@ -158,6 +158,11 @@ h1, .h1 {
   backdrop-filter: blur(10px);
 }
 
+/* Keep navbar above dropdowns/offcanvas consistently without inline styles */
+.site-navbar {
+  z-index: 1040;
+}
+
 .nav-link {
   font-weight: 400;
   transition: var(--bs-transition);

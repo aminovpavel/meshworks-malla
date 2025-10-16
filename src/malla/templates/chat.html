@@ -2,7 +2,7 @@
 {% block title %}Chat · {{ APP_NAME }}{% endblock %}
 
 {% block extra_css %}
-<style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/chat.css', v=STATIC_VERSION) }}">
 .chat-panel .card-header {
     background-color: var(--bs-body-bg);
     border-bottom: 1px solid var(--bs-border-color);
@@ -351,7 +351,6 @@
         word-break: break-word;
     }
 }
-</style>
 {% endblock %}
 
 {% block content %}

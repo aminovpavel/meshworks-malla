@@ -326,8 +326,8 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
         response.headers.setdefault("Permissions-Policy", "geolocation=()")
         response.headers.setdefault("X-Request-ID", getattr(g, "request_id", ""))
 
-        # Moderate CSP compatible with current templates (allows inline styles/scripts)
-        # Tighten later as we audit templates/static
+        # CSP: disallow inline scripts/styles in prod-like; allow in debug/dev only
+        # We tightened templates; remaining inline usage should be migrated to static assets.
         # Allow required CDNs while keeping sensible defaults for dev/prod
         # Note: we include https: for third-party assets (Bootstrap, Plotly, Leaflet, etc.)
         # and allow images over https: (tiles), while keeping 'self' and inline compatibility.
