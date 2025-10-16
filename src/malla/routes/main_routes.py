@@ -3,8 +3,9 @@ Main routes for the Meshtastic Mesh Health Web UI
 """
 
 import logging
+import os
 
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, current_app, send_from_directory
 
 # Import from the new modular architecture
 from ..config import get_config
@@ -118,6 +119,23 @@ def chat():
         limit_label=str(limit),
         mqtt_info=mqtt_info,
     )
+
+
+@main_bp.route("/favicon.ico")
+def favicon():
+    """Serve favicon for browsers that request /favicon.ico directly."""
+    static_folder = current_app.static_folder
+    icons_dir = os.path.join(static_folder, "icons")
+    ico_path = os.path.join(icons_dir, "favicon.ico")
+    png_path = os.path.join(icons_dir, "favicon.png")
+
+    # Prefer ICO; fallback to PNG if present
+    if os.path.exists(ico_path):
+        return send_from_directory(icons_dir, "favicon.ico", mimetype="image/x-icon")
+    if os.path.exists(png_path):
+        return send_from_directory(icons_dir, "favicon.png", mimetype="image/png")
+    # Nothing to serve
+    return ("", 404)
 
 
 @main_bp.route("/map")
