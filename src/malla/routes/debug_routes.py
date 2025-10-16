@@ -1,11 +1,11 @@
-from __future__ import annotations
-
 """
 Lightweight browser debug endpoints.
 
 Disabled by default. Enable with config.enable_browser_debug or when app is in debug mode.
 Uses an optional token to restrict access.
 """
+
+from __future__ import annotations
 
 import time
 from collections import deque
@@ -78,4 +78,3 @@ def ui() -> Response:
         return Response(status=403)
     # Minimal JSON view; consumers can poll /__debug/logs
     return jsonify({"message": "Browser debug enabled", "endpoint": "/__debug/logs"})
-

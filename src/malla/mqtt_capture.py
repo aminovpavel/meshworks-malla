@@ -17,6 +17,7 @@ Configuration:
 """
 
 import base64
+import os
 import hashlib
 import logging
 import socket
@@ -223,19 +224,47 @@ def try_decrypt_mesh_packet(
 
 
 # --- Database Functions ---
-def init_database() -> None:
-    """Initialize SQLite database with required tables."""
-    conn = sqlite3.connect(DATABASE_FILE, timeout=30.0)
-    conn.row_factory = sqlite3.Row
+def _configure_connection(conn: sqlite3.Connection) -> None:
+    """Apply per-connection PRAGMAs for stability and bounded memory/IO."""
     cursor = conn.cursor()
-
-    # Configure SQLite for better concurrency
     cursor.execute("PRAGMA journal_mode=WAL")
     cursor.execute("PRAGMA synchronous=NORMAL")
     cursor.execute("PRAGMA busy_timeout=30000")
     cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.execute("PRAGMA cache_size=10000")
+    # Negative cache_size means KiB
+    try:
+        cursor.execute(f"PRAGMA cache_size=-{SQLITE_CACHE_KB}")
+    except Exception:
+        cursor.execute("PRAGMA cache_size=8192")
     cursor.execute("PRAGMA temp_store=MEMORY")
+    try:
+        cursor.execute(f"PRAGMA wal_autocheckpoint={WAL_AUTOCHECKPOINT_PAGES}")
+    except Exception:
+        pass
+    try:
+        cursor.execute(f"PRAGMA journal_size_limit={JOURNAL_SIZE_LIMIT_BYTES}")
+    except Exception:
+        pass
+    try:
+        if DISABLE_MMAP:
+            cursor.execute("PRAGMA mmap_size=0")
+    except Exception:
+        pass
+
+
+def _open_conn() -> sqlite3.Connection:
+    conn = sqlite3.connect(DATABASE_FILE, timeout=30.0)
+    conn.row_factory = sqlite3.Row
+    _configure_connection(conn)
+    return conn
+
+
+def init_database() -> None:
+    """Initialize SQLite database with required tables."""
+    conn = _open_conn()
+    cursor = conn.cursor()
+
+    # Connection already configured with PRAGMAs by _open_conn()
 
     # Table for packet history
     cursor.execute("""
@@ -376,8 +405,7 @@ def load_node_cache() -> None:
     """Load node information from database into memory cache."""
     global node_cache
     with db_lock:
-        conn = sqlite3.connect(DATABASE_FILE, timeout=30.0)
-        conn.row_factory = sqlite3.Row
+        conn = _open_conn()
         cursor = conn.cursor()
 
         cursor.execute("""
@@ -471,8 +499,7 @@ def update_node_cache(
 
     # Update database using INSERT OR REPLACE to handle existing nodes
     with db_lock:
-        conn = sqlite3.connect(DATABASE_FILE, timeout=30.0)
-        conn.row_factory = sqlite3.Row
+        conn = _open_conn()
         cursor = conn.cursor()
 
         # Get existing values from database if node exists
@@ -674,7 +701,8 @@ def log_packet_to_database(
     )
     raw_payload = (
         mesh_packet.decoded.payload
-        if mesh_packet
+        if CAPTURE_STORE_RAW
+        and mesh_packet
         and hasattr(mesh_packet, "decoded")
         and hasattr(mesh_packet.decoded, "payload")
         else b""
@@ -702,8 +730,7 @@ def log_packet_to_database(
     tx_after = getattr(mesh_packet, "tx_after", None) if mesh_packet else None
 
     with db_lock:
-        conn = sqlite3.connect(DATABASE_FILE, timeout=30.0)
-        conn.row_factory = sqlite3.Row
+        conn = _open_conn()
         cursor = conn.cursor()
 
         cursor.execute(
@@ -744,7 +771,7 @@ def log_packet_to_database(
                 relay_node,
                 tx_after,
                 message_type,
-                raw_service_envelope_data,
+                raw_service_envelope_data if CAPTURE_STORE_RAW else None,
                 parsing_error,
             ),
         )
@@ -758,8 +785,7 @@ def get_packet_history(
 ) -> list[dict[str, Any]]:
     """Get recent packet history from ..database."""
     with db_lock:
-        conn = sqlite3.connect(DATABASE_FILE, timeout=30.0)
-        conn.row_factory = sqlite3.Row
+        conn = _open_conn()
         cursor = conn.cursor()
 
         query = "SELECT * FROM packet_history WHERE 1=1"
@@ -786,8 +812,7 @@ def get_packet_history(
 def get_node_statistics() -> dict[str, Any]:
     """Get statistics about known nodes."""
     with db_lock:
-        conn = sqlite3.connect(DATABASE_FILE, timeout=30.0)
-        conn.row_factory = sqlite3.Row
+        conn = _open_conn()
         cursor = conn.cursor()
 
         # Total nodes
@@ -1293,3 +1318,11 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+CAPTURE_STORE_RAW: bool = (
+    str(getattr(_cfg, "capture_store_raw", os.getenv("MALLA_CAPTURE_STORE_RAW", "1"))).lower()
+    in {"1", "true", "yes", "on"}
+)
+WAL_AUTOCHECKPOINT_PAGES: int = int(os.getenv("MALLA_WAL_AUTOCHECKPOINT", "1000"))
+JOURNAL_SIZE_LIMIT_BYTES: int = int(os.getenv("MALLA_JOURNAL_SIZE_LIMIT", str(64 * 1024 * 1024)))
+SQLITE_CACHE_KB: int = int(os.getenv("MALLA_SQLITE_CACHE_KB", "8192"))  # ~8 MiB per connection
+DISABLE_MMAP: bool = str(os.getenv("MALLA_SQLITE_DISABLE_MMAP", "1")).lower() in {"1","true","yes","on"}

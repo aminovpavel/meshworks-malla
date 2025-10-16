@@ -1,0 +1,218 @@
+/* Traceroute Graph Page Styles (extracted for CSP Phase 2) */
+
+/* Hide the footer on this full-screen page */
+.footer {
+  display: none !important;
+}
+
+.graph-container {
+  position: fixed;
+  top: 56px; /* Height of navbar */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  background: #f8f9fa;
+  z-index: 1;
+}
+
+.graph-main {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  order: 1;
+}
+
+.network-graph {
+  width: 100%;
+  height: 100%;
+}
+
+.loading-overlay,
+.error-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: rgba(248, 249, 250, 0.9);
+  z-index: 100;
+}
+
+/* Default hidden for error overlay; JS shows with display:flex on error */
+.error-overlay {
+  display: none;
+  color: #dc3545;
+}
+
+/* Node labels styling */
+.node-label {
+  font-size: 12px;
+  font-weight: bold;
+  fill: #333;
+  text-anchor: middle;
+  pointer-events: none;
+  text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+.node-label.highlighted {
+  font-size: 14px;
+  fill: #007bff;
+  font-weight: 900;
+}
+
+.node.selected circle {
+  stroke: #007bff;
+  stroke-width: 4;
+}
+
+.link.selected {
+  stroke: #007bff !important;
+  stroke-width: 4 !important;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .graph-container {
+    flex-direction: column;
+    top: 56px;
+  }
+
+  .graph-main {
+    order: 1;
+    flex: 1;
+  }
+}
+
+/* --- Component: Combined Traceroute Graph (packet detail) --- */
+.traceroute-graph-container {
+  height: 700px;
+  width: 100%;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+@media (max-width: 768px) {
+  .traceroute-graph-container {
+    height: 500px;
+  }
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  position: relative;
+}
+
+.legend-item:hover {
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+.legend-path-item {
+  display: flex;
+  align-items: center;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 2px;
+  border-left: 3px solid transparent;
+}
+
+.legend-path-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: translateX(2px);
+}
+
+.legend-path-item.highlighted {
+  background-color: rgba(0, 123, 255, 0.15);
+  border-left-color: var(--path-color, #007bff);
+}
+
+.legend-path-color {
+  width: 16px;
+  height: 3px;
+  margin-right: 8px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legend-path-info { flex: 1; min-width: 0; }
+.legend-path-title { font-size: .75rem; font-weight: 600; margin-bottom: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.legend-path-details { font-size: .65rem; color: #6c757d; line-height: 1.2; }
+
+.legend-tooltip {
+  position: absolute;
+  background: rgba(0,0,0,0.9);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: .75rem;
+  pointer-events: none;
+  z-index: 1000;
+  max-width: 250px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  opacity: 0;
+  transition: opacity .2s ease;
+  white-space: nowrap;
+}
+
+.traceroute-graph-container svg { cursor: grab; }
+.traceroute-graph-container svg:active { cursor: grabbing; }
+
+.graph-tooltip {
+  position: absolute;
+  background: rgba(0,0,0,0.95);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  pointer-events: none;
+  z-index: 1000;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+  line-height: 1.5;
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.graph-tooltip .tooltip-title { font-weight: 700; margin-bottom: 8px; color: #fff; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 4px; }
+.graph-tooltip .tooltip-content { color: #e0e0e0; }
+.graph-tooltip .tooltip-badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 2px 6px; border-radius: 4px; font-size: 11px; margin: 2px 4px 2px 0; }
+
+.node-circle { cursor: pointer; transition: all .3s ease; filter: drop-shadow(2px 2px 4px rgba(0,0,0,.2)); }
+.node-circle:hover { stroke-width: 4px !important; filter: drop-shadow(2px 2px 8px rgba(0,0,0,.4)) brightness(1.1); transform: scale(1.1); }
+.node-router { fill: #4a90e2; stroke: #2c5aa0; }
+.node-gateway { fill: #28a745; stroke: #1e7e34; }
+.node-gateway-router { fill: url(#gatewayRouterGradient); stroke: #1e7e34; }
+.node-source { fill: #ff6b35 !important; stroke: #d63031 !important; stroke-width: 4px !important; }
+.node-target { fill: #6c5ce7 !important; stroke: #5f3dc4 !important; stroke-width: 4px !important; }
+
+.link-line { transition: all .3s ease; cursor: pointer; filter: drop-shadow(1px 1px 2px rgba(0,0,0,.1)); }
+.link-line:hover { stroke-width: 8px !important; filter: drop-shadow(2px 2px 4px rgba(0,0,0,.3)); }
+.gateway-connection { stroke-dasharray: 5,5; stroke: #17a2b8; stroke-width: 2; opacity: .7; }
+.gateway-connection:hover { opacity: 1; stroke-width: 4; }
+.gateway-connection-zero-hop { stroke-dasharray: 2,2; stroke: #fd7e14; stroke-width: 2; opacity: .7; }
+.gateway-connection-zero-hop:hover { opacity: 1; stroke-width: 4; }
+
+.path-line { fill: none; stroke-width: 4; opacity: .8; transition: all .3s ease; pointer-events: none; filter: drop-shadow(1px 1px 2px rgba(0,0,0,.2)); }
+.path-line:hover { opacity: 1; stroke-width: 6; }
+.node-label { pointer-events: none; user-select: none; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-weight: 600; text-shadow: 1px 1px 2px rgba(255,255,255,.8); font-size: 11px; }
+.link-label { pointer-events: none; user-select: none; font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; font-weight: 700; text-shadow: 1px 1px 2px rgba(255,255,255,.9); font-size: 10px; }
+
+.modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.5); z-index: 9999; cursor: pointer; }
+.modal-content { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #fff; border: 1px solid #ccc; border-radius: 12px; padding: 24px; box-shadow: 0 8px 32px rgba(0,0,0,.3); z-index: 10000; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; cursor: default; }
+
+/* helpers for component */
+.legend-scroll { max-height: 700px; overflow-y: auto; }
+.legend-title { font-size: .85rem; }
+.badge-xxs { font-size: .7rem; }

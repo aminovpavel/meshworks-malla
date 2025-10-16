@@ -1,17 +1,16 @@
-from __future__ import annotations
-
 """
 Lightweight request parameter utilities for safe parsing and clamping.
 
 No external dependencies; designed to be used in route handlers.
 """
 
+from __future__ import annotations
+
 import re
+from collections.abc import Iterable
 from datetime import datetime
-from typing import Iterable
 
 from flask import Request
-
 
 _TRUE_SET = {"1", "true", "yes", "on"}
 
@@ -109,4 +108,3 @@ def get_pagination(req: Request, *, default_limit: int, max_limit: int) -> tuple
     limit = get_int_arg(req, "limit", default=default_limit, min_val=1, max_val=max_limit)
     offset = (page - 1) * limit
     return page, limit, offset
-

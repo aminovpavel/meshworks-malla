@@ -6,6 +6,7 @@
 {% block extra_css %}
 <!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/traceroute-graph.css', v=STATIC_VERSION) }}">
 <style>
     .card-metric {
         text-align: center;

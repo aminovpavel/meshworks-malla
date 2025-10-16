@@ -10,11 +10,13 @@ import atexit
 import json
 import logging
 import os
+import secrets
 import sys
 from pathlib import Path
-import secrets
+from typing import Any
 
 from flask import Flask, abort, g, request
+from flask.typing import ResponseReturnValue
 from markupsafe import Markup
 from werkzeug.exceptions import HTTPException
 
@@ -374,8 +376,8 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
     # Optional: lightweight rate limiting via Flask-Limiter, if available
     # ------------------------------------------------------------------
     try:  # pragma: no cover - add-on, not required for tests
-        from flask_limiter import Limiter
-        from flask_limiter.util import get_remote_address
+        from flask_limiter import Limiter  # type: ignore[reportMissingImports]
+        from flask_limiter.util import get_remote_address  # type: ignore[reportMissingImports]
 
         default_limit = (getattr(cfg, "default_rate_limit", "") or "").strip()
         # Never enable rate limiting in development (Flask debug)
@@ -425,7 +427,7 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
     # Error handlers (shape API errors; keep HTML minimal elsewhere)
     # ------------------------------------------------------------------
     @app.errorhandler(HTTPException)
-    def _handle_http_exc(err: HTTPException):  # noqa: ANN001
+    def _handle_http_exc(err: HTTPException) -> Any:  # noqa: ANN001
         try:
             rid = getattr(g, "request_id", "")
         except Exception:  # pragma: no cover
@@ -439,7 +441,7 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
         return err, err.code
 
     @app.errorhandler(Exception)
-    def _handle_unexpected(err: Exception):  # noqa: ANN001
+    def _handle_unexpected(err: Exception) -> Any:  # noqa: ANN001
         logger.exception("Unhandled error: %s", err)
         try:
             rid = getattr(g, "request_id", "")

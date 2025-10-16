@@ -5,6 +5,7 @@ This module provides data access layer with business logic for different entitie
 """
 
 import html
+import sqlite3
 import json
 import logging
 import re
@@ -109,7 +110,24 @@ class DashboardRepository:
                 "success_rate": stats_row["success_rate"] or 0,
             }
 
-        except Exception as e:
+        except sqlite3.DatabaseError as e:
+            if "malformed" in str(e).lower():
+                logger.error(f"DashboardRepository.get_stats degraded due to DB corruption: {e}")
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+                # Return minimal safe payload so UI stays up
+                return {
+                    "total_nodes": 0,
+                    "active_nodes_24h": 0,
+                    "total_packets": 0,
+                    "recent_packets": 0,
+                    "avg_rssi": 0.0,
+                    "avg_snr": 0.0,
+                    "packet_types": [],
+                    "success_rate": 0.0,
+                }
             logger.error(f"Error getting dashboard stats: {e}")
             raise
 
@@ -969,7 +987,8 @@ class ChatRepository:
 
         group_expr = "COALESCE(mesh_packet_id, id)"
 
-        cursor.execute(
+        try:
+            cursor.execute(
             f"""
             SELECT COUNT(*) as total
             FROM (
@@ -978,12 +997,12 @@ class ChatRepository:
                 {where_clause}
                 GROUP BY {group_expr}, from_node_id, to_node_id, channel_id
             ) AS grouped_packets
-        """,
-            base_params,
-        )
-        total = cursor.fetchone()["total"]
+            """,
+                base_params,
+            )
+            total = cursor.fetchone()["total"]
 
-        cursor.execute(
+            cursor.execute(
             f"""
             SELECT
                 SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS count_1h,
@@ -994,17 +1013,17 @@ class ChatRepository:
                 {where_clause}
                 GROUP BY {group_expr}, from_node_id, to_node_id, channel_id
             ) AS grouped_counts
-        """,
-            [one_hour_ago, twenty_four_hours_ago] + base_params,
-        )
-        counts_row = cursor.fetchone()
-        hourly_count = 0
-        daily_count = 0
-        if counts_row:
-            hourly_count = counts_row["count_1h"] or 0
-            daily_count = counts_row["count_24h"] or 0
+            """,
+                [one_hour_ago, twenty_four_hours_ago] + base_params,
+            )
+            counts_row = cursor.fetchone()
+            hourly_count = 0
+            daily_count = 0
+            if counts_row:
+                hourly_count = counts_row["count_1h"] or 0
+                daily_count = counts_row["count_24h"] or 0
 
-        cursor.execute(
+            cursor.execute(
             f"""
             SELECT
                 MIN(id) AS id,
@@ -1024,72 +1043,92 @@ class ChatRepository:
             GROUP BY {group_expr}, from_node_id, to_node_id, channel_id
             ORDER BY timestamp DESC
             LIMIT ? OFFSET ?
-        """,
-            base_params + [limit, offset],
-        )
-
-        rows = cursor.fetchall()
-
-        message_group_ids = list(
-            {
-                row["message_group_id"]
-                for row in rows
-                if row["message_group_id"] is not None
-            }
-        )
-
-        gateway_metrics_map: dict[Any, dict[str, dict[str, list[Any]]]] = {}
-        if message_group_ids:
-            placeholders = ",".join("?" for _ in message_group_ids)
-            cursor.execute(
-                f"""
-                SELECT
-                    COALESCE(mesh_packet_id, id) AS message_group_id,
-                    COALESCE(gateway_id, '') AS gateway_id,
-                    rssi,
-                    snr,
-                    hop_start,
-                    hop_limit
-                FROM packet_history
-                WHERE COALESCE(mesh_packet_id, id) IN ({placeholders})
             """,
-                message_group_ids,
+                base_params + [limit, offset],
             )
 
-            metric_rows = cursor.fetchall()
-            for detail in metric_rows:
-                group_id = detail["message_group_id"]
-                gateway_id_raw = detail["gateway_id"] or ""
+            rows = cursor.fetchall()
+            
+            message_group_ids = list(
+                {
+                    row["message_group_id"]
+                    for row in rows
+                    if row["message_group_id"] is not None
+                }
+            )
 
-                metrics = gateway_metrics_map.setdefault(group_id, {}).setdefault(
-                    gateway_id_raw, {"rssi": [], "snr": [], "hop_counts": []}
+            gateway_metrics_map: dict[Any, dict[str, dict[str, list[Any]]]] = {}
+            if message_group_ids:
+                placeholders = ",".join("?" for _ in message_group_ids)
+                cursor.execute(
+                    f"""
+                    SELECT
+                        COALESCE(mesh_packet_id, id) AS message_group_id,
+                        COALESCE(gateway_id, '') AS gateway_id,
+                        rssi,
+                        snr,
+                        hop_start,
+                        hop_limit
+                    FROM packet_history
+                    WHERE COALESCE(mesh_packet_id, id) IN ({placeholders})
+                """,
+                    message_group_ids,
                 )
 
-                rssi_val = detail["rssi"]
-                if rssi_val is not None:
-                    metrics["rssi"].append(rssi_val)
+                metric_rows = cursor.fetchall()
+                for detail in metric_rows:
+                    group_id = detail["message_group_id"]
+                    gateway_id_raw = detail["gateway_id"] or ""
 
-                snr_val = detail["snr"]
-                if snr_val is not None:
-                    metrics["snr"].append(snr_val)
+                    metrics = gateway_metrics_map.setdefault(group_id, {}).setdefault(
+                        gateway_id_raw, {"rssi": [], "snr": [], "hop_counts": []}
+                    )
 
-                hop_start = detail["hop_start"]
-                hop_limit = detail["hop_limit"]
-                hop_count_val = None
-                if hop_start is not None and hop_limit is not None:
-                    hop_count_val = hop_start - hop_limit
-                elif hop_start is not None:
-                    hop_count_val = hop_start
-                elif hop_limit is not None:
-                    hop_count_val = hop_limit
+                    rssi_val = detail["rssi"]
+                    if rssi_val is not None:
+                        metrics["rssi"].append(rssi_val)
 
-                if hop_count_val is not None:
-                    try:
-                        metrics["hop_counts"].append(float(hop_count_val))
-                    except (TypeError, ValueError):
-                        pass
+                    snr_val = detail["snr"]
+                    if snr_val is not None:
+                        metrics["snr"].append(snr_val)
 
-        conn.close()
+                    hop_start = detail["hop_start"]
+                    hop_limit = detail["hop_limit"]
+                    hop_count_val = None
+                    if hop_start is not None and hop_limit is not None:
+                        hop_count_val = hop_start - hop_limit
+                    elif hop_start is not None:
+                        hop_count_val = hop_start
+                    elif hop_limit is not None:
+                        hop_count_val = hop_limit
+
+                    if hop_count_val is not None:
+                        try:
+                            metrics["hop_counts"].append(float(hop_count_val))
+                        except (TypeError, ValueError):
+                            pass
+
+            conn.close()
+        except sqlite3.DatabaseError as e:
+            # Graceful degradation on SQLite corruption: return empty dataset
+            if "malformed" in str(e).lower():
+                logger.error(f"ChatRepository.get_recent_messages degraded due to DB corruption: {e}")
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+                return {
+                    "messages": [],
+                    "total": 0,
+                    "limit": limit,
+                    "offset": offset,
+                    "has_more": False,
+                    "counts": {"count_1h": 0, "count_24h": 0},
+                    "search": search,
+                    "degraded": True,
+                }
+            # Re-raise other DB errors
+            raise
 
         node_ids: set[int] = set()
         for row in rows:
@@ -2691,6 +2730,7 @@ class NodeRepository:
             List of dictionaries where each dict contains aggregated statistics per node
             and individual packet data for chart plotting.
         """
+        conn = None
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -2946,7 +2986,19 @@ class NodeRepository:
 
             conn.close()
             return result
-
+        except sqlite3.DatabaseError as e:
+            # Handle SQLite corruption gracefully by returning empty result
+            if "malformed" in str(e).lower():
+                logger.error(
+                    f"Direct receptions degraded due to DB corruption for node {node_id}, direction {direction}: {e}"
+                )
+                try:
+                    if conn:
+                        conn.close()
+                except Exception:
+                    pass
+                return []
+            raise
         except Exception as e:
             logger.error(
                 f"Error getting bidirectional direct receptions for node {node_id}, direction {direction}: {e}"

@@ -29,8 +29,6 @@ from ..utils.node_utils import (
     get_bulk_node_names,
     get_bulk_node_short_names,
 )
-from ..utils.serialization_utils import convert_bytes_to_base64, sanitize_floats
-from ..utils.traceroute_utils import parse_traceroute_payload
 from ..utils.params import (
     get_bool_arg,
     get_int_arg,
@@ -38,6 +36,8 @@ from ..utils.params import (
     get_pagination,
     get_str_arg,
 )
+from ..utils.serialization_utils import convert_bytes_to_base64, sanitize_floats
+from ..utils.traceroute_utils import parse_traceroute_payload
 
 logger = logging.getLogger(__name__)
 api_bp = Blueprint("api", __name__, url_prefix="/api")
