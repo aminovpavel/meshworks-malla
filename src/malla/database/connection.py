@@ -5,6 +5,7 @@ Database connection management for Meshtastic Mesh Health Web UI.
 import logging
 import os
 import sqlite3
+from urllib.parse import quote
 
 # Prefer configuration loader over environment variables
 from malla.config import get_config
@@ -31,37 +32,60 @@ def get_db_connection() -> sqlite3.Connection:
     )
 
     try:
-        conn = sqlite3.connect(
-            db_path, timeout=30.0
-        )  # 30 second timeout for busy database
+        # Determine read-only mode (web UI should not write)
+        try:
+            cfg = get_config()
+            # Respect config flag, but keep writes enabled in debug/tests
+            readonly = bool(getattr(cfg, "database_read_only", False)) and not bool(
+                getattr(cfg, "debug", False)
+            )
+        except Exception:
+            readonly = False
+
+        # Never force read-only inside test runs
+        if os.getenv("PYTEST_CURRENT_TEST"):
+            readonly = False
+
+        if readonly:
+            # Use SQLite URI to enforce read-only access
+            # Ensure absolute path; do NOT percent-encode path separators
+            abs_path = os.path.abspath(db_path)
+            uri = f"file:{quote(abs_path, safe='/')}?mode=ro"
+            conn = sqlite3.connect(uri, timeout=30.0, uri=True)
+        else:
+            conn = sqlite3.connect(
+                db_path, timeout=30.0
+            )  # 30 second timeout for busy database
         conn.row_factory = sqlite3.Row  # Enable column access by name
 
         # Configure SQLite for better concurrency
         cursor = conn.cursor()
 
-        # Enable WAL mode for better concurrent read/write performance
-        cursor.execute("PRAGMA journal_mode=WAL")
-
-        # Set synchronous to NORMAL for better performance while maintaining safety
-        cursor.execute("PRAGMA synchronous=NORMAL")
+        # Skip write-affecting PRAGMAs if in read-only mode
+        if not readonly:
+            # Enable WAL mode for better concurrent read/write performance
+            cursor.execute("PRAGMA journal_mode=WAL")
+            # Set synchronous to NORMAL for better performance while maintaining safety
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            # Enable foreign key constraints
+            cursor.execute("PRAGMA foreign_keys=ON")
 
         # Set busy timeout to handle concurrent access
         cursor.execute("PRAGMA busy_timeout=30000")  # 30 seconds
 
-        # Enable foreign key constraints
-        cursor.execute("PRAGMA foreign_keys=ON")
-
-        # Optimize for read performance
+        # Optimize for read performance (per-connection settings)
         cursor.execute("PRAGMA cache_size=10000")  # 10MB cache
         cursor.execute("PRAGMA temp_store=MEMORY")
 
         # ------------------------------------------------------------------
         # Lightweight schema migrations – run once per connection.
         # ------------------------------------------------------------------
-        try:
-            _ensure_schema_migrations(cursor)
-        except Exception as e:
-            logger.warning(f"Schema migration check failed: {e}")
+        # Run lightweight schema migrations only when writes are allowed
+        if not readonly:
+            try:
+                _ensure_schema_migrations(cursor)
+            except Exception as e:
+                logger.warning(f"Schema migration check failed: {e}")
 
         return conn
     except Exception as e:

@@ -1,0 +1,53 @@
+services:
+  malla-capture:
+    build: .
+    image: meshworks/malla-dev:local
+    container_name: malla-capture-dev
+    restart: unless-stopped
+    environment:
+      # Core app config
+      - MALLA_NAME=Malla (Dev)
+      - MALLA_HOST=0.0.0.0
+      - MALLA_PORT=5008
+      # MQTT – set your local or remote broker creds via env or override file
+      - MALLA_MQTT_BROKER_ADDRESS=${MALLA_MQTT_BROKER_ADDRESS:-meshtastic.taubetele.com}
+      - MALLA_MQTT_PORT=${MALLA_MQTT_PORT:-1883}
+      - MALLA_MQTT_USERNAME=${MALLA_MQTT_USERNAME:-meshdev}
+      - MALLA_MQTT_PASSWORD=${MALLA_MQTT_PASSWORD:-large4cats}
+      - MALLA_MQTT_TOPIC_PREFIX=${MALLA_MQTT_TOPIC_PREFIX:-msh/msk}
+      - MALLA_MQTT_TOPIC_SUFFIX=${MALLA_MQTT_TOPIC_SUFFIX:-/+/+/+/#}
+      # DB path shared between capture and web
+      - MALLA_DATABASE_FILE=/data/meshtastic_history.db
+      - TZ=Europe/Moscow
+    command: ["/app/.venv/bin/malla-capture"]
+    volumes:
+      - ./devdata:/data
+
+  malla-web:
+    build: .
+    image: meshworks/malla-dev:local
+    container_name: malla-web-dev
+    restart: unless-stopped
+    depends_on:
+      - malla-capture
+    environment:
+      - MALLA_NAME=Malla (Dev)
+      - MALLA_HOST=0.0.0.0
+      - MALLA_PORT=5008
+      - MALLA_DATABASE_FILE=/data/meshtastic_history.db
+      - MALLA_TRUST_PROXY_HEADERS=1
+      # - MALLA_ALLOWED_HOSTS=localhost,127.0.0.1
+      # Enable browser debug UI (prod-like; keep DB read-only)
+      - MALLA_ENABLE_BROWSER_DEBUG=1
+      - MALLA_DEBUG_TOKEN=${MALLA_DEBUG_TOKEN:-devtoken123}
+      - MALLA_DATABASE_READ_ONLY=1
+      # Optional: enable simple per-process rate limit in prod-like mode
+      - MALLA_DEFAULT_RATE_LIMIT=${MALLA_DEFAULT_RATE_LIMIT:-}
+      # In dev we leave SECRET_KEY unset; for prod, set it externally
+      - TZ=Europe/Moscow
+    command: ["/app/.venv/bin/malla-web-gunicorn"]
+    ports:
+      - "5008:5008"
+    volumes:
+      # Web opens DB in SQLite read-only mode, but needs RW mount for WAL/SHM files.
+      - ./devdata:/data:rw

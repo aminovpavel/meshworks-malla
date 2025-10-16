@@ -4,15 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
+    {% if APP_CONFIG.enable_browser_debug or APP_CONFIG.debug %}
+    {% if APP_CONFIG.debug_token %}
+    <meta name="debug-token" content="{{ APP_CONFIG.debug_token }}">
+    {% endif %}
+    {% endif %}
 
     <!-- Favicon (ICO only) -->
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='icons/favicon.ico', v=STATIC_VERSION) }}">
     <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='icons/favicon.ico', v=STATIC_VERSION) }}">
 
-    <script>
-        (function () {
-            var storageKey = 'malla-theme-preference';
-            var theme = 'auto';
+    <script src="{{ url_for('static', filename='js/theme-preload.js', v=STATIC_VERSION) }}"></script>
+    <!--
+        (inline theme script moved to static/js/theme-preload.js)
+        var storageKey = 'malla-theme-preference';
+        var theme = 'auto';
             try {
                 var saved = localStorage.getItem(storageKey);
                 if (saved && ['light', 'dark', 'auto'].indexOf(saved) !== -1) {
@@ -32,7 +38,7 @@
 
             document.documentElement.setAttribute('data-bs-theme', theme);
         })();
-    </script>
+    -->
 
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
@@ -52,6 +58,7 @@
     <!-- Global 2025 theme overrides -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/malla.css', v=STATIC_VERSION) }}">
 
+    <!-- inline styles moved to css/malla.css -->
     <style>
         .navbar-brand {
             font-weight: bold;
@@ -258,6 +265,9 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <!-- jQuery (still used by some components) -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    {% if APP_CONFIG.enable_browser_debug or APP_CONFIG.debug %}
+    <script src="{{ url_for('static', filename='js/debug-client.js', v=STATIC_VERSION) }}" defer></script>
+    {% endif %}
     <!-- URL Filter Manager (global utility) -->
     <script src="{{ url_for('static', filename='js/url-filter-manager.js', v=STATIC_VERSION) }}"></script>
     <!-- NodeCache utility (shared across pages) -->
@@ -266,6 +276,8 @@
     <script src="{{ url_for('static', filename='js/dark-mode-toggle.js', v=STATIC_VERSION) }}"></script>
 
     <!-- Node tooltip functionality -->
+    <script src="{{ url_for('static', filename='js/node-tooltips.js', v=STATIC_VERSION) }}"></script>
+    <!--
     <script>
         // Cache for node information to avoid repeated API calls
         const nodeInfoCache = new Map();
@@ -425,6 +437,7 @@
         // Make reinitializeTooltips available globally for dynamic content
         window.reinitializeTooltips = reinitializeTooltips;
     </script>
+    -->
 
     {% block extra_js %}{% endblock %}
 </body>

@@ -31,6 +31,13 @@ from ..utils.node_utils import (
 )
 from ..utils.serialization_utils import convert_bytes_to_base64, sanitize_floats
 from ..utils.traceroute_utils import parse_traceroute_payload
+from ..utils.params import (
+    get_bool_arg,
+    get_int_arg,
+    get_iso_ts,
+    get_pagination,
+    get_str_arg,
+)
 
 logger = logging.getLogger(__name__)
 api_bp = Blueprint("api", __name__, url_prefix="/api")
@@ -178,9 +185,7 @@ def api_packets():
     """API endpoint for packet data."""
     logger.info("API packets endpoint accessed")
     try:
-        limit = request.args.get("limit", 100, type=int)
-        page = request.args.get("page", 1, type=int)
-        offset = (page - 1) * limit
+        page, limit, offset = get_pagination(request, default_limit=100, max_limit=200)
 
         # Build filters
         filters: dict[str, Any] = {}
@@ -194,52 +199,36 @@ def api_packets():
             except ValueError:
                 # Fallback to use raw string if conversion fails (legacy)
                 filters["gateway_id"] = gateway_id_arg
-        from_node_str = request.args.get("from_node")
-        if from_node_str:
-            try:
-                filters["from_node"] = int(from_node_str)
-            except ValueError:
-                pass
-        if request.args.get("portnum"):
-            filters["portnum"] = request.args.get("portnum")
-        min_rssi_str = request.args.get("min_rssi")
-        if min_rssi_str:
-            try:
-                filters["min_rssi"] = int(min_rssi_str)
-            except ValueError:
-                pass
-        max_rssi_str = request.args.get("max_rssi")
-        if max_rssi_str:
-            try:
-                filters["max_rssi"] = int(max_rssi_str)
-            except ValueError:
-                pass
-        hop_count_str = request.args.get("hop_count")
-        if hop_count_str:
-            try:
-                filters["hop_count"] = int(hop_count_str)
-            except ValueError:
-                pass
+        from_node = get_int_arg(request, "from_node", default=0, min_val=0, max_val=2**32 - 1)
+        if from_node:
+            filters["from_node"] = from_node
+        portnum = get_str_arg(request, "portnum", default="", max_len=32, pattern=r"[\w.-]+")
+        if portnum:
+            filters["portnum"] = portnum
+        if request.args.get("min_rssi") is not None:
+            filters["min_rssi"] = get_int_arg(
+                request, "min_rssi", default=0, min_val=-200, max_val=0
+            )
+        if request.args.get("max_rssi") is not None:
+            filters["max_rssi"] = get_int_arg(
+                request, "max_rssi", default=0, min_val=-200, max_val=50
+            )
+        hop_count = get_int_arg(request, "hop_count", default=-1, min_val=0, max_val=100)
+        if hop_count >= 0:
+            filters["hop_count"] = hop_count
 
         # ------------------------------------------------------------------
         # Generic exclusion filters (exclude_from, exclude_to)
         # ------------------------------------------------------------------
-        exclude_from_str = request.args.get("exclude_from", "").strip()
-        if exclude_from_str:
-            try:
-                filters["exclude_from"] = int(exclude_from_str)
-            except ValueError:
-                pass
-
-        exclude_to_str = request.args.get("exclude_to", "").strip()
-        if exclude_to_str:
-            try:
-                filters["exclude_to"] = int(exclude_to_str)
-            except ValueError:
-                pass
+        exclude_from = get_int_arg(request, "exclude_from", default=0, min_val=0, max_val=2**32 - 1)
+        if exclude_from:
+            filters["exclude_from"] = exclude_from
+        exclude_to = get_int_arg(request, "exclude_to", default=0, min_val=0, max_val=2**32 - 1)
+        if exclude_to:
+            filters["exclude_to"] = exclude_to
 
         # Special convenience flag to exclude self-reported gateway messages
-        exclude_self_flag = request.args.get("exclude_self", "false").lower() == "true"
+        exclude_self_flag = get_bool_arg(request, "exclude_self", default=False)
         if exclude_self_flag and gateway_id_arg:
             try:
                 if node_id_for_gateway is None:
@@ -272,10 +261,8 @@ def api_nodes():
     """API endpoint for node data (with optional search)."""
     logger.info("API nodes endpoint accessed")
     try:
-        limit = request.args.get("limit", 100, type=int)
-        page = request.args.get("page", 1, type=int)
-        search = request.args.get("search", "").strip()
-        offset = (page - 1) * limit
+        page, limit, offset = get_pagination(request, default_limit=100, max_limit=200)
+        search = get_str_arg(request, "search", default="", max_len=128)
 
         # Check if database tables exist before calling NodeRepository
         db_ready = False
@@ -321,11 +308,8 @@ def api_nodes_search():
     """API endpoint for searching nodes by name or ID."""
     logger.info("API nodes search endpoint accessed")
     try:
-        query = request.args.get("q", "").strip()
-        limit = request.args.get("limit", 20, type=int)
-
-        # Limit the search limit to prevent abuse
-        limit = min(limit, 100)
+        query = get_str_arg(request, "q", default="", max_len=128)
+        limit = get_int_arg(request, "limit", default=20, min_val=1, max_val=100)
 
         # Check if database tables exist before calling NodeRepository
         db_ready = False
@@ -1227,15 +1211,14 @@ def api_packets_data():
     """Modern table endpoint for packets with structured JSON response."""
     logger.info("API packets modern endpoint accessed")
     try:
-        # Get parameters
-        page = request.args.get("page", type=int, default=1)
-        limit = request.args.get("limit", type=int, default=25)
-        search = request.args.get("search", default="")
-        sort_by = request.args.get("sort_by", default="timestamp")
-        sort_order = request.args.get("sort_order", default="desc")
-        group_packets = (
-            request.args.get("group_packets", default="false").lower() == "true"
-        )
+        # Get parameters (with safe defaults and clamping)
+        page, limit, offset = get_pagination(request, default_limit=25, max_limit=200)
+        search = get_str_arg(request, "search", default="", max_len=128)
+        sort_by = get_str_arg(request, "sort_by", default="timestamp", max_len=32, pattern=r"[\w_]+")
+        if sort_by not in {"timestamp", "size", "gateway", "gateway_count", "from_node", "to_node", "hops"}:
+            sort_by = "timestamp"
+        sort_order = get_str_arg(request, "sort_order", default="desc", max_len=4, pattern=r"asc|desc")
+        group_packets = get_bool_arg(request, "group_packets", default=False)
 
         # Build filters from query parameters
         filters: dict[str, Any] = {}
@@ -1249,58 +1232,38 @@ def api_packets_data():
             except ValueError:
                 # Fallback to use raw string if conversion fails (legacy)
                 filters["gateway_id"] = gateway_id_arg
-        from_node_str = request.args.get("from_node", "").strip()
-        if from_node_str:
-            try:
-                filters["from_node"] = int(from_node_str)
-            except ValueError:
-                pass
-        to_node_str = request.args.get("to_node", "").strip()
-        if to_node_str:
-            try:
-                filters["to_node"] = int(to_node_str)
-            except ValueError:
-                pass
-        portnum = request.args.get("portnum", "").strip()
+        from_node = get_int_arg(request, "from_node", default=0, min_val=0, max_val=2**32 - 1)
+        if from_node:
+            filters["from_node"] = from_node
+        to_node = get_int_arg(request, "to_node", default=0, min_val=0, max_val=2**32 - 1)
+        if to_node:
+            filters["to_node"] = to_node
+        portnum = get_str_arg(request, "portnum", default="", max_len=32, pattern=r"[\w.-]+")
         if portnum:
             filters["portnum"] = portnum
-        min_rssi_str = request.args.get("min_rssi")
-        if min_rssi_str:
-            try:
-                filters["min_rssi"] = int(min_rssi_str)
-            except ValueError:
-                pass
-        hop_count_str = request.args.get("hop_count")
-        if hop_count_str:
-            try:
-                filters["hop_count"] = int(hop_count_str)
-            except ValueError:
-                pass
+        if request.args.get("min_rssi") is not None:
+            filters["min_rssi"] = get_int_arg(request, "min_rssi", default=0, min_val=-200, max_val=0)
+        hop_count = get_int_arg(request, "hop_count", default=-1, min_val=0, max_val=100)
+        if hop_count >= 0:
+            filters["hop_count"] = hop_count
 
         # New: primary_channel filter (packet channel_id)
-        primary_channel = request.args.get("primary_channel", "").strip()
+        primary_channel = get_str_arg(request, "primary_channel", default="", max_len=64)
         if primary_channel:
             filters["primary_channel"] = primary_channel
 
         # ------------------------------------------------------------------
         # Generic exclusion filters (exclude_from, exclude_to)
         # ------------------------------------------------------------------
-        exclude_from_str = request.args.get("exclude_from", "").strip()
-        if exclude_from_str:
-            try:
-                filters["exclude_from"] = int(exclude_from_str)
-            except ValueError:
-                pass
-
-        exclude_to_str = request.args.get("exclude_to", "").strip()
-        if exclude_to_str:
-            try:
-                filters["exclude_to"] = int(exclude_to_str)
-            except ValueError:
-                pass
+        exclude_from = get_int_arg(request, "exclude_from", default=0, min_val=0, max_val=2**32 - 1)
+        if exclude_from:
+            filters["exclude_from"] = exclude_from
+        exclude_to = get_int_arg(request, "exclude_to", default=0, min_val=0, max_val=2**32 - 1)
+        if exclude_to:
+            filters["exclude_to"] = exclude_to
 
         # Special convenience flag to exclude self-reported gateway messages
-        exclude_self_flag = request.args.get("exclude_self", "false").lower() == "true"
+        exclude_self_flag = get_bool_arg(request, "exclude_self", default=False)
         if exclude_self_flag and gateway_id_arg:
             try:
                 if node_id_for_gateway is None:
@@ -1312,30 +1275,12 @@ def api_packets_data():
                 pass
 
         # Handle time filters
-        start_time_str = request.args.get("start_time", "").strip()
-        if start_time_str:
-            try:
-                from datetime import datetime
-
-                dt = datetime.fromisoformat(start_time_str)
-                filters["start_time"] = dt.timestamp()
-            except (ValueError, TypeError):
-                # Invalid time format, ignore filter
-                pass
-
-        end_time_str = request.args.get("end_time", "").strip()
-        if end_time_str:
-            try:
-                from datetime import datetime
-
-                dt = datetime.fromisoformat(end_time_str)
-                filters["end_time"] = dt.timestamp()
-            except (ValueError, TypeError):
-                # Invalid time format, ignore filter
-                pass
-
-        # Calculate offset
-        offset = (page - 1) * limit
+        start_ts = get_iso_ts(request, "start_time")
+        end_ts = get_iso_ts(request, "end_time")
+        if start_ts is not None:
+            filters["start_time"] = start_ts
+        if end_ts is not None:
+            filters["end_time"] = end_ts
 
         # Map sort fields for computed columns
         sort_field_mapping = {
