@@ -1,9 +1,10 @@
-# Malla (Meshworks fork)
+# MeshWorks Malla — Meshtastic analysis & web UI
 
-Malla (_Mesh_, in Spanish) is an ([AI-built](./AI.md)) tool that logs Meshtastic packets from an MQTT broker into a SQLite database and exposes a web UI to explore and monitor the network.  
-This repository is Meshworks' maintained fork of [zenitraM/malla](https://github.com/zenitraM/malla) and powers the monitoring stack behind [meshworks.ru](https://meshworks.ru/).
+MeshWorks Malla (_“mesh”_ in Spanish) ingests Meshtastic MQTT packets into SQLite and provides a modern web UI to explore packets, nodes, chat, traceroutes and maps. It’s suitable for personal networks, community deployments and experimentation.
 
-Public Docker images are published to **ghcr.io/aminovpavel/meshworks-malla**.
+Public Docker images live at **ghcr.io/aminovpavel/meshworks-malla**.
+
+> Attribution: This project originated as a fork of [zenitraM/malla](https://github.com/zenitraM/malla). Many thanks to the upstream authors and community.
 
 ## Quick start
 
@@ -36,22 +37,15 @@ Need demo data, screenshots, maintainer workflows or release notes on the image 
 
 ## Running instances
 
-Meshworks operates a public deployment backed by this fork:
-- https://malla.meshworks.ru/ (Russia / Moscow mesh)
+Community instances may run different versions; feature parity is not guaranteed.
 
-Community-operated upstream instances such as https://malla.meshtastic.es/ may run different code; feature parity is not guaranteed.
+## Highlights
 
-## Meshworks-specific enhancements
-
-In addition to staying close to upstream, this fork ships Meshworks-focused improvements:
-
-- Hardened chat experience with filterable live stream, adaptive tooltips and extensive end-to-end tests.
-- Dark-mode aligned UI assets and Playwright-based screenshot tooling (`scripts/generate_screenshots.py`).
-- Deterministic demo database generator for docs/tests via `scripts/create_demo_database.py`.
-- Continuous integration coverage for Python 3.13 + Playwright, matching our production stack.
-- Infrastructure docs and GitOps alignment for the Meshworks Meshtastic deployment.
-
-Wherever possible we keep changes compatible so upstream updates remain easy to merge.
+- Fast packet browser with filters (time, node, RSSI/SNR, type) and CSV export
+- Chat stream (TEXT_MESSAGE_APP) with sender/channel filters
+- Node explorer (hardware, role, battery) with search & badges
+- Traceroutes, map and network graph views
+- Tools: hop analysis, gateway compare, longest links, analytics
 
 ## Features
 
@@ -153,9 +147,9 @@ The compose file ships with a capture + web pair already wired to share `malla_d
 
 ### Image tags
 
-- `latest` – moving tag following the default branch.
-- `sha-<shortsha>` – immutable commit-based pins (recommended for production).
-- Semver `vX.Y.Z` (when releases are cut), plus `X.Y`.
+- `latest` – moving tag following the default branch
+- `sha-<shortsha>` – immutable commit-based pins (recommended for production)
+- Semver `vX.Y.Z` (when releases are cut), plus `X.Y`
 
 **Manual Docker run (advanced):**
 ```bash

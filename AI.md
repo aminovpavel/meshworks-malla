@@ -1,13 +1,37 @@
-# About AI in this project
+# AI & Contributor Workflow
 
-Malla was almost entirely kickstarted, or rather _vibe coded_ using AI, with Cursor and Claude 4 Sonnet.
+This repository uses AI-assisted workflows (coding agents + CI policy) in a transparent, contributor‑friendly way. This document describes how to work with the repo safely.
 
-This is a "between jobs hobby project" where I mostly cared about the idea and the UX working and the data making sense, and not so much about the code quality, scalability, security or maintainability.
+## Principles
+- Human‑owned decisions: maintainers approve policy and releases.
+- Deterministic CI: PRs must pass a small, stable set of checks.
+- Public‑safe: no secrets in the repo; use local env files or CI secrets.
 
-This means -- this code may likely not what you would call "production ready". I have _not_ gone doing a full review of the entirety of the code the model has churned out, although I at least tried for it to be kept relatively structured.
+## PR checks (required)
+- `PR Checks (Python)`: lint (ruff), types (basedpyright), unit tests (no e2e/integration/slow on PR)
+- `pr-smoke`: Docker build (no push), run container, hit `/health`
+- `policy`: Self‑Approval Policy — allows merge without external approvals only for `@aminovpavel`
+- `sensitive-policy`: if PR modifies `.github/workflows/**`, `AGENTS.md`, or `AGENTS_DOCS/**`, require label `owner-ack`
 
-I also tried the code to make tests that it continously ran (see [cursorrules](./cursorrules)), it was useful to keep a self-running feedback loop but it also likely has led to some of the tests actually being wrong or the AI cheating to make them pass.
+## Branch protection (summary)
+- PR required (admins included), linear history, resolve conversations, no force‑push/delete.
+- Required checks = the four above. Approvals set to 0 because GitHub doesn’t allow authors to approve their own PRs; self‑approval is governed by `policy`.
 
-I don't think there's a lot of room for it to be security issues in a project like this, the app has no auth, the public facing server only interacts with its own SQLite and most of the data is already public anyhow (if the attacker comes with a LoRA receiver to the right place they can see most of the data). But.. famous last words.
+## Local secrets (not committed)
+- `env/.gh_token` — GitHub PAT for automations
+- `env/.gitea_token` — Gitea PAT (if you use Gitea tooling)
+- `env/.telegram_bot_token`, `env/.telegram_chat_id` — if you use Telegram alerts
 
-In any case, and just in case - don't run this in production or anywhere close to any critical data if you expose it to the internet, and if you do, take good isolation measures. I run it on a isolated cheap VPS.
+## Runbooks
+- See `AGENTS_DOCS/` in the workspace root for operational notes (CI/PR policy, nginx, backups, alerts, docs, fork detach). These are short, public‑safe guides.
+
+## Notes on AI assistance
+- We use agents for refactors, docs, CI updates, and maintenance. Agents follow AGENTS.md (TL;DR policies) and add/adjust runbooks in `AGENTS_DOCS/` as needed.
+- Agents never embed secrets. Any operational changes are kept concise, with owner confirmation when in doubt.
+
+## Personal note
+This is a personal repository maintained by @aminovpavel. Day‑to‑day work often uses
+GPT Codex (gpt‑5 high) together with the Cursor editor. The goal is to keep the
+workflow transparent and contributor‑friendly: small PRs, clear CI signals, and
+public‑safe documentation. Upstream authors of the original malla are credited in
+README with thanks.

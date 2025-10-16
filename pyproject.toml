@@ -46,10 +46,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/zenitraM/malla"
-Documentation = "https://github.com/zenitraM/malla#readme"
-Repository = "https://github.com/zenitraM/malla.git"
-Issues = "https://github.com/zenitraM/malla/issues"
+Homepage = "https://github.com/aminovpavel/meshworks-malla"
+Documentation = "https://github.com/aminovpavel/meshworks-malla#readme"
+Repository = "https://github.com/aminovpavel/meshworks-malla.git"
+Issues = "https://github.com/aminovpavel/meshworks-malla/issues"
 
 [project.scripts]
 malla-web = "malla.web_ui:main"
