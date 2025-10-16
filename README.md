@@ -104,6 +104,18 @@ docker pull ghcr.io/aminovpavel/meshworks-malla:latest
 # or pin a specific build
 docker pull ghcr.io/aminovpavel/meshworks-malla:sha-be66ef8
 
+# Run capture (MQTT -> SQLite)
+docker volume create malla_data
+docker run -d --name malla-capture \"
+  -e MALLA_MQTT_BROKER_ADDRESS=your.mqtt.broker.address \"
+  -e MALLA_MQTT_PORT=1883 \"
+  -e MALLA_MQTT_USERNAME=your_user \"
+  -e MALLA_MQTT_PASSWORD=your_pass \"
+  -e MALLA_DATABASE_FILE=/app/data/meshtastic_history.db \"
+  -v malla_data:/app/data \"
+  ghcr.io/aminovpavel/meshworks-malla:sha-be66ef8 \"
+  /app/.venv/bin/malla-capture
+
 # Run Web UI only (binds 5008)
 docker run -d --name malla-web \
   -p 5008:5008 \
@@ -112,7 +124,7 @@ docker run -d --name malla-web \
   -e MALLA_PORT=5008 \
   -v malla_data:/app/data \
   ghcr.io/aminovpavel/meshworks-malla:sha-be66ef8 \
-  /app/.venv/bin/malla-web
+  /app/.venv/bin/malla-web-gunicorn
 ```
 
 To force-refresh browser caches for static assets, set `MALLA_STATIC_VERSION` (typically the short SHA of the image):
