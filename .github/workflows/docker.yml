@@ -64,6 +64,16 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Smoke test image (PR only)
+        if: github.event_name == 'pull_request'
+        run: |
+          docker buildx build --load --platform linux/amd64 -t malla-pr:${{ github.sha }} .
+          docker run -d --rm -p 5008:5008 --name malla-pr malla-pr:${{ github.sha }}
+          sleep 3
+          curl -fsS http://127.0.0.1:5008/health | jq .
+          docker logs malla-pr --tail 50 || true
+          docker rm -f malla-pr || true
+
       - name: Generate artifact attestation
         if: github.event_name != 'pull_request'
         uses: actions/attest-build-provenance@v1
