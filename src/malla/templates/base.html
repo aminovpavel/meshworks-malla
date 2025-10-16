@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{{ APP_NAME }}{% endblock %}</title>
 
+    <!-- Favicon (ICO only) -->
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='icons/favicon.ico', v=STATIC_VERSION) }}">
+    <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='icons/favicon.ico', v=STATIC_VERSION) }}">
+
     <script>
         (function () {
             var storageKey = 'malla-theme-preference';
