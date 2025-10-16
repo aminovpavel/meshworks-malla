@@ -46,8 +46,13 @@ jobs:
             let ok = true;
             let reason = '';
             if (approvers.size === 0) {
-              ok = false;
-              reason = 'No approvals present';
+              // Allow merge without approvals only for allowlisted author
+              if (allowedSelf.includes(author)) {
+                ok = true;
+              } else {
+                ok = false;
+                reason = 'No approvals present';
+              }
             } else if (approvers.size === 1 && approvers.has(author)) {
               // Only self-approval exists
               ok = allowedSelf.includes(author);
