@@ -1469,9 +1469,14 @@ def api_nodes_data():
     """Modern table endpoint for nodes with structured JSON response."""
     logger.info("API nodes modern endpoint accessed")
     try:
-        # Get parameters
+        # Get parameters with safe pagination clamps
         page = request.args.get("page", type=int, default=1)
-        limit = request.args.get("limit", type=int, default=25)
+        # Clamp limit to avoid heavy queries/DoS
+        try:
+            limit_raw = int(request.args.get("limit", 25))
+        except Exception:
+            limit_raw = 25
+        limit = max(1, min(limit_raw, 200))
         search = request.args.get("search", default="")
         sort_by = request.args.get("sort_by", default="last_packet_time")
         sort_order = request.args.get("sort_order", default="desc")
@@ -1489,7 +1494,8 @@ def api_nodes_data():
         if primary_channel:
             filters["primary_channel"] = primary_channel
 
-        # Calculate offset
+        # Calculate offset (keeping page >= 1)
+        page = max(1, page or 1)
         offset = (page - 1) * limit
 
         # Get node data using repository
