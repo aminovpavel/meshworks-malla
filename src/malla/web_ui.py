@@ -16,7 +16,6 @@ from pathlib import Path
 from typing import Any
 
 from flask import Flask, abort, g, request
-from flask.typing import ResponseReturnValue
 from markupsafe import Markup
 from werkzeug.exceptions import HTTPException
 
@@ -120,11 +119,11 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
     app.config["STATIC_VERSION"] = static_version
     # Bound maximum request body size (bytes) to avoid large uploads (esp. debug endpoints)
     try:
-        app.config.setdefault(
-            "MAX_CONTENT_LENGTH", int(os.getenv("MALLA_MAX_CONTENT_LENGTH", "1048576"))
+        app.config["MAX_CONTENT_LENGTH"] = int(
+            os.getenv("MALLA_MAX_CONTENT_LENGTH", "1048576")
         )
     except Exception:
-        app.config.setdefault("MAX_CONTENT_LENGTH", 1048576)
+        app.config["MAX_CONTENT_LENGTH"] = 1048576
 
     # Optionally trust proxy headers for correct scheme/host with Gunicorn behind Nginx
     if getattr(cfg, "trust_proxy_headers", False):
@@ -387,8 +386,11 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
     # Optional: lightweight rate limiting via Flask-Limiter, if available
     # ------------------------------------------------------------------
     try:  # pragma: no cover - add-on, not required for tests
-        from flask_limiter import Limiter  # type: ignore[reportMissingImports]
-        from flask_limiter.util import get_remote_address  # type: ignore[reportMissingImports]
+        import importlib
+        _lm = importlib.import_module("flask_limiter")
+        _lm_util = importlib.import_module("flask_limiter.util")
+        Limiter = _lm.Limiter
+        get_remote_address = _lm_util.get_remote_address
 
         default_limit = (getattr(cfg, "default_rate_limit", "") or "").strip()
         # Never enable rate limiting in development (Flask debug)

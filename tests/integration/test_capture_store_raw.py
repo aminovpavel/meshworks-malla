@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import os
+import importlib
 import sqlite3
 import tempfile
-
-import importlib
 
 
 def _setup_db_path(monkeypatch):
@@ -99,4 +97,3 @@ def test_init_database_sets_wal(monkeypatch):
     cur.execute("PRAGMA journal_mode")
     assert cur.fetchone()[0].lower() == "wal"
     conn.close()
-

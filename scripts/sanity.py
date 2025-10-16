@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import compileall
 from malla.config import AppConfig
+import tempfile
 from malla.web_ui import create_app
 
 
@@ -18,7 +19,10 @@ def main() -> int:
     if not ok:
         raise SystemExit("compileall failed")
 
-    app = create_app(AppConfig(database_file=":memory:", debug=False))
+    # Use a temp file DB so read-only mode can open it and API /api/nodes works in 'db not ready' branch
+    tf = tempfile.NamedTemporaryFile(delete=False, suffix=".db")
+    tf.close()
+    app = create_app(AppConfig(database_file=tf.name, debug=False))
     c = app.test_client()
 
     r = c.get("/health")
@@ -29,8 +33,8 @@ def main() -> int:
     assert h.get("X-Frame-Options") == "DENY", "missing X-Frame-Options"
     assert "Content-Security-Policy" in h, "missing CSP header"
 
-    d = c.get("/api/nodes/data?limit=999999").get_json()
-    assert 1 <= d.get("limit", 0) <= 200, "nodes/data clamp failed"
+    d = c.get("/api/nodes?limit=999999").get_json()
+    assert 1 <= d.get("per_page", 0) <= 200, "nodes clamp failed"
 
     print("sanity ok")
     return 0
@@ -38,4 +42,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

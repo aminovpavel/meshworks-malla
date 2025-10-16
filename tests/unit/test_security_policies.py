@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import os
 import tempfile
 
-import pytest
-
-from src.malla.web_ui import create_app
 from src.malla.config import AppConfig
+from src.malla.web_ui import create_app
 from tests.fixtures.database_fixtures import DatabaseFixtures
 
 
@@ -98,9 +95,8 @@ def test_max_content_length_blocks_large_debug_report(monkeypatch):
     monkeypatch.setenv("MALLA_MAX_CONTENT_LENGTH", "1024")
     app = _app_with_db(debug=True)  # enable debug endpoints
     with app.test_client() as c:
-        big = "a" * 2048
-        r = c.post("/__debug/report", json={"x": big})
-        # Werkzeug raises 413 when MAX_CONTENT_LENGTH exceeded
+        # Send raw payload to guarantee Content-Length is set and over limit
+        big = b"a" * 20480
+        r = c.post("/__debug/report", data=big, content_type="application/json")
+        # Expect 413 (or 400 depending on stack)
         assert r.status_code in (400, 413)
-        # Some servers may coerce to 400; accept either as failure to accept
-

@@ -5,10 +5,10 @@ This module provides data access layer with business logic for different entitie
 """
 
 import html
-import sqlite3
 import json
 import logging
 import re
+import sqlite3
 import time
 from datetime import UTC, datetime
 from typing import Any
@@ -34,6 +34,7 @@ class DashboardRepository:
         """Get overview statistics for the dashboard using optimized single query."""
         logger.info(f"Getting dashboard stats with gateway_id={gateway_id}")
 
+        conn = None
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -114,7 +115,8 @@ class DashboardRepository:
             if "malformed" in str(e).lower():
                 logger.error(f"DashboardRepository.get_stats degraded due to DB corruption: {e}")
                 try:
-                    conn.close()
+                    if conn:
+                        conn.close()
                 except Exception:
                     pass
                 # Return minimal safe payload so UI stays up
@@ -1048,7 +1050,7 @@ class ChatRepository:
             )
 
             rows = cursor.fetchall()
-            
+
             message_group_ids = list(
                 {
                     row["message_group_id"]

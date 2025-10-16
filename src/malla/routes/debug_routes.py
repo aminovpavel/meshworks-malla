@@ -51,6 +51,12 @@ def ping() -> Response:
 def report() -> Response:
     if not _enabled() or not _check_token():
         return Response(status=403)
+    # Enforce request size cap explicitly (Flask MAX_CONTENT_LENGTH may not trigger in all client modes)
+    max_len = int(current_app.config.get("MAX_CONTENT_LENGTH") or 0)
+    if max_len:
+        raw = request.get_data(cache=True) or b""
+        if len(raw) > max_len:
+            return Response(status=413)
     try:
         payload = request.get_json(force=True, silent=True) or {}
     except Exception:
