@@ -12,7 +12,7 @@ Pick whichever workflow fits you best:
 
 - **Local development (recommended)**  
   ```bash
-  git clone https://git.meshworks.ru/MeshWorks/meshworks-malla.git
+  git clone https://github.com/aminovpavel/meshworks-malla.git
   cd meshworks-malla
   curl -LsSf https://astral.sh/uv/install.sh | sh        # install uv (once)
   uv sync --dev                                         # install deps incl. Playwright tooling
@@ -24,7 +24,7 @@ Pick whichever workflow fits you best:
 
 - **Docker compose (deployment-style)**  
   ```bash
-  git clone https://git.meshworks.ru/MeshWorks/meshworks-malla.git
+  git clone https://github.com/aminovpavel/meshworks-malla.git
   cd meshworks-malla
   cp env.example .env                                  # fill in MQTT credentials
   docker pull ghcr.io/aminovpavel/meshworks-malla:latest
@@ -104,7 +104,19 @@ docker pull ghcr.io/aminovpavel/meshworks-malla:latest
 # or pin a specific build
 docker pull ghcr.io/aminovpavel/meshworks-malla:sha-be66ef8
 
-# Run Web UI only (binds 5008)
+# Run capture (MQTT -> SQLite)
+docker volume create malla_data
+docker run -d --name malla-capture \
+  -e MALLA_MQTT_BROKER_ADDRESS=your.mqtt.broker.address \
+  -e MALLA_MQTT_PORT=1883 \
+  -e MALLA_MQTT_USERNAME=your_user \
+  -e MALLA_MQTT_PASSWORD=your_pass \
+  -e MALLA_DATABASE_FILE=/app/data/meshtastic_history.db \
+  -v malla_data:/app/data \
+  ghcr.io/aminovpavel/meshworks-malla:sha-be66ef8 \
+  /app/.venv/bin/malla-capture
+
+# Run Web UI (binds 5008) — production (Gunicorn)
 docker run -d --name malla-web \
   -p 5008:5008 \
   -e MALLA_DATABASE_FILE=/app/data/meshtastic_history.db \
@@ -112,7 +124,7 @@ docker run -d --name malla-web \
   -e MALLA_PORT=5008 \
   -v malla_data:/app/data \
   ghcr.io/aminovpavel/meshworks-malla:sha-be66ef8 \
-  /app/.venv/bin/malla-web
+  /app/.venv/bin/malla-web-gunicorn
 ```
 
 To force-refresh browser caches for static assets, set `MALLA_STATIC_VERSION` (typically the short SHA of the image):
@@ -126,7 +138,7 @@ docker run -d --name malla-web \
   -e MALLA_STATIC_VERSION=be66ef8 \
   -v malla_data:/app/data \
   ghcr.io/aminovpavel/meshworks-malla:sha-be66ef8 \
-  /app/.venv/bin/malla-web
+  /app/.venv/bin/malla-web-gunicorn
 ```
 
 ### Using Docker (build locally)
@@ -134,7 +146,7 @@ docker run -d --name malla-web \
 You can also build an image locally and point Docker Compose at the result.
 
 ```bash
-git clone https://git.meshworks.ru/MeshWorks/meshworks-malla.git
+git clone https://github.com/aminovpavel/meshworks-malla.git
 cd meshworks-malla
 cp env.example .env                      # fill in MQTT credentials
 $EDITOR .env
@@ -180,7 +192,7 @@ docker run -d --name malla-web \
 You can also install and run this fork directly using [uv](https://docs.astral.sh/uv/):
 1. **Clone the repository** (Meshworks fork):
    ```bash
-   git clone https://git.meshworks.ru/MeshWorks/meshworks-malla.git
+   git clone https://github.com/aminovpavel/meshworks-malla.git
    cd meshworks-malla
    ```
 
