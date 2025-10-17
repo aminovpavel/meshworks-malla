@@ -40,6 +40,10 @@
         }
     }
 
+    function buildAbsoluteUrl(relativePath) {
+        return new URL(relativePath, window.location.origin).toString();
+    }
+
     const NodeCache = {
         /**
          * Load the full node list, restoring from cache if possible.
@@ -61,7 +65,9 @@
 
                 // 2. Fetch from API
                 try {
-                    const resp = await fetch('/api/nodes?limit=1000');
+                    const resp = await fetch(buildAbsoluteUrl('/api/nodes?limit=1000'), {
+                        credentials: 'include',
+                    });
                     if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
                     const data = await resp.json();
                     _nodes = data.nodes || [];
@@ -114,7 +120,8 @@
 
             // If we're still loading the big list, perform a quick focused query to the API
             try {
-                const resp = await fetch(`/api/nodes?search=${encodeURIComponent(query)}&limit=${limit}`);
+                const searchUrl = buildAbsoluteUrl(`/api/nodes?search=${encodeURIComponent(query)}&limit=${limit}`);
+                const resp = await fetch(searchUrl, { credentials: 'include' });
                 if (resp.ok) {
                     const data = await resp.json();
                     if (Array.isArray(data.nodes)) {

@@ -130,16 +130,6 @@
     const searchInput = document.getElementById('chat-text-search');
     const chatPanelEl = document.querySelector('.chat-panel');
     const compactToggleEl = document.getElementById('chat-compact-toggle');
-    const summaryEl = document.getElementById('chat-summary');
-    const summaryDetailsEl = document.getElementById('chat-summary-details');
-    const summaryFields = summaryEl ? {
-        total: summaryEl.querySelector('[data-summary="total"]'),
-        senders: summaryEl.querySelector('[data-summary="senders"]'),
-        broadcast: summaryEl.querySelector('[data-summary="broadcast"]'),
-        direct: summaryEl.querySelector('[data-summary="direct"]'),
-        gateways: summaryEl.querySelector('[data-summary="gateways"]'),
-    } : null;
-
     const scrollSentinelEl = document.getElementById('chat-scroll-sentinel');
     const windowQuickEl = document.getElementById('chat-window-quick');
     const activeFiltersEl = document.getElementById('chat-active-filters');
@@ -150,10 +140,6 @@
     const customCloseBtn = document.getElementById('chat-custom-close');
     const customPresetsContainer = document.querySelector('.chat-custom-presets-buttons');
     const COMPACT_STORAGE_KEY = 'chatCompactMode';
-
-    if (summaryDetailsEl && window.matchMedia('(min-width: 992px)').matches) {
-        summaryDetailsEl.setAttribute('open', '');
-    }
 
     if (searchInput) {
         if (chatState.search) {
@@ -750,14 +736,6 @@
         `;
     }
 
-    function formatCountWithPercent(count, total) {
-        if (!total || total <= 0) {
-            return '—';
-        }
-        const pct = Math.round((count / total) * 100);
-        return `${count.toLocaleString()} (${pct}%)`;
-    }
-
     function getMessageKey(message) {
         if (!message || typeof message !== 'object') {
             return null;
@@ -1153,69 +1131,6 @@
         renderActiveFilters();
     }
 
-    function updateSummary(meta) {
-        if (!summaryFields) {
-            return;
-        }
-        const list = Array.isArray(chatState.messages) ? chatState.messages : [];
-        const totalFromMeta = meta && typeof meta.total === 'number' ? meta.total : null;
-        const totalCount = totalFromMeta ?? list.length;
-
-        const applyValue = (field, value) => {
-            if (!field) {
-                return;
-            }
-            field.textContent = value;
-        };
-
-        if (!list.length && (totalCount ?? 0) === 0) {
-            applyValue(summaryFields.total, '—');
-            applyValue(summaryFields.senders, '—');
-            applyValue(summaryFields.broadcast, '—');
-            applyValue(summaryFields.direct, '—');
-            applyValue(summaryFields.gateways, '—');
-            return;
-        }
-
-        const senders = new Set();
-        let broadcastCount = 0;
-        let gatewaySum = 0;
-        let gatewayMessages = 0;
-
-        list.forEach((message) => {
-            const senderKey = message.from_node_id ?? message.from_name ?? message.id;
-            if (senderKey !== undefined && senderKey !== null) {
-                senders.add(String(senderKey));
-            }
-            if (message.to_is_broadcast) {
-                broadcastCount += 1;
-            }
-            const gatewayCount = typeof message.gateway_count === 'number'
-                ? message.gateway_count
-                : Array.isArray(message.gateway_nodes)
-                    ? message.gateway_nodes.length
-                    : 0;
-            if (gatewayCount > 0) {
-                gatewaySum += gatewayCount;
-                gatewayMessages += 1;
-            }
-        });
-
-        const directCount = (list.length || totalCount) - broadcastCount;
-        const averageGateways = gatewayMessages
-            ? gatewaySum / gatewayMessages
-            : 0;
-
-        applyValue(summaryFields.total, totalCount.toLocaleString());
-        applyValue(summaryFields.senders, senders.size ? senders.size.toLocaleString() : '—');
-        applyValue(summaryFields.broadcast, formatCountWithPercent(broadcastCount, list.length || totalCount));
-        applyValue(summaryFields.direct, formatCountWithPercent(Math.max(directCount, 0), list.length || totalCount));
-        applyValue(
-            summaryFields.gateways,
-            gatewayMessages ? `${averageGateways.toFixed(averageGateways >= 10 ? 0 : 1)} avg` : '—',
-        );
-    }
-
     function applyCompactMode(isCompact, options) {
         if (!chatPanelEl) {
             return;
@@ -1409,23 +1324,93 @@
             + `${sign}${offsetHours}:${offsetMins}`;
     }
 
-    function updateMeta(meta) {
-        const counts = (meta && meta.counts) || {};
-        const hourCount = counts.last_hour ?? counts.count_1h ?? counts.hour ?? 0;
-        const dayCount = counts.last_day ?? counts.count_24h ?? counts.day ?? 0;
+    function getMessageTimestampMs(message) {
+        if (!message) {
+            return null;
+        }
+        if (message.timestamp_unix !== undefined && message.timestamp_unix !== null) {
+            const unix = Number(message.timestamp_unix);
+            if (Number.isFinite(unix)) {
+                return unix * 1000;
+            }
+        }
+        if (message.timestamp) {
+            const parsed = Date.parse(message.timestamp);
+            if (!Number.isNaN(parsed)) {
+                return parsed;
+            }
+        }
+        if (message.created_at) {
+            const parsed = Date.parse(message.created_at);
+            if (!Number.isNaN(parsed)) {
+                return parsed;
+            }
+        }
+        return null;
+    }
+
+    function updateActivityStats(meta) {
+        const list = Array.isArray(chatState.messages) ? chatState.messages : [];
+        const now = Date.now();
+        const oneHourAgo = now - (60 * 60 * 1000);
+        const oneDayAgo = now - (24 * 60 * 60 * 1000);
+        let hourCount = 0;
+        let dayCount = 0;
+
+        if (list.length) {
+            list.forEach((message) => {
+                const timestamp = getMessageTimestampMs(message);
+                if (timestamp === null) {
+                    return;
+                }
+                if (timestamp >= oneDayAgo) {
+                    dayCount += 1;
+                    if (timestamp >= oneHourAgo) {
+                        hourCount += 1;
+                    }
+                }
+            });
+        } else if (meta && meta.counts) {
+            const counts = meta.counts;
+            dayCount = counts.last_day ?? counts.count_24h ?? counts.day ?? 0;
+            hourCount = counts.last_hour ?? counts.count_1h ?? counts.hour ?? 0;
+        }
 
         if (hourCountValueEl) {
-            hourCountValueEl.textContent = hourCount;
+            hourCountValueEl.textContent = hourCount.toLocaleString();
         }
         if (dayCountValueEl) {
-            dayCountValueEl.textContent = dayCount;
+            dayCountValueEl.textContent = dayCount.toLocaleString();
         }
+    }
 
-        if (lastUpdatedEl) {
-            lastUpdatedEl.textContent = `Updated ${formatTimestampWithOffset(new Date())}`;
+    function updateLastUpdated() {
+        if (!lastUpdatedEl) {
+            return;
         }
+        const latestMessage = chatState.messages && chatState.messages.length
+            ? chatState.messages[0]
+            : null;
+        const timestamp = getMessageTimestampMs(latestMessage);
+        if (timestamp) {
+            lastUpdatedEl.textContent = `Updated ${formatTimestampWithOffset(new Date(timestamp))}`;
+            return;
+        }
+        if (chatState.meta && chatState.meta.generated_at) {
+            const generated = Date.parse(chatState.meta.generated_at);
+            if (!Number.isNaN(generated)) {
+                lastUpdatedEl.textContent = `Updated ${formatTimestampWithOffset(new Date(generated))}`;
+                return;
+            }
+            lastUpdatedEl.textContent = `Updated ${chatState.meta.generated_at}`;
+            return;
+        }
+        lastUpdatedEl.textContent = 'Updated —';
+    }
 
-        updateSummary(meta);
+    function updateMeta(meta) {
+        updateActivityStats(meta);
+        updateLastUpdated();
     }
 
     function applyMetaFromResponse(meta) {
@@ -1491,6 +1476,8 @@
         }
 
         renderMessages(chatState.messages, { replace: true });
+        updateActivityStats(chatState.meta);
+        updateLastUpdated();
         updateRelativeTimes();
     }
 
@@ -1636,8 +1623,13 @@
                 params.set('before_id', cursor.before_id);
             }
 
-            const response = await fetch(`${chatState.apiUrl}?${params.toString()}`, {
+            const baseApiUrl = new URL(chatState.apiUrl, window.location.origin).toString();
+            const queryString = params.toString();
+            const requestUrl = queryString ? `${baseApiUrl}?${queryString}` : baseApiUrl;
+
+            const response = await fetch(requestUrl, {
                 headers: { Accept: 'application/json' },
+                credentials: 'include',
             });
 
             if (!response.ok) {
