@@ -19,19 +19,6 @@
                     <div class="chat-heading-title">
                         <span class="fw-semibold"><i class="bi bi-chat-square-text"></i> Recent messages</span>
                     </div>
-                    <div class="chat-heading-stats">
-                        <span class="chat-activity-pill" id="chat-count-hour">
-                            <i class="bi bi-clock-history"></i>
-                            <span>Last hour:</span>
-                            <strong>{{ (chat_meta.counts.last_hour if chat_meta.counts else 0) | int }}</strong>
-                        </span>
-                        <span class="chat-activity-pill" id="chat-count-day">
-                            <i class="bi bi-calendar-event"></i>
-                            <span>Last 24h:</span>
-                            <strong>{{ (chat_meta.counts.last_day if chat_meta.counts else 0) | int }}</strong>
-                        </span>
-                    </div>
-                    <div class="chat-last-updated text-muted small" id="chat-last-updated">Updated --</div>
                 </div>
                 <div class="chat-header-actions">
                     <button
@@ -50,10 +37,6 @@
                     <button class="btn btn-outline-primary btn-sm chat-refresh-button" type="button" id="chat-refresh-button">
                         <i class="bi bi-arrow-clockwise"></i> Refresh
                     </button>
-                    <div class="form-check form-switch chat-compact-toggle">
-                        <input class="form-check-input" type="checkbox" role="switch" id="chat-compact-toggle">
-                        <label class="form-check-label" for="chat-compact-toggle">Compact mode</label>
-                    </div>
                 </div>
             </div>
 

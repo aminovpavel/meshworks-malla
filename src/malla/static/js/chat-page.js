@@ -91,12 +91,7 @@
     const messageListEl = document.getElementById('chat-message-list');
     const loadingEl = document.getElementById('chat-loading');
     const cardBodyEl = document.getElementById('chat-card-body');
-    const lastUpdatedEl = document.getElementById('chat-last-updated');
     const autoRefreshEl = document.getElementById('chat-live-status') || document.getElementById('chat-auto-refresh-note');
-    const hourCountEl = document.getElementById('chat-count-hour');
-    const dayCountEl = document.getElementById('chat-count-day');
-    const hourCountValueEl = hourCountEl ? hourCountEl.querySelector('strong') : null;
-    const dayCountValueEl = dayCountEl ? dayCountEl.querySelector('strong') : null;
 
     const refreshButton = document.getElementById('chat-refresh-button');
     const liveToggleButton = document.getElementById('chat-live-toggle');
@@ -128,8 +123,6 @@
     const senderToggle = document.getElementById('chat-sender-dropdown');
 
     const searchInput = document.getElementById('chat-text-search');
-    const chatPanelEl = document.querySelector('.chat-panel');
-    const compactToggleEl = document.getElementById('chat-compact-toggle');
     const scrollSentinelEl = document.getElementById('chat-scroll-sentinel');
     const windowQuickEl = document.getElementById('chat-window-quick');
     const activeFiltersEl = document.getElementById('chat-active-filters');
@@ -139,7 +132,6 @@
     const customCancelBtn = document.getElementById('chat-custom-cancel');
     const customCloseBtn = document.getElementById('chat-custom-close');
     const customPresetsContainer = document.querySelector('.chat-custom-presets-buttons');
-    const COMPACT_STORAGE_KEY = 'chatCompactMode';
 
     if (searchInput) {
         if (chatState.search) {
@@ -1131,47 +1123,6 @@
         renderActiveFilters();
     }
 
-    function applyCompactMode(isCompact, options) {
-        if (!chatPanelEl) {
-            return;
-        }
-        chatPanelEl.classList.toggle('chat-compact', Boolean(isCompact));
-        if (compactToggleEl && compactToggleEl.checked !== Boolean(isCompact)) {
-            compactToggleEl.checked = Boolean(isCompact);
-        }
-        if (!options || options.persist !== false) {
-            try {
-                if (isCompact) {
-                    localStorage.setItem(COMPACT_STORAGE_KEY, '1');
-                } else {
-                    localStorage.setItem(COMPACT_STORAGE_KEY, '0');
-                }
-            } catch (_) {
-                // Ignore storage errors (private mode, etc.)
-            }
-        }
-    }
-
-    function initCompactMode() {
-        if (!chatPanelEl) {
-            return;
-        }
-        let storedValue = null;
-        if (typeof localStorage !== 'undefined') {
-            try {
-                storedValue = localStorage.getItem(COMPACT_STORAGE_KEY);
-            } catch (_) {
-                storedValue = null;
-            }
-        }
-        const enabled = storedValue === '1';
-        applyCompactMode(enabled, { persist: false });
-        if (compactToggleEl) {
-            compactToggleEl.checked = enabled;
-            compactToggleEl.addEventListener('change', () => applyCompactMode(compactToggleEl.checked));
-        }
-    }
-
     function renderMessages(messages, options) {
         if (!messageListEl) {
             return;
@@ -1324,95 +1275,6 @@
             + `${sign}${offsetHours}:${offsetMins}`;
     }
 
-    function getMessageTimestampMs(message) {
-        if (!message) {
-            return null;
-        }
-        if (message.timestamp_unix !== undefined && message.timestamp_unix !== null) {
-            const unix = Number(message.timestamp_unix);
-            if (Number.isFinite(unix)) {
-                return unix * 1000;
-            }
-        }
-        if (message.timestamp) {
-            const parsed = Date.parse(message.timestamp);
-            if (!Number.isNaN(parsed)) {
-                return parsed;
-            }
-        }
-        if (message.created_at) {
-            const parsed = Date.parse(message.created_at);
-            if (!Number.isNaN(parsed)) {
-                return parsed;
-            }
-        }
-        return null;
-    }
-
-    function updateActivityStats(meta) {
-        const list = Array.isArray(chatState.messages) ? chatState.messages : [];
-        const now = Date.now();
-        const oneHourAgo = now - (60 * 60 * 1000);
-        const oneDayAgo = now - (24 * 60 * 60 * 1000);
-        let hourCount = 0;
-        let dayCount = 0;
-
-        if (list.length) {
-            list.forEach((message) => {
-                const timestamp = getMessageTimestampMs(message);
-                if (timestamp === null) {
-                    return;
-                }
-                if (timestamp >= oneDayAgo) {
-                    dayCount += 1;
-                    if (timestamp >= oneHourAgo) {
-                        hourCount += 1;
-                    }
-                }
-            });
-        } else if (meta && meta.counts) {
-            const counts = meta.counts;
-            dayCount = counts.last_day ?? counts.count_24h ?? counts.day ?? 0;
-            hourCount = counts.last_hour ?? counts.count_1h ?? counts.hour ?? 0;
-        }
-
-        if (hourCountValueEl) {
-            hourCountValueEl.textContent = hourCount.toLocaleString();
-        }
-        if (dayCountValueEl) {
-            dayCountValueEl.textContent = dayCount.toLocaleString();
-        }
-    }
-
-    function updateLastUpdated() {
-        if (!lastUpdatedEl) {
-            return;
-        }
-        const latestMessage = chatState.messages && chatState.messages.length
-            ? chatState.messages[0]
-            : null;
-        const timestamp = getMessageTimestampMs(latestMessage);
-        if (timestamp) {
-            lastUpdatedEl.textContent = `Updated ${formatTimestampWithOffset(new Date(timestamp))}`;
-            return;
-        }
-        if (chatState.meta && chatState.meta.generated_at) {
-            const generated = Date.parse(chatState.meta.generated_at);
-            if (!Number.isNaN(generated)) {
-                lastUpdatedEl.textContent = `Updated ${formatTimestampWithOffset(new Date(generated))}`;
-                return;
-            }
-            lastUpdatedEl.textContent = `Updated ${chatState.meta.generated_at}`;
-            return;
-        }
-        lastUpdatedEl.textContent = 'Updated —';
-    }
-
-    function updateMeta(meta) {
-        updateActivityStats(meta);
-        updateLastUpdated();
-    }
-
     function applyMetaFromResponse(meta) {
         chatState.meta = meta || {};
         chatState.nextCursor = chatState.meta.next_cursor || null;
@@ -1426,7 +1288,6 @@
             chatState.nextCursor = null;
         }
         updateSentinelState();
-        updateMeta(chatState.meta);
     }
 
     function getLatestPointer() {
@@ -1476,8 +1337,6 @@
         }
 
         renderMessages(chatState.messages, { replace: true });
-        updateActivityStats(chatState.meta);
-        updateLastUpdated();
         updateRelativeTimes();
     }
 
@@ -1545,7 +1404,6 @@
                 if (payload.meta) {
                     applyMetaFromResponse(payload.meta);
                 }
-                updateMeta(chatState.meta);
             } catch (error) {
                 console.error('Failed to process chat stream payload', error);
             }
@@ -2113,9 +1971,7 @@
 
     updateLiveToggleUi();
     renderSendersInitial();
-    initCompactMode();
     renderMessages(chatState.messages, { replace: true });
-    updateMeta(chatState.meta);
     refreshTooltips();
     updateSentinelState();
     initInfiniteScroll();
