@@ -5,9 +5,10 @@ API routes for the Meshtastic Mesh Health Web UI
 import json
 import logging
 import time
+from dataclasses import dataclass
 from typing import Any
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request, stream_with_context
 
 from ..database import (
     ChatRepository,
@@ -24,6 +25,10 @@ from ..services.location_service import LocationService
 from ..services.meshtastic_service import MeshtasticService
 from ..services.node_service import NodeService
 from ..services.traceroute_service import TracerouteService
+from ..utils.chat_windows import (
+    parse_timestamp_param,
+    resolve_window_selection,
+)
 from ..utils.node_utils import (
     convert_node_id,
     get_bulk_node_names,
@@ -41,6 +46,79 @@ from ..utils.traceroute_utils import parse_traceroute_payload
 
 logger = logging.getLogger(__name__)
 api_bp = Blueprint("api", __name__, url_prefix="/api")
+
+
+@dataclass
+class ChatRequestArgs:
+    limit: int
+    channel: str | None
+    node_id: int | None
+    audience: str | None
+    sender_id: int | None
+    search: str | None
+    window_start: float | None
+    window_hours: float | None
+    window_value: str
+    window_label: str
+    before_ts: float | None
+    before_id: int | None
+
+
+def _parse_chat_request_args(req) -> ChatRequestArgs:
+    limit = req.args.get("limit", default=50, type=int)
+    limit = max(1, min(limit, 200))
+
+    window_param = req.args.get("window")
+    since_param = req.args.get("since") or req.args.get("start")
+    before_param = req.args.get("before")
+    before_id_param = req.args.get("before_id")
+    channel = req.args.get("channel")
+    audience = req.args.get("audience")
+    sender_param = req.args.get("sender")
+    node_param = req.args.get("node_id")
+    search_query = req.args.get("q")
+
+    node_id = None
+    if node_param:
+        try:
+            node_id = convert_node_id(node_param)
+        except ValueError as exc:
+            raise ValueError("Invalid node_id parameter") from exc
+
+    sender_id = None
+    if sender_param:
+        try:
+            sender_id = convert_node_id(sender_param)
+        except ValueError as exc:
+            raise ValueError("Invalid sender parameter") from exc
+
+    custom_start_ts = parse_timestamp_param(since_param)
+    window_selection = resolve_window_selection(
+        window_param, custom_start=custom_start_ts
+    )
+
+    before_ts = parse_timestamp_param(before_param)
+    before_id = None
+    if before_id_param:
+        try:
+            before_id = int(str(before_id_param), 10)
+        except (TypeError, ValueError):
+            before_id = None
+
+    return ChatRequestArgs(
+        limit=limit,
+        channel=channel,
+        node_id=node_id,
+        audience=audience,
+        sender_id=sender_id,
+        search=search_query,
+        window_start=window_selection["start_ts"],
+        window_hours=window_selection["hours"],
+        window_value=window_selection["value"],
+        window_label=window_selection["label"],
+        before_ts=before_ts,
+        before_id=before_id,
+    )
 
 
 @api_bp.route("/stats")
@@ -62,40 +140,22 @@ def api_chat_messages():
     logger.info("API chat messages endpoint accessed")
 
     try:
-        limit = request.args.get("limit", default=100, type=int)
-        offset = request.args.get("offset", default=0, type=int)
-        channel = request.args.get("channel")
-        node_param = request.args.get("node_id")
-        audience = request.args.get("audience")
-        sender_param = request.args.get("sender")
-        search_query = request.args.get("q")
+        args = _parse_chat_request_args(request)
+    except ValueError as err:
+        return jsonify({"error": str(err)}), 400
 
-        # Clamp pagination values
-        limit = max(1, min(limit, 500))
-        offset = max(0, offset)
-
-        node_id = None
-        if node_param:
-            try:
-                node_id = convert_node_id(node_param)
-            except ValueError:
-                return jsonify({"error": "Invalid node_id parameter"}), 400
-
-        sender_id = None
-        if sender_param:
-            try:
-                sender_id = convert_node_id(sender_param)
-            except ValueError:
-                return jsonify({"error": "Invalid sender parameter"}), 400
-
+    try:
         messages_data = ChatRepository.get_recent_messages(
-            limit=limit,
-            offset=offset,
-            channel=channel,
-            node_id=node_id,
-            audience=audience,
-            sender_id=sender_id,
-            search=search_query,
+            limit=args.limit,
+            before=args.before_ts,
+            before_id=args.before_id,
+            channel=args.channel,
+            node_id=args.node_id,
+            audience=args.audience,
+            sender_id=args.sender_id,
+            search=args.search,
+            window_start=args.window_start,
+            window_hours=args.window_hours,
         )
         channels = ChatRepository.get_channels()
         senders = ChatRepository.get_senders()
@@ -104,26 +164,132 @@ def api_chat_messages():
             "messages": messages_data["messages"],
             "total": messages_data["total"],
             "limit": messages_data["limit"],
-            "offset": messages_data["offset"],
+            "offset": messages_data.get("offset", 0),
             "has_more": messages_data["has_more"],
             "channels": channels,
-            "selected_channel": channel,
+            "selected_channel": args.channel,
             "senders": senders,
-            "selected_audience": audience,
+            "selected_audience": args.audience,
             "counts": messages_data.get("counts", {}),
             "search": messages_data.get("search"),
+            "window": messages_data.get("window", {}),
+            "window_value": args.window_value,
+            "window_label": args.window_label,
+            "next_cursor": messages_data.get("next_cursor"),
         }
 
-        if node_id is not None:
-            response["selected_node_id"] = node_id
-        if sender_id is not None:
-            response["selected_sender_id"] = sender_id
+        if args.node_id is not None:
+            response["selected_node_id"] = args.node_id
+        if args.sender_id is not None:
+            response["selected_sender_id"] = args.sender_id
 
         return jsonify(response)
 
     except Exception as exc:  # noqa: BLE001
         logger.error(f"Error in API chat messages: {exc}")
         return jsonify({"error": str(exc)}), 500
+
+
+@api_bp.route("/chat/stream")
+def api_chat_stream():
+    """Server-Sent Events stream with live chat updates."""
+    logger.info("API chat stream endpoint accessed")
+
+    try:
+        args = _parse_chat_request_args(request)
+    except ValueError as err:
+        return jsonify({"error": str(err)}), 400
+
+    poll_ms = request.args.get("poll", default=3000, type=int) or 3000
+    poll_interval = max(1.0, min(poll_ms / 1000.0, 30.0))
+    heartbeat_interval = max(5.0, poll_interval * 2)
+
+    last_ts = request.args.get("last_ts", type=float)
+    last_group_id = request.args.get("last_id", type=int)
+    if last_ts is None:
+        last_ts = time.time()
+    if last_group_id is None:
+        last_group_id = 0
+
+    stream_limit = min(args.limit, 50)
+
+    def event_stream():
+        nonlocal last_ts, last_group_id
+        heartbeat_at = time.time()
+        yield ": connected\n\n"
+        while True:
+            try:
+                result = ChatRepository.get_recent_messages(
+                    limit=stream_limit,
+                    channel=args.channel,
+                    node_id=args.node_id,
+                    audience=args.audience,
+                    sender_id=args.sender_id,
+                    search=args.search,
+                    window_start=args.window_start,
+                    window_hours=args.window_hours,
+                )
+            except Exception as exc:  # noqa: BLE001
+                logger.error("chat stream poll failed: %s", exc)
+                time.sleep(poll_interval)
+                continue
+
+            messages = result.get("messages", [])
+            new_messages: list[dict[str, Any]] = []
+            for message in reversed(messages):
+                timestamp_value = float(message.get("timestamp_unix") or 0.0)
+                group_id = (
+                    message.get("message_group_id")
+                    or message.get("id")
+                    or message.get("mesh_packet_id")
+                    or 0
+                )
+                if timestamp_value > last_ts or (
+                    timestamp_value == last_ts and group_id > last_group_id
+                ):
+                    new_messages.append(message)
+
+            if new_messages:
+                new_messages.sort(
+                    key=lambda item: float(item.get("timestamp_unix") or 0.0)
+                )
+                last_message = new_messages[-1]
+                last_ts = float(last_message.get("timestamp_unix") or last_ts)
+                last_group_id = (
+                    last_message.get("message_group_id")
+                    or last_message.get("id")
+                    or last_group_id
+                )
+                payload = {
+                    "messages": new_messages,
+                    "meta": {
+                        "counts": result.get("counts"),
+                        "window": result.get("window"),
+                        "total": result.get("total"),
+                        "has_more": result.get("has_more"),
+                        "next_cursor": result.get("next_cursor"),
+                    },
+                }
+                yield "event: chat-message\n"
+                yield f"data: {json.dumps(payload)}\n\n"
+                heartbeat_at = time.time()
+            elif time.time() - heartbeat_at >= heartbeat_interval:
+                yield "event: chat-heartbeat\n"
+                yield "data: {}\n\n"
+                heartbeat_at = time.time()
+
+            time.sleep(poll_interval)
+
+    headers = {
+        "Cache-Control": "no-cache",
+        "X-Accel-Buffering": "no",
+        "Connection": "keep-alive",
+    }
+    return Response(
+        stream_with_context(event_stream()),
+        headers=headers,
+        mimetype="text/event-stream",
+    )
 
 
 @api_bp.route("/meshtastic/hardware-models")

@@ -10,6 +10,8 @@ import logging
 import re
 import sqlite3
 import time
+from contextlib import closing
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from typing import Any
 
@@ -25,6 +27,21 @@ ISO_TIMESTAMP_RE = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$"
 )
 
+
+@dataclass(frozen=True)
+class ChatQueryParams:
+    """Normalized parameters for chat message queries."""
+
+    limit: int
+    window_start: float
+    window_end: float
+    channel_value: str | None
+    node_id: int | None
+    audience: str | None
+    sender_id: int | None
+    search_term: str | None
+    before_ts: float | None
+    before_group_id: int | None
 
 class DashboardRepository:
     """Repository for dashboard statistics."""
@@ -947,211 +964,441 @@ class ChatRepository:
 
     @staticmethod
     def get_recent_messages(
+        *,
         limit: int = 100,
-        offset: int = 0,
+        before: float | None = None,
+        before_id: int | None = None,
         channel: str | None = None,
         node_id: int | None = None,
         audience: str | None = None,
         sender_id: int | None = None,
         search: str | None = None,
+        window_start: float | None = None,
+        window_hours: float | None = 24.0,
     ) -> dict[str, Any]:
-        """Fetch recent text messages from the packet history."""
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        """Fetch recent text messages from the packet history using a time window."""
+        params = ChatRepository._prepare_query_params(
+            limit=limit,
+            before_ts=before,
+            before_group_id=before_id,
+            channel=channel,
+            node_id=node_id,
+            audience=audience,
+            sender_id=sender_id,
+            search=search,
+            window_start=window_start,
+            window_hours=window_hours,
+        )
 
-        where_clauses = ["portnum_name = ?"]
-        params: list[Any] = [ChatRepository._TEXT_PORT]
+        try:
+            with closing(get_db_connection()) as conn:
+                cursor = conn.cursor()
+                where_clause, where_params = ChatRepository._build_where_clause(params)
+                counts = ChatRepository._fetch_group_counts(
+                    cursor, where_clause, where_params, params.window_end
+                )
+                group_rows = ChatRepository._fetch_group_rows(
+                    cursor, where_clause, where_params, params
+                )
+                gateway_metrics_map = ChatRepository._collect_gateway_metrics(
+                    cursor, group_rows
+                )
+        except sqlite3.DatabaseError as exc:
+            return ChatRepository._handle_chat_db_error(exc, params)
+
+        node_names = ChatRepository._resolve_node_names(group_rows)
+        gateway_name_map = ChatRepository._resolve_gateway_names(
+            group_rows, gateway_metrics_map
+        )
+
+        messages, filtered_count, overflow_detected = ChatRepository._hydrate_messages(
+            group_rows,
+            gateway_metrics_map,
+            node_names,
+            gateway_name_map,
+            params.limit,
+        )
+
+        effective_total = max(0, counts["total_in_window"] - filtered_count)
+        has_more = ChatRepository._determine_has_more(
+            messages, effective_total, params.limit, overflow_detected
+        )
+        next_cursor = ChatRepository._build_next_cursor(messages, has_more)
+
+        return {
+            "messages": messages,
+            "total": effective_total,
+            "limit": params.limit,
+            "has_more": has_more,
+            "counts": {
+                "last_hour": counts["hourly"],
+                "last_6h": counts["six_hour"],
+                "last_day": counts["daily"],
+                "window": counts["total_in_window"],
+            },
+            "window": {
+                "start": params.window_start,
+                "end": params.window_end,
+                "oldest": counts["oldest_ts"],
+                "duration_hours": max(
+                    0.0, (params.window_end - params.window_start) / 3600.0
+                ),
+            },
+            "next_cursor": next_cursor,
+            "selected_audience": params.audience,
+            "selected_sender_id": params.sender_id,
+            "search": params.search_term,
+        }
+
+    @staticmethod
+    def _prepare_query_params(
+        *,
+        limit: int,
+        before_ts: float | None,
+        before_group_id: int | None,
+        channel: str | None,
+        node_id: int | None,
+        audience: str | None,
+        sender_id: int | None,
+        search: str | None,
+        window_start: float | None,
+        window_hours: float | None,
+    ) -> ChatQueryParams:
+        normalized_limit = int(max(1, min(limit, 200)))
+        now_ts = time.time()
+        max_window_hours = 24.0 * 14
+
+        window_start_ts: float | None = None
+        if window_start is not None:
+            try:
+                window_start_ts = float(window_start)
+            except (TypeError, ValueError):
+                window_start_ts = None
+
+        effective_hours: float | None = None
+        if window_hours is not None:
+            try:
+                effective_hours = float(window_hours)
+            except (TypeError, ValueError):
+                effective_hours = None
+
+        if window_start_ts is None:
+            hours = effective_hours if effective_hours and effective_hours > 0 else 24.0
+            hours = max(0.25, min(hours, max_window_hours))
+            window_start_ts = now_ts - (hours * 3600.0)
+        else:
+            window_start_ts = max(0.0, min(window_start_ts, now_ts))
+
+        normalized_before_ts: float | None = None
+        if before_ts is not None:
+            try:
+                normalized_before_ts = float(before_ts)
+            except (TypeError, ValueError):
+                normalized_before_ts = None
+
+        normalized_before_group_id: int | None = None
+        if before_group_id is not None:
+            try:
+                normalized_before_group_id = int(before_group_id)
+            except (TypeError, ValueError):
+                normalized_before_group_id = None
 
         channel_value = ChatRepository._normalize_channel_param(channel)
-        if channel_value is not None:
-            if channel_value == "__primary__":
+        search_term = ChatRepository._normalize_search_param(search)
+        normalized_audience = audience if audience in {"broadcast", "direct"} else audience
+
+        return ChatQueryParams(
+            limit=normalized_limit,
+            window_start=window_start_ts,
+            window_end=now_ts,
+            channel_value=channel_value,
+            node_id=node_id,
+            audience=normalized_audience,
+            sender_id=sender_id,
+            search_term=search_term,
+            before_ts=normalized_before_ts,
+            before_group_id=normalized_before_group_id,
+        )
+
+    @staticmethod
+    def _build_where_clause(params: ChatQueryParams) -> tuple[str, list[Any]]:
+        where_clauses = ["portnum_name = ?"]
+        query_params: list[Any] = [ChatRepository._TEXT_PORT]
+
+        if params.channel_value is not None:
+            if params.channel_value == "__primary__":
                 where_clauses.append("(channel_id IS NULL OR channel_id = '')")
             else:
                 where_clauses.append("channel_id = ?")
-                params.append(channel_value)
+                query_params.append(params.channel_value)
 
-        if node_id is not None:
+        if params.node_id is not None:
             where_clauses.append("(from_node_id = ? OR to_node_id = ?)")
-            params.extend([node_id, node_id])
+            query_params.extend([params.node_id, params.node_id])
 
-        if sender_id is not None:
+        if params.sender_id is not None:
             where_clauses.append("from_node_id = ?")
-            params.append(sender_id)
+            query_params.append(params.sender_id)
 
-        search_term = ChatRepository._normalize_search_param(search)
-        if search_term is not None:
+        if params.search_term is not None:
             where_clauses.append("CAST(raw_payload AS TEXT) LIKE ?")
-            params.append(f"%{search_term}%")
+            query_params.append(f"%{params.search_term}%")
 
-        if audience == "broadcast":
-            where_clauses.append(
-                "(to_node_id IS NULL OR to_node_id = ?)"
-            )
-            params.append(ChatRepository._BROADCAST_NODE_ID)
-        elif audience == "direct":
+        if params.audience == "broadcast":
+            where_clauses.append("(to_node_id IS NULL OR to_node_id = ?)")
+            query_params.append(ChatRepository._BROADCAST_NODE_ID)
+        elif params.audience == "direct":
             where_clauses.append(
                 "(to_node_id IS NOT NULL AND to_node_id != ?)"
             )
-            params.append(ChatRepository._BROADCAST_NODE_ID)
+            query_params.append(ChatRepository._BROADCAST_NODE_ID)
 
-        where_sql = " AND ".join(where_clauses)
-        where_clause = f"WHERE {where_sql}" if where_sql else ""
-        base_params = list(params)
+        where_clauses.append("timestamp >= ?")
+        query_params.append(params.window_start)
 
-        now_ts = time.time()
-        one_hour_ago = now_ts - 3600
-        twenty_four_hours_ago = now_ts - 86400
+        clause = " AND ".join(where_clauses)
+        return (f"WHERE {clause}" if clause else "", query_params)
 
+    @staticmethod
+    def _fetch_group_counts(
+        cursor: sqlite3.Cursor,
+        where_clause: str,
+        where_params: list[Any],
+        window_end_ts: float,
+    ) -> dict[str, Any]:
         group_expr = "COALESCE(mesh_packet_id, id)"
-
-        try:
-            cursor.execute(
-            f"""
-            SELECT COUNT(*) as total
-            FROM (
-                SELECT {group_expr}
-                FROM packet_history
-                {where_clause}
-                GROUP BY {group_expr}, from_node_id, to_node_id, channel_id
-            ) AS grouped_packets
-            """,
-                base_params,
-            )
-            total = cursor.fetchone()["total"]
-
-            cursor.execute(
-            f"""
+        query = f"""
+        WITH filtered_packets AS (
             SELECT
-                SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS count_1h,
-                SUM(CASE WHEN timestamp >= ? THEN 1 ELSE 0 END) AS count_24h
-            FROM (
-                SELECT MAX(timestamp) AS timestamp
-                FROM packet_history
-                {where_clause}
-                GROUP BY {group_expr}, from_node_id, to_node_id, channel_id
-            ) AS grouped_counts
-            """,
-                [one_hour_ago, twenty_four_hours_ago] + base_params,
-            )
-            counts_row = cursor.fetchone()
-            hourly_count = 0
-            daily_count = 0
-            if counts_row:
-                hourly_count = counts_row["count_1h"] or 0
-                daily_count = counts_row["count_24h"] or 0
-
-            cursor.execute(
-            f"""
-            SELECT
-                MIN(id) AS id,
-                MAX(timestamp) AS timestamp,
+                {group_expr} AS message_group_id,
                 from_node_id,
                 to_node_id,
                 channel_id,
-                {group_expr} AS message_group_id,
+                timestamp
+            FROM packet_history
+            {where_clause}
+        ),
+        grouped_messages AS (
+            SELECT
+                message_group_id,
+                from_node_id,
+                to_node_id,
+                channel_id,
+                MAX(timestamp) AS last_timestamp
+            FROM filtered_packets
+            GROUP BY message_group_id, from_node_id, to_node_id, channel_id
+        )
+        SELECT
+            COUNT(*) AS total_count,
+            COALESCE(MIN(last_timestamp), 0) AS oldest_timestamp,
+            SUM(CASE WHEN last_timestamp >= ? THEN 1 ELSE 0 END) AS count_1h,
+            SUM(CASE WHEN last_timestamp >= ? THEN 1 ELSE 0 END) AS count_6h,
+            SUM(CASE WHEN last_timestamp >= ? THEN 1 ELSE 0 END) AS count_24h
+        FROM grouped_messages
+        """
+        params = list(where_params) + [
+            window_end_ts - 3600.0,
+            window_end_ts - (6 * 3600.0),
+            window_end_ts - 86400.0,
+        ]
+        cursor.execute(query, params)
+        row = cursor.fetchone()
+        counts = dict(row) if row else {}
+        return {
+            "total_in_window": int(counts.get("total_count", 0) or 0),
+            "oldest_ts": counts.get("oldest_timestamp"),
+            "hourly": int(counts.get("count_1h", 0) or 0),
+            "six_hour": int(counts.get("count_6h", 0) or 0),
+            "daily": int(counts.get("count_24h", 0) or 0),
+        }
+
+    @staticmethod
+    def _fetch_group_rows(
+        cursor: sqlite3.Cursor,
+        where_clause: str,
+        where_params: list[Any],
+        params: ChatQueryParams,
+    ) -> list[Any]:
+        group_expr = "COALESCE(mesh_packet_id, id)"
+        data_where_clause = ""
+        data_params = list(where_params)
+
+        if params.before_ts is not None:
+            if params.before_group_id is not None:
+                data_where_clause = (
+                    "WHERE gm.last_timestamp < ? "
+                    "OR (gm.last_timestamp = ? AND gm.message_group_id < ?)"
+                )
+                data_params.extend(
+                    [params.before_ts, params.before_ts, params.before_group_id]
+                )
+            else:
+                data_where_clause = "WHERE gm.last_timestamp < ?"
+                data_params.append(params.before_ts)
+
+        query = f"""
+        WITH filtered_packets AS (
+            SELECT
+                *,
+                {group_expr} AS message_group_id
+            FROM packet_history
+            {where_clause}
+        ),
+        grouped_messages AS (
+            SELECT
+                MIN(id) AS id,
+                MAX(timestamp) AS last_timestamp,
+                from_node_id,
+                to_node_id,
+                channel_id,
+                message_group_id,
                 GROUP_CONCAT(DISTINCT gateway_id) AS gateway_list,
                 COUNT(DISTINCT gateway_id) AS gateway_count,
                 MAX(mesh_packet_id) AS mesh_packet_id,
                 MIN(raw_payload) AS raw_payload,
                 MIN(processed_successfully) AS processed_successfully,
                 MIN(message_type) AS message_type
+            FROM filtered_packets
+            GROUP BY message_group_id, from_node_id, to_node_id, channel_id
+        )
+        SELECT
+            gm.id,
+            gm.last_timestamp AS timestamp,
+            gm.from_node_id,
+            gm.to_node_id,
+            gm.channel_id,
+            gm.message_group_id,
+            gm.gateway_list,
+            gm.gateway_count,
+            gm.mesh_packet_id,
+            gm.raw_payload,
+            gm.processed_successfully,
+            gm.message_type
+        FROM grouped_messages AS gm
+        {data_where_clause}
+        ORDER BY gm.last_timestamp DESC, gm.message_group_id DESC
+        LIMIT ?
+        """
+        data_params.append(params.limit + 1)
+        cursor.execute(query, data_params)
+        return cursor.fetchall()
+
+    @staticmethod
+    def _collect_gateway_metrics(
+        cursor: sqlite3.Cursor, rows: list[Any]
+    ) -> dict[Any, dict[str, dict[str, list[Any]]]]:
+        if not rows:
+            return {}
+        message_group_ids = [
+            row["message_group_id"]
+            for row in rows
+            if row["message_group_id"] is not None
+        ]
+        if not message_group_ids:
+            return {}
+
+        placeholders = ",".join("?" for _ in message_group_ids)
+        cursor.execute(
+            f"""
+            SELECT
+                COALESCE(mesh_packet_id, id) AS message_group_id,
+                COALESCE(gateway_id, '') AS gateway_id,
+                rssi,
+                snr,
+                hop_start,
+                hop_limit
             FROM packet_history
-            {where_clause}
-            GROUP BY {group_expr}, from_node_id, to_node_id, channel_id
-            ORDER BY timestamp DESC
-            LIMIT ? OFFSET ?
-            """,
-                base_params + [limit, offset],
+            WHERE COALESCE(mesh_packet_id, id) IN ({placeholders})
+        """,
+            message_group_ids,
+        )
+
+        metrics_map: dict[Any, dict[str, dict[str, list[Any]]]] = {}
+        for detail in cursor.fetchall():
+            group_id = detail["message_group_id"]
+            gateway_id_raw = detail["gateway_id"] or ""
+            metrics = metrics_map.setdefault(group_id, {}).setdefault(
+                gateway_id_raw, {"rssi": [], "snr": [], "hop_counts": []}
             )
 
-            rows = cursor.fetchall()
+            rssi_val = detail["rssi"]
+            if rssi_val is not None:
+                metrics["rssi"].append(rssi_val)
 
-            message_group_ids = list(
-                {
-                    row["message_group_id"]
-                    for row in rows
-                    if row["message_group_id"] is not None
-                }
-            )
+            snr_val = detail["snr"]
+            if snr_val is not None:
+                metrics["snr"].append(snr_val)
 
-            gateway_metrics_map: dict[Any, dict[str, dict[str, list[Any]]]] = {}
-            if message_group_ids:
-                placeholders = ",".join("?" for _ in message_group_ids)
-                cursor.execute(
-                    f"""
-                    SELECT
-                        COALESCE(mesh_packet_id, id) AS message_group_id,
-                        COALESCE(gateway_id, '') AS gateway_id,
-                        rssi,
-                        snr,
-                        hop_start,
-                        hop_limit
-                    FROM packet_history
-                    WHERE COALESCE(mesh_packet_id, id) IN ({placeholders})
-                """,
-                    message_group_ids,
-                )
+            hop_start = detail["hop_start"]
+            hop_limit = detail["hop_limit"]
+            hop_count_val = None
+            if hop_start is not None and hop_limit is not None:
+                hop_count_val = hop_start - hop_limit
+            elif hop_start is not None:
+                hop_count_val = hop_start
+            elif hop_limit is not None:
+                hop_count_val = hop_limit
 
-                metric_rows = cursor.fetchall()
-                for detail in metric_rows:
-                    group_id = detail["message_group_id"]
-                    gateway_id_raw = detail["gateway_id"] or ""
-
-                    metrics = gateway_metrics_map.setdefault(group_id, {}).setdefault(
-                        gateway_id_raw, {"rssi": [], "snr": [], "hop_counts": []}
-                    )
-
-                    rssi_val = detail["rssi"]
-                    if rssi_val is not None:
-                        metrics["rssi"].append(rssi_val)
-
-                    snr_val = detail["snr"]
-                    if snr_val is not None:
-                        metrics["snr"].append(snr_val)
-
-                    hop_start = detail["hop_start"]
-                    hop_limit = detail["hop_limit"]
-                    hop_count_val = None
-                    if hop_start is not None and hop_limit is not None:
-                        hop_count_val = hop_start - hop_limit
-                    elif hop_start is not None:
-                        hop_count_val = hop_start
-                    elif hop_limit is not None:
-                        hop_count_val = hop_limit
-
-                    if hop_count_val is not None:
-                        try:
-                            metrics["hop_counts"].append(float(hop_count_val))
-                        except (TypeError, ValueError):
-                            pass
-
-            conn.close()
-        except sqlite3.DatabaseError as e:
-            # Graceful degradation on SQLite corruption: return empty dataset
-            if "malformed" in str(e).lower():
-                logger.error(f"ChatRepository.get_recent_messages degraded due to DB corruption: {e}")
+            if hop_count_val is not None:
                 try:
-                    conn.close()
-                except Exception:
+                    metrics["hop_counts"].append(float(hop_count_val))
+                except (TypeError, ValueError):
                     pass
-                return {
-                    "messages": [],
-                    "total": 0,
-                    "limit": limit,
-                    "offset": offset,
-                    "has_more": False,
-                    "counts": {
-                        "last_hour": 0,
-                        "last_day": 0,
-                        "count_1h": 0,
-                        "count_24h": 0,
-                    },
-                    "search": search,
-                    "degraded": True,
-                }
-            # Re-raise other DB errors
-            raise
 
+        return metrics_map
+
+    @staticmethod
+    def _handle_chat_db_error(exc: sqlite3.DatabaseError, params: ChatQueryParams) -> dict[str, Any]:
+        error_message = str(exc).lower()
+        if "no such table" in error_message:
+            logger.warning(
+                "ChatRepository.get_recent_messages returning empty dataset; table missing: %s",
+                exc,
+            )
+            return ChatRepository._empty_chat_response(params, degraded=False)
+        if "malformed" in error_message:
+            logger.error(
+                "ChatRepository.get_recent_messages degraded due to DB corruption: %s",
+                exc,
+            )
+            return ChatRepository._empty_chat_response(params, degraded=True)
+        raise
+
+    @staticmethod
+    def _empty_chat_response(
+        params: ChatQueryParams, *, degraded: bool = False
+    ) -> dict[str, Any]:
+        window_duration_hours = max(
+            0.0, (params.window_end - params.window_start) / 3600.0
+        )
+        payload = {
+            "messages": [],
+            "total": 0,
+            "limit": params.limit,
+            "has_more": False,
+            "counts": {
+                "last_hour": 0,
+                "last_6h": 0,
+                "last_day": 0,
+                "window": 0,
+            },
+            "window": {
+                "start": params.window_start,
+                "end": params.window_end,
+                "oldest": None,
+                "duration_hours": window_duration_hours,
+            },
+            "next_cursor": None,
+            "selected_audience": params.audience,
+            "selected_sender_id": params.sender_id,
+            "search": params.search_term,
+        }
+        if degraded:
+            payload["degraded"] = True
+        return payload
+
+    @staticmethod
+    def _resolve_node_names(rows: list[Any]) -> dict[int, str]:
         node_ids: set[int] = set()
         for row in rows:
             from_id = row["from_node_id"]
@@ -1160,29 +1407,49 @@ class ChatRepository:
                 node_ids.add(from_id)
             if isinstance(to_id, int) and to_id != ChatRepository._BROADCAST_NODE_ID:
                 node_ids.add(to_id)
+        return get_bulk_node_names(list(node_ids)) if node_ids else {}
 
-        node_names = get_bulk_node_names(list(node_ids))
-        gateway_node_ids: set[int] = set()
+    @staticmethod
+    def _resolve_gateway_names(
+        rows: list[Any], metrics_map: dict[Any, dict[str, dict[str, list[Any]]]]
+    ) -> dict[int, str]:
+        gateway_ids: set[int] = set()
         for row in rows:
-            metrics_for_message = gateway_metrics_map.get(row["message_group_id"], {})
+            metrics_for_message = metrics_map.get(row["message_group_id"], {})
             gateway_keys = ChatRepository._collect_gateway_keys(
                 row["gateway_list"], metrics_for_message
             )
-            for raw_id in gateway_keys:
-                if raw_id.startswith("!"):
+            for raw_gateway in gateway_keys:
+                if raw_gateway.startswith("!"):
                     try:
-                        gateway_node_ids.add(int(raw_id[1:], 16))
+                        gateway_ids.add(int(raw_gateway[1:], 16))
                     except ValueError:
                         continue
+        if not gateway_ids:
+            return {}
+        return get_bulk_node_names(list(gateway_ids))
 
-        gateway_name_map = (
-            get_bulk_node_names(list(gateway_node_ids)) if gateway_node_ids else {}
-        )
-
+    @staticmethod
+    def _hydrate_messages(
+        rows: list[Any],
+        gateway_metrics_map: dict[Any, dict[str, dict[str, list[Any]]]],
+        node_names: dict[int, str],
+        gateway_name_map: dict[int, str],
+        limit: int,
+    ) -> tuple[list[dict[str, Any]], int, bool]:
         messages: list[dict[str, Any]] = []
         filtered_count = 0
         for row in rows:
-            timestamp_utc = datetime.fromtimestamp(row["timestamp"], tz=UTC)
+            message_text = PacketRepository.decode_text_payload(row["raw_payload"]) or ""
+            if ChatRepository._is_time_ping(message_text):
+                filtered_count += 1
+                continue
+
+            if len(messages) >= limit:
+                break
+
+            timestamp_value = float(row["timestamp"] or 0.0)
+            timestamp_utc = datetime.fromtimestamp(timestamp_value, tz=UTC)
             channel_raw = row["channel_id"]
             if isinstance(channel_raw, bytes):
                 channel_raw = channel_raw.decode("utf-8", errors="replace")
@@ -1205,22 +1472,23 @@ class ChatRepository:
             to_is_broadcast = to_node_id in (None, ChatRepository._BROADCAST_NODE_ID)
 
             metrics_for_message = gateway_metrics_map.get(row["message_group_id"], {})
-            gateway_nodes: list[dict[str, Any]] = []
-            tooltip_lines: list[str] = []
-            gateway_display_parts: list[str] = []
             gateway_keys = ChatRepository._collect_gateway_keys(
                 row["gateway_list"], metrics_for_message
             )
 
+            gateway_nodes: list[dict[str, Any]] = []
+            tooltip_lines: list[str] = []
+            gateway_display_parts: list[str] = []
+
             for raw_gateway in gateway_keys:
-                node_id = None
+                node_ref = None
                 display_name = raw_gateway
                 if raw_gateway.startswith("!"):
                     try:
-                        node_id = int(raw_gateway[1:], 16)
-                        display_name = gateway_name_map.get(node_id, display_name)
+                        node_ref = int(raw_gateway[1:], 16)
+                        display_name = gateway_name_map.get(node_ref, display_name)
                     except ValueError:
-                        node_id = None
+                        node_ref = None
                 if raw_gateway and display_name and display_name != raw_gateway:
                     label = f"{display_name} ({raw_gateway})"
                 else:
@@ -1233,7 +1501,7 @@ class ChatRepository:
                     label,
                     raw_gateway,
                     metrics_summary.get("text"),
-                    node_id,
+                    node_ref,
                 )
 
                 if tooltip_line:
@@ -1242,7 +1510,7 @@ class ChatRepository:
                 gateway_nodes.append(
                     {
                         "raw_id": raw_gateway,
-                        "node_id": node_id,
+                        "node_id": node_ref,
                         "name": display_name,
                         "label": label,
                         "metrics": metrics_summary,
@@ -1252,16 +1520,12 @@ class ChatRepository:
                 )
                 gateway_display_parts.append(label)
 
-            message = PacketRepository.decode_text_payload(row["raw_payload"]) or ""
-            if ChatRepository._is_time_ping(message):
-                filtered_count += 1
-                continue
-
             messages.append(
                 {
                     "id": row["id"],
+                    "message_group_id": row["message_group_id"],
                     "timestamp": timestamp_utc.isoformat(),
-                    "timestamp_unix": row["timestamp"],
+                    "timestamp_unix": timestamp_value,
                     "timestamp_display": timestamp_utc.astimezone().strftime(
                         "%Y-%m-%d %H:%M:%S %Z"
                     ),
@@ -1274,34 +1538,49 @@ class ChatRepository:
                     "gateway_count": len(gateway_nodes),
                     "gateway_nodes": gateway_nodes,
                     "gateway_tooltip": "<br>".join(t for t in tooltip_lines if t),
-                    "gateway_display": ", ".join(gateway_display_parts) if gateway_display_parts else None,
+                    "gateway_display": ", ".join(gateway_display_parts)
+                    if gateway_display_parts
+                    else None,
                     "channel_id": channel_raw if channel_key != "__primary__" else None,
                     "channel_key": channel_key,
                     "channel_label": channel_label,
                     "gateway_id": row["gateway_list"] or "Unknown",
                     "mesh_packet_id": row["mesh_packet_id"],
-                    "message": message,
+                    "message": message_text,
                     "processed_successfully": bool(row["processed_successfully"]),
                     "message_type": row["message_type"],
                     "portnum_name": ChatRepository._TEXT_PORT,
                 }
             )
 
-        effective_total = max(0, total - filtered_count)
+        overflow_detected = len(rows) > limit
+        return messages, filtered_count, overflow_detected
 
+    @staticmethod
+    def _determine_has_more(
+        messages: list[dict[str, Any]],
+        effective_total: int,
+        limit: int,
+        overflow_detected: bool,
+    ) -> bool:
+        if not messages:
+            return False
+        if overflow_detected:
+            return True
+        if effective_total > len(messages):
+            return True
+        return False
+
+    @staticmethod
+    def _build_next_cursor(
+        messages: list[dict[str, Any]], has_more: bool
+    ) -> dict[str, Any] | None:
+        if not has_more or not messages:
+            return None
+        last_message = messages[-1]
         return {
-            "messages": messages,
-            "total": effective_total,
-            "limit": limit,
-            "offset": offset,
-            "has_more": (offset + limit) < effective_total,
-            "selected_audience": audience,
-            "selected_sender_id": sender_id,
-            "search": search_term,
-            "counts": {
-                "last_hour": int(hourly_count),
-                "last_day": int(daily_count),
-            },
+            "before_ts": last_message["timestamp_unix"],
+            "before_id": last_message["message_group_id"],
         }
 
     @staticmethod

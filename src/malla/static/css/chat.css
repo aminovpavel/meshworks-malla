@@ -35,9 +35,16 @@
 .chat-card.is-loading .list-unstyled { pointer-events: none; }
 .chat-loading-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; background: linear-gradient(rgba(15, 23, 42, 0.45), rgba(15, 23, 42, 0.45)); opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
 .chat-card.is-loading .chat-loading-overlay { opacity: 1; pointer-events: auto; }
+.chat-scroll-sentinel { display: none; text-align: center; padding: 0.65rem 0; font-size: 0.8rem; color: var(--bs-secondary-color); }
+.chat-scroll-sentinel.is-loading { display: block; }
 .chat-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.25rem; flex-wrap: wrap; }
 .chat-header-main { display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; min-width: 0; flex: 1 1 auto; }
-.chat-meta { font-size: 0.8rem; color: var(--bs-secondary-color); margin-top: 0; white-space: nowrap; flex: 0 0 auto; text-align: right; line-height: 1.4; }
+.chat-meta { font-size: 0.8rem; color: var(--bs-secondary-color); margin-top: 0; display: inline-flex; align-items: center; gap: 0.25rem; white-space: nowrap; flex: 0 0 auto; }
+.chat-meta-relative { color: var(--bs-secondary-color); }
+.chat-meta-absolute { color: var(--bs-tertiary-color); }
+.chat-meta-absolute::before { content: '\2022'; margin: 0 0.35rem; color: var(--bs-secondary-color); }
+.chat-live-indicator { display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; background-color: #2ad46b; margin-right: 0.35rem; animation: chat-live-pulse 1.5s ease-in-out infinite; vertical-align: middle; position: relative; top: -0.05em; }
+@keyframes chat-live-pulse { 0% { opacity: 0.2; } 50% { opacity: 1; } 100% { opacity: 0.2; } }
 .chat-body { white-space: pre-wrap; word-break: break-word; margin-top: 0.5rem; }
 .chat-summary { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem; }
 .chat-summary-item { background-color: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color); border-radius: var(--bs-border-radius); padding: 0.65rem 0.9rem; min-width: 135px; flex: 0 0 auto; }

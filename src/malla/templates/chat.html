@@ -34,19 +34,7 @@
                     <div class="text-muted small" id="chat-last-updated">Updated --</div>
                 </div>
                 <div class="chat-refresh-group">
-                    <span class="text-muted small" id="chat-auto-refresh-note">Auto-refresh in 30 seconds</span>
-                    <select class="form-select form-select-sm" id="chat-refresh-interval">
-                        {% set refresh_options = [
-                            (0, "Off"),
-                            (15000, "15 seconds"),
-                            (30000, "30 seconds"),
-                            (60000, "1 minute"),
-                            (300000, "5 minutes")
-                        ] %}
-                        {% for value, label in refresh_options %}
-                            <option value="{{ value }}" {% if value == 30000 %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
+                    <span class="text-muted small" id="chat-auto-refresh-note">Auto-refresh every 30 seconds</span>
                     <button class="btn btn-outline-primary btn-sm chat-refresh-button" type="button" id="chat-refresh-button">
                         <i class="bi bi-arrow-clockwise"></i> Refresh
                     </button>
@@ -172,27 +160,33 @@
                     </div>
                 </div>
                 <div class="flex-grow-1 flex-sm-grow-0 chat-dropdown-wrapper">
-                    <label class="form-label">Messages</label>
+                    <label class="form-label">Time window</label>
                     <div class="dropdown w-100">
                         <button
                             class="btn btn-outline-secondary btn-sm dropdown-toggle w-100"
                             type="button"
-                            id="chat-limit-dropdown"
+                            id="chat-window-dropdown"
                             data-bs-toggle="dropdown"
                             aria-expanded="false"
                         >
-                            <span class="chat-dropdown-label" data-role="label" data-default="100">{{ limit_label }}</span>
+                            <span class="chat-dropdown-label" data-role="label" data-default="Last 24 hours">{{ selected_window_label }}</span>
                         </button>
-                        <div class="dropdown-menu chat-dropdown-menu" aria-labelledby="chat-limit-dropdown" id="chat-limit-menu">
+                        <div class="dropdown-menu chat-dropdown-menu" aria-labelledby="chat-window-dropdown" id="chat-window-menu">
                             <div class="chat-dropdown-options" data-role="options">
-                                {% for option in [25, 50, 100, 150, 200] %}
-                                    <button class="dropdown-item {% if chat_meta.limit == option %}active{% endif %}" type="button" data-value="{{ option }}" data-label="{{ option }}">
-                                        {{ option }}
+                                {% for value, label in time_window_options %}
+                                    <button
+                                        class="dropdown-item {% if selected_window_value == value %}active{% endif %}"
+                                        type="button"
+                                        data-value="{{ value }}"
+                                        data-label="{{ label }}"
+                                    >
+                                        {{ label }}
                                     </button>
                                 {% endfor %}
                             </div>
                         </div>
-                        <input type="hidden" name="limit" id="chat-limit-input" value="{{ chat_meta.limit }}">
+                        <input type="hidden" name="window" id="chat-window-input" value="{{ selected_window_value }}">
+                        <input type="hidden" name="since" id="chat-window-since" value="{{ selected_window_start_iso or '' }}">
                     </div>
                 </div>
                 <div class="flex-grow-1 flex-sm-grow-0">
@@ -263,6 +257,7 @@
                     <li class="chat-empty">No chat messages available for the selected filters.</li>
                 {% endif %}
             </ul>
+            <div id="chat-scroll-sentinel" class="chat-scroll-sentinel" aria-hidden="true"></div>
         </div>
     </div>
 </div>
@@ -271,14 +266,32 @@
 {% block extra_js %}
 <script>
 (function () {
+    const AUTO_REFRESH_MS = 30000;
+    const MAX_MESSAGES = 500;
+    const RELATIVE_TIME_INTERVAL_MS = 60000;
+    const LIVE_RETRY_DELAY_MS = 15000;
+    const LIVE_POLL_INTERVAL_MS = 3000;
+
     const chatState = {
         apiUrl: "{{ url_for('api.api_chat_messages') }}",
-        limit: {{ chat_meta.limit }},
+        streamUrl: "{{ url_for('api.api_chat_stream') }}",
+        pageSize: {{ chat_meta.limit }},
         channel: {{ (selected_channel or '') | tojson }},
         audience: {{ (selected_audience or 'all') | tojson }},
         sender: {{ (selected_sender or '') | tojson }},
         search: {{ (search_query or '') | tojson }},
-        refreshInterval: 30000,
+        windowValue: {{ (selected_window_value or '24') | tojson }},
+        windowSince: {{ (selected_window_start_iso or '') | tojson }},
+        windowLabel: {{ selected_window_label | tojson }},
+        refreshInterval: AUTO_REFRESH_MS,
+        nextCursor: null,
+        hasMore: false,
+        loading: false,
+        loadingMore: false,
+        messages: [],
+        messageKeys: null,
+        meta: null,
+        reachedCap: false,
     };
 
     const initialData = {
@@ -287,6 +300,12 @@
         senders: {{ senders | safe_json | safe }},
         meta: {{ chat_meta | safe_json | safe }},
     };
+
+    const supportsSSE = typeof window.EventSource !== 'undefined';
+    let eventSource = null;
+    let liveUpdates = false;
+    let liveRetryTimer = null;
+    let relativeUpdateTimer = null;
 
     const messageListEl = document.getElementById('chat-message-list');
     const loadingEl = document.getElementById('chat-loading');
@@ -299,7 +318,6 @@
     const dayCountValueEl = dayCountEl ? dayCountEl.querySelector('strong') : null;
 
     const refreshButton = document.getElementById('chat-refresh-button');
-    const refreshIntervalSelect = document.getElementById('chat-refresh-interval');
     const filterForm = document.getElementById('chat-filter-form');
 
     const channelInput = document.getElementById('chat-channel-input');
@@ -312,10 +330,11 @@
     const audienceMenu = document.getElementById('chat-audience-menu');
     const audienceToggle = document.getElementById('chat-audience-dropdown');
 
-    const limitInput = document.getElementById('chat-limit-input');
-    const limitLabelEl = document.querySelector('#chat-limit-dropdown .chat-dropdown-label');
-    const limitMenu = document.getElementById('chat-limit-menu');
-    const limitToggle = document.getElementById('chat-limit-dropdown');
+    const windowInput = document.getElementById('chat-window-input');
+    const windowLabelEl = document.querySelector('#chat-window-dropdown .chat-dropdown-label');
+    const windowMenu = document.getElementById('chat-window-menu');
+    const windowToggle = document.getElementById('chat-window-dropdown');
+    const windowSinceInput = document.getElementById('chat-window-since');
 
     const senderInput = document.getElementById('chat-sender-input');
     const senderLabel = document.getElementById('chat-sender-label');
@@ -335,6 +354,7 @@
         gateways: summaryEl.querySelector('[data-summary="gateways"]'),
     } : null;
 
+    const scrollSentinelEl = document.getElementById('chat-scroll-sentinel');
     const COMPACT_STORAGE_KEY = 'chatCompactMode';
 
     if (searchInput) {
@@ -350,17 +370,46 @@
     if (loadingEl) {
         loadingEl.setAttribute('aria-hidden', 'true');
     }
-    if (refreshIntervalSelect) {
-        const parsedInterval = parseInt(refreshIntervalSelect.value, 10);
-        if (!Number.isNaN(parsedInterval)) {
-            chatState.refreshInterval = parsedInterval;
-        }
+    chatState.pageSize = Number(
+        (initialData.meta && initialData.meta.limit)
+        || chatState.pageSize
+        || 50,
+    );
+    if (!Number.isFinite(chatState.pageSize) || chatState.pageSize <= 0) {
+        chatState.pageSize = 50;
+    }
+    chatState.pageSize = Math.min(chatState.pageSize, MAX_MESSAGES);
+
+    chatState.messages = Array.isArray(initialData.messages)
+        ? initialData.messages.slice(0, MAX_MESSAGES)
+        : [];
+    chatState.messageKeys = new Set(
+        chatState.messages.map(getMessageKey).filter(Boolean),
+    );
+    chatState.meta = initialData.meta || {};
+    chatState.nextCursor = chatState.meta.next_cursor || null;
+    chatState.hasMore = Boolean(chatState.meta.has_more && chatState.nextCursor);
+    chatState.reachedCap = chatState.messages.length >= MAX_MESSAGES;
+    if (chatState.meta && typeof chatState.meta.total === 'number') {
+        chatState.meta.total = Math.min(chatState.meta.total, MAX_MESSAGES);
+    }
+    if (chatState.reachedCap) {
+        chatState.hasMore = false;
+        chatState.nextCursor = null;
+    }
+    if (chatState.meta.window_value || chatState.meta.window_label || chatState.meta.window) {
+        syncWindowSelectionFromResponse({
+            window_value: chatState.meta.window_value,
+            window_label: chatState.meta.window_label,
+            window: chatState.meta.window,
+        });
     }
 
     let autoRefreshTimer = null;
     let countdownTimer = null;
     let nextRefreshAt = null;
     let searchDebounceTimer = null;
+    let infiniteObserver = null;
     const tooltipInstances = new WeakMap();
     const tooltipHandlers = new WeakMap();
     let activeTooltipEl = null;
@@ -376,6 +425,43 @@
 
     function escapeAttribute(value) {
         return escapeHtml(value).split('\n').join('&#10;');
+    }
+
+    function setAutoRefreshStatus(label, options) {
+        if (!autoRefreshEl) {
+            return;
+        }
+        const opts = options || {};
+        if (opts.live) {
+            autoRefreshEl.innerHTML = `<span class="chat-live-indicator" aria-hidden="true"></span>${escapeHtml(label)}`;
+        } else {
+            autoRefreshEl.textContent = label;
+        }
+    }
+
+    function buildQueryParams(options) {
+        const opts = options || {};
+        const params = new URLSearchParams();
+        if (opts.withLimit !== false) {
+            params.set('limit', chatState.pageSize);
+        }
+        if (chatState.channel) {
+            params.set('channel', chatState.channel);
+        }
+        if (chatState.audience) {
+            params.set('audience', chatState.audience);
+        }
+        if (chatState.sender) {
+            params.set('sender', chatState.sender);
+        }
+        if (chatState.search) {
+            params.set('q', chatState.search);
+        }
+        params.set('window', chatState.windowValue || '24');
+        if (chatState.windowValue === 'custom' && chatState.windowSince) {
+            params.set('since', chatState.windowSince);
+        }
+        return params;
     }
 
     function animateMessageList() {
@@ -433,6 +519,9 @@
         const inputEl = config.inputEl;
         const labelEl = config.labelEl;
         const toggleEl = config.toggleEl;
+        const beforeSelect = typeof config.beforeSelect === 'function'
+            ? config.beforeSelect
+            : null;
 
         if (!menuEl || !inputEl || !labelEl || !toggleEl) {
             return;
@@ -444,6 +533,13 @@
                 const value = btn.dataset.value ?? '';
                 const labelText = btn.dataset.label || btn.textContent.trim();
 
+                if (beforeSelect) {
+                    const result = beforeSelect({ value, label: labelText, button: btn });
+                    if (result === false) {
+                        return;
+                    }
+                }
+
                 inputEl.value = value;
                 labelEl.textContent = labelText || labelEl.dataset.default || '';
 
@@ -452,7 +548,7 @@
                 });
 
                 bootstrap.Dropdown.getOrCreateInstance(toggleEl).hide();
-                applyFilters();
+                applyFilters({ force: true });
             });
         });
     }
@@ -661,17 +757,13 @@
             `;
         }
 
-        const metaSegments = [];
-        if (timeAgo) {
-            metaSegments.push(timeAgo);
-        }
-        if (timestampDisplay) {
-            metaSegments.push(timestampDisplay);
-        }
-
-        const metaHtml = metaSegments.length
-            ? `<div class="chat-meta">${metaSegments.join(' • ')}</div>`
-            : '';
+        const timestampUnix = Number(message.timestamp_unix || message.timestamp || Date.now() / 1000);
+        const metaHtml = `
+            <div class="chat-meta" data-timestamp="${timestampUnix}">
+                <span class="chat-meta-relative">${timeAgo || ''}</span>
+                ${timestampDisplay ? ` • <span class="chat-meta-absolute">${timestampDisplay}</span>` : ''}
+            </div>
+        `;
 
         return `
             <li class="chat-message py-3" data-message-id="${message.id}">
@@ -698,11 +790,250 @@
         return `${count.toLocaleString()} (${pct}%)`;
     }
 
-    function updateSummary(messages, meta) {
+    function getMessageKey(message) {
+        if (!message || typeof message !== 'object') {
+            return null;
+        }
+        if (message.message_group_id !== undefined && message.message_group_id !== null) {
+            return `group:${message.message_group_id}`;
+        }
+        if (message.id !== undefined && message.id !== null) {
+            return `id:${message.id}`;
+        }
+        if (message.timestamp_unix !== undefined && message.timestamp_unix !== null) {
+            return `ts:${message.timestamp_unix}`;
+        }
+        return null;
+    }
+
+    function formatRelativeTime(timestampMs) {
+        const diffSeconds = Math.floor((Date.now() - timestampMs) / 1000);
+        if (Number.isNaN(diffSeconds)) {
+            return '';
+        }
+        if (diffSeconds < 5) {
+            return 'Just now';
+        }
+        if (diffSeconds < 60) {
+            return `${diffSeconds}s ago`;
+        }
+        const diffMinutes = Math.floor(diffSeconds / 60);
+        if (diffMinutes < 60) {
+            return diffMinutes === 1 ? '1 minute ago' : `${diffMinutes} minutes ago`;
+        }
+        const diffHours = Math.floor(diffMinutes / 60);
+        if (diffHours < 24) {
+            return diffHours === 1 ? '1 hour ago' : `${diffHours} hours ago`;
+        }
+        const diffDays = Math.floor(diffHours / 24);
+        return diffDays === 1 ? '1 day ago' : `${diffDays} days ago`;
+    }
+
+    function updateRelativeTimes() {
+        const nodes = document.querySelectorAll('.chat-meta[data-timestamp]');
+        nodes.forEach((meta) => {
+            const relativeEl = meta.querySelector('.chat-meta-relative');
+            if (!relativeEl) {
+                return;
+            }
+            const dataTs = Number(meta.getAttribute('data-timestamp'));
+            if (!Number.isFinite(dataTs)) {
+                return;
+            }
+            const timestampMs = dataTs > 1e12 ? dataTs : dataTs * 1000;
+            relativeEl.textContent = formatRelativeTime(timestampMs);
+        });
+    }
+
+    function stopRelativeTimeUpdates() {
+        if (relativeUpdateTimer) {
+            clearInterval(relativeUpdateTimer);
+            relativeUpdateTimer = null;
+        }
+    }
+
+    function startRelativeTimeUpdates() {
+        stopRelativeTimeUpdates();
+        updateRelativeTimes();
+        relativeUpdateTimer = setInterval(updateRelativeTimes, RELATIVE_TIME_INTERVAL_MS);
+    }
+
+    function setLoadMoreState(isLoading) {
+        if (!scrollSentinelEl) {
+            return;
+        }
+        if (isLoading) {
+            scrollSentinelEl.style.display = 'block';
+            scrollSentinelEl.classList.add('is-loading');
+            scrollSentinelEl.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></div>';
+        } else {
+            scrollSentinelEl.classList.remove('is-loading');
+            updateSentinelState();
+        }
+    }
+
+    function updateSentinelState() {
+        if (!scrollSentinelEl) {
+            return;
+        }
+        if (!chatState.messages.length) {
+            scrollSentinelEl.style.display = 'none';
+            scrollSentinelEl.innerHTML = '';
+            return;
+        }
+
+        scrollSentinelEl.style.display = 'block';
+        if (chatState.reachedCap) {
+            scrollSentinelEl.innerHTML = '<div class="text-muted small py-2">Showing the last 500 messages</div>';
+            return;
+        }
+        if (chatState.hasMore) {
+            scrollSentinelEl.innerHTML = '';
+        } else {
+            scrollSentinelEl.innerHTML = '<div class="text-muted small py-2">Reached selected time window</div>';
+        }
+    }
+
+    function initInfiniteScroll() {
+        if (!scrollSentinelEl || !cardBodyEl) {
+            return;
+        }
+        if (infiniteObserver) {
+            infiniteObserver.disconnect();
+        }
+        infiniteObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting && chatState.hasMore && !chatState.loadingMore && !chatState.reachedCap) {
+                    loadMessages({ mode: 'append', showSpinner: false });
+                }
+            });
+        }, {
+            root: cardBodyEl,
+            rootMargin: '128px',
+            threshold: 0.1,
+        });
+        infiniteObserver.observe(scrollSentinelEl);
+    }
+
+    function formatLocalDateInput(isoString) {
+        if (!isoString) {
+            return '';
+        }
+        const date = new Date(isoString);
+        if (Number.isNaN(date.getTime())) {
+            return '';
+        }
+        const pad = (value) => String(value).padStart(2, '0');
+        return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} `
+            + `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function parseCustomDateInput(input) {
+        if (input === null || input === undefined) {
+            return null;
+        }
+        let normalized = String(input).trim();
+        if (!normalized) {
+            return null;
+        }
+        if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/u.test(normalized)) {
+            normalized = normalized.replace(' ', 'T');
+        }
+        if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/u.test(normalized)) {
+            normalized = `${normalized}:00`;
+        }
+        const parsed = new Date(normalized);
+        if (Number.isNaN(parsed.getTime())) {
+            return null;
+        }
+        return parsed;
+    }
+
+    function formatCustomLabel(date) {
+        const pad = (value) => String(value).padStart(2, '0');
+        return `Custom since ${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} `
+            + `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+    }
+
+    function handleCustomWindowSelection() {
+        const defaultIso = chatState.windowSince || (windowSinceInput ? windowSinceInput.value : '');
+        const defaultValue = formatLocalDateInput(defaultIso || new Date().toISOString());
+        const promptMessage = 'Enter start datetime for the chat window (YYYY-MM-DD HH:MM, local time).';
+        const inputValue = window.prompt(promptMessage, defaultValue);
+        if (inputValue === null) {
+            return;
+        }
+        const parsedDate = parseCustomDateInput(inputValue);
+        if (!parsedDate) {
+            window.alert('Invalid datetime. Please use YYYY-MM-DD HH:MM format.');
+            return;
+        }
+        if (parsedDate.getTime() > Date.now()) {
+            window.alert('Start time cannot be in the future.');
+            return;
+        }
+        const iso = parsedDate.toISOString();
+        chatState.windowValue = 'custom';
+        chatState.windowSince = iso;
+        chatState.windowLabel = formatCustomLabel(parsedDate);
+        if (windowInput) {
+            windowInput.value = 'custom';
+        }
+        if (windowSinceInput) {
+            windowSinceInput.value = iso;
+        }
+        if (windowLabelEl) {
+            windowLabelEl.textContent = chatState.windowLabel;
+        }
+        applyFilters({ force: true });
+    }
+
+    function syncWindowSelectionFromResponse(data) {
+        if (!data) {
+            return;
+        }
+
+        const windowValue = data.window_value;
+        const windowLabel = data.window_label;
+        const windowInfo = data.window;
+
+        if (windowValue) {
+            chatState.windowValue = windowValue;
+            if (windowInput) {
+                windowInput.value = windowValue;
+            }
+            if (windowValue !== 'custom' && windowSinceInput) {
+                windowSinceInput.value = '';
+                chatState.windowSince = '';
+            }
+        }
+
+        if (chatState.windowValue === 'custom' && windowInfo && typeof windowInfo.start === 'number') {
+            const startDate = new Date(windowInfo.start * 1000);
+            const iso = startDate.toISOString();
+            chatState.windowSince = iso;
+            if (windowSinceInput) {
+                windowSinceInput.value = iso;
+            }
+            if (!windowLabel) {
+                chatState.windowLabel = formatCustomLabel(startDate);
+            }
+        }
+
+        if (windowLabel) {
+            chatState.windowLabel = windowLabel;
+        }
+
+        if (windowLabelEl && chatState.windowLabel) {
+            windowLabelEl.textContent = chatState.windowLabel;
+        }
+    }
+
+    function updateSummary(meta) {
         if (!summaryFields) {
             return;
         }
-        const list = Array.isArray(messages) ? messages : [];
+        const list = Array.isArray(chatState.messages) ? chatState.messages : [];
         const totalFromMeta = meta && typeof meta.total === 'number' ? meta.total : null;
         const totalCount = totalFromMeta ?? list.length;
 
@@ -802,24 +1133,51 @@
         }
     }
 
-    function renderMessages(messages) {
+    function renderMessages(messages, options) {
         if (!messageListEl) {
             return;
         }
 
+        const opts = options || {};
+        const replace = opts.replace !== false;
         hideActiveTooltip();
 
-        if (!messages || messages.length === 0) {
-            messageListEl.innerHTML = '<li class="chat-empty">No chat messages available for the selected filters.</li>';
-            messageListEl.classList.remove('chat-list-animate');
+        if (replace) {
+            if (!messages || messages.length === 0) {
+                messageListEl.innerHTML = '<li class="chat-empty">No chat messages available for the selected filters.</li>';
+                messageListEl.classList.remove('chat-list-animate');
+                refreshTooltips();
+                updateSentinelState();
+                updateRelativeTimes();
+                return;
+            }
+
+            const html = messages.map(formatMessageItem).join('');
+            messageListEl.innerHTML = html;
+            animateMessageList();
             refreshTooltips();
+            updateSentinelState();
+            updateRelativeTimes();
             return;
         }
 
-        const html = messages.map(formatMessageItem).join('');
-        messageListEl.innerHTML = html;
-        animateMessageList();
+        if (!messages || messages.length === 0) {
+            updateSentinelState();
+            updateRelativeTimes();
+            return;
+        }
+
+        const emptyEl = messageListEl.querySelector('.chat-empty');
+        if (emptyEl) {
+            emptyEl.remove();
+        }
+
+        const template = document.createElement('template');
+        template.innerHTML = messages.map(formatMessageItem).join('');
+        messageListEl.appendChild(template.content);
         refreshTooltips();
+        updateSentinelState();
+        updateRelativeTimes();
     }
 
     function setLoading(isLoading) {
@@ -864,16 +1222,20 @@
         if (!autoRefreshEl) {
             return;
         }
+        if (liveUpdates) {
+            setAutoRefreshStatus('Live updates active', { live: true });
+            return;
+        }
         if (!chatState.refreshInterval || chatState.refreshInterval <= 0) {
-            autoRefreshEl.textContent = 'Auto-refresh off';
+            setAutoRefreshStatus('Auto-refresh off');
             return;
         }
         if (nextRefreshAt) {
             const remainingMs = Math.max(0, nextRefreshAt - Date.now());
             const seconds = Math.ceil(remainingMs / 1000);
-            autoRefreshEl.textContent = `Auto-refresh in ${formatCountdownLabel(seconds)}`;
+            setAutoRefreshStatus(`Auto-refresh in ${formatCountdownLabel(seconds)}`);
         } else {
-            autoRefreshEl.textContent = `Auto-refresh in ${formatIntervalLabel(chatState.refreshInterval)}`;
+            setAutoRefreshStatus(`Auto-refresh in ${formatIntervalLabel(chatState.refreshInterval)}`);
         }
     }
 
@@ -899,7 +1261,7 @@
         updateAutoRefreshNote();
         countdownTimer = setInterval(updateAutoRefreshNote, 1000);
         autoRefreshTimer = setTimeout(() => {
-            loadMessages({ showSpinner: false });
+            loadMessages({ mode: 'replace', showSpinner: false });
         }, chatState.refreshInterval);
     }
 
@@ -916,7 +1278,7 @@
             + `${sign}${offsetHours}:${offsetMins}`;
     }
 
-    function updateMeta(meta, messages) {
+    function updateMeta(meta) {
         const counts = (meta && meta.counts) || {};
         const hourCount = counts.last_hour ?? counts.count_1h ?? counts.hour ?? 0;
         const dayCount = counts.last_day ?? counts.count_24h ?? counts.day ?? 0;
@@ -932,36 +1294,205 @@
             lastUpdatedEl.textContent = `Updated ${formatTimestampWithOffset(new Date())}`;
         }
 
-        updateSummary(messages, meta);
+        updateSummary(meta);
+    }
+
+    function applyMetaFromResponse(meta) {
+        chatState.meta = meta || {};
+        chatState.nextCursor = chatState.meta.next_cursor || null;
+        chatState.hasMore = Boolean(chatState.meta.has_more && chatState.nextCursor);
+        chatState.reachedCap = chatState.messages.length >= MAX_MESSAGES;
+        if (chatState.meta && typeof chatState.meta.total === 'number') {
+            chatState.meta.total = Math.min(chatState.meta.total, MAX_MESSAGES);
+        }
+        if (chatState.reachedCap) {
+            chatState.hasMore = false;
+            chatState.nextCursor = null;
+        }
+        updateSentinelState();
+        updateMeta(chatState.meta);
+    }
+
+    function getLatestPointer() {
+        if (!chatState.messages.length) {
+            return null;
+        }
+        const latest = chatState.messages[0];
+        return {
+            timestamp: Number(latest.timestamp_unix || latest.timestamp || Date.now() / 1000),
+            groupId: latest.message_group_id || latest.id || latest.mesh_packet_id || 0,
+        };
+    }
+
+    function addIncomingMessages(messages) {
+        if (!Array.isArray(messages) || messages.length === 0) {
+            return;
+        }
+        const sorted = messages.slice().sort(
+            (a, b) => (Number(a.timestamp_unix || 0) - Number(b.timestamp_unix || 0)),
+        );
+        let appended = false;
+        sorted.forEach((message) => {
+            const key = getMessageKey(message);
+            if (key && chatState.messageKeys && chatState.messageKeys.has(key)) {
+                return;
+            }
+            if (key) {
+                chatState.messageKeys.add(key);
+            }
+            chatState.messages.unshift(message);
+            appended = true;
+        });
+
+        if (!appended) {
+            return;
+        }
+
+        if (chatState.messages.length > MAX_MESSAGES) {
+            const removed = chatState.messages.splice(MAX_MESSAGES);
+            removed.forEach((message) => {
+                const key = getMessageKey(message);
+                if (key && chatState.messageKeys) {
+                    chatState.messageKeys.delete(key);
+                }
+            });
+            chatState.reachedCap = true;
+        }
+
+        renderMessages(chatState.messages, { replace: true });
+        updateRelativeTimes();
+    }
+
+    function stopLiveUpdates() {
+        liveUpdates = false;
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+        if (liveRetryTimer) {
+            clearTimeout(liveRetryTimer);
+            liveRetryTimer = null;
+        }
+    }
+
+    function startLiveUpdates() {
+        if (!supportsSSE || !chatState.streamUrl) {
+            liveUpdates = false;
+            scheduleAutoRefresh();
+            return;
+        }
+
+        const pointer = getLatestPointer();
+        const params = buildQueryParams({ withLimit: false });
+        params.set('poll', LIVE_POLL_INTERVAL_MS);
+        if (pointer) {
+            if (pointer.timestamp) {
+                params.set('last_ts', pointer.timestamp);
+            }
+            if (pointer.groupId) {
+                params.set('last_id', pointer.groupId);
+            }
+        }
+
+        const url = `${chatState.streamUrl}?${params.toString()}`;
+        setAutoRefreshStatus('Connecting to live stream…');
+        try {
+            eventSource = new EventSource(url, { withCredentials: true });
+        } catch (error) {
+            console.error('Failed to initialise EventSource', error);
+            liveUpdates = false;
+            scheduleAutoRefresh();
+            return;
+        }
+
+        eventSource.onopen = () => {
+            liveUpdates = true;
+            cancelAutoRefresh();
+            setAutoRefreshStatus('Live updates active', { live: true });
+        };
+
+        eventSource.addEventListener('chat-message', (event) => {
+            try {
+                const payload = JSON.parse(event.data || '{}');
+                if (Array.isArray(payload.messages)) {
+                    addIncomingMessages(payload.messages);
+                }
+                if (payload.meta) {
+                    applyMetaFromResponse(payload.meta);
+                }
+                updateMeta(chatState.meta);
+            } catch (error) {
+                console.error('Failed to process chat stream payload', error);
+            }
+        });
+
+        eventSource.addEventListener('chat-heartbeat', () => {
+            if (liveUpdates) {
+                setAutoRefreshStatus('Live updates active', { live: true });
+            }
+        });
+
+        eventSource.onerror = () => {
+            stopLiveUpdates();
+            updateAutoRefreshNote();
+            scheduleAutoRefresh();
+            if (supportsSSE && !liveRetryTimer) {
+                liveRetryTimer = setTimeout(restartLiveUpdates, LIVE_RETRY_DELAY_MS);
+            }
+        };
+    }
+
+    function restartLiveUpdates() {
+        stopLiveUpdates();
+        if (supportsSSE) {
+            startLiveUpdates();
+        } else {
+            scheduleAutoRefresh();
+        }
     }
 
     async function loadMessages(options) {
         const opts = options || {};
-        const showSpinner = opts.showSpinner !== false;
+        const mode = opts.mode === 'append' ? 'append' : 'replace';
+        const cursor = mode === 'append'
+            ? opts.cursor || chatState.nextCursor
+            : null;
+        const showSpinner = opts.showSpinner !== false && mode === 'replace';
+
+        if (mode === 'append') {
+            if (!chatState.hasMore || !cursor) {
+                updateSentinelState();
+                return;
+            }
+            if (chatState.loadingMore) {
+                return;
+            }
+        } else if (chatState.loading) {
+            return;
+        }
 
         cancelAutoRefresh();
 
         try {
-            if (showSpinner) {
-                setLoading(true);
+            if (mode === 'append') {
+                chatState.loadingMore = true;
+                setLoadMoreState(true);
+            } else {
+                chatState.loading = true;
+                if (showSpinner) {
+                    setLoading(true);
+                }
             }
 
-            const params = new URLSearchParams();
-            params.set('limit', chatState.limit);
-            if (chatState.channel) {
-                params.set('channel', chatState.channel);
+            const params = buildQueryParams();
+            if (cursor && cursor.before_ts !== undefined && cursor.before_ts !== null) {
+                params.set('before', cursor.before_ts);
             }
-            if (chatState.audience) {
-                params.set('audience', chatState.audience);
-            }
-            if (chatState.sender) {
-                params.set('sender', chatState.sender);
-            }
-            if (chatState.search) {
-                params.set('q', chatState.search);
+            if (cursor && cursor.before_id !== undefined && cursor.before_id !== null) {
+                params.set('before_id', cursor.before_id);
             }
 
-            const response = await fetch(`${chatState.apiUrl}?${params.toString()}` , {
+            const response = await fetch(`${chatState.apiUrl}?${params.toString()}`, {
                 headers: { Accept: 'application/json' },
             });
 
@@ -970,16 +1501,78 @@
             }
 
             const data = await response.json();
-            renderMessages(data.messages);
-            updateMeta(data, data.messages);
-            if (Array.isArray(data.senders)) {
+
+            if (!(chatState.messageKeys instanceof Set)) {
+                chatState.messageKeys = new Set(
+                    chatState.messages.map(getMessageKey).filter(Boolean),
+                );
+            }
+
+            if (mode === 'replace') {
+                const incoming = Array.isArray(data.messages)
+                    ? data.messages.slice(0, MAX_MESSAGES)
+                    : [];
+                chatState.messages = incoming;
+                chatState.messageKeys = new Set(
+                    chatState.messages.map(getMessageKey).filter(Boolean),
+                );
+                renderMessages(chatState.messages, { replace: true });
+            } else {
+                const incoming = Array.isArray(data.messages) ? data.messages : [];
+                const uniqueCandidates = [];
+                incoming.forEach((message) => {
+                    const key = getMessageKey(message);
+                    if (!key || (chatState.messageKeys && chatState.messageKeys.has(key))) {
+                        return;
+                    }
+                    uniqueCandidates.push({ message, key });
+                });
+                if (uniqueCandidates.length) {
+                    const availableSlots = MAX_MESSAGES - chatState.messages.length;
+                    if (availableSlots <= 0) {
+                        chatState.reachedCap = true;
+                    } else {
+                        const batch = uniqueCandidates.slice(0, availableSlots);
+                        const batchMessages = batch.map((entry) => entry.message);
+                        batch.forEach((entry) => {
+                            if (entry.key) {
+                                chatState.messageKeys.add(entry.key);
+                            }
+                            chatState.messages.push(entry.message);
+                        });
+                        renderMessages(batchMessages, { replace: false });
+                        if (uniqueCandidates.length > availableSlots) {
+                            chatState.reachedCap = true;
+                        }
+                    }
+                } else {
+                    updateSentinelState();
+                }
+            }
+
+            applyMetaFromResponse(data);
+            if (mode === 'replace') {
+                restartLiveUpdates();
+            }
+
+            if (mode === 'replace' && Array.isArray(data.senders)) {
                 renderSendersList(data.senders);
             }
+
+            syncWindowSelectionFromResponse(data);
         } catch (error) {
             console.error('Failed to load chat messages', error);
         } finally {
-            setLoading(false);
-            scheduleAutoRefresh();
+            if (mode === 'append') {
+                chatState.loadingMore = false;
+                setLoadMoreState(false);
+            } else {
+                chatState.loading = false;
+                setLoading(false);
+                if (!liveUpdates) {
+                    scheduleAutoRefresh();
+                }
+            }
         }
     }
 
@@ -992,28 +1585,30 @@
         const channelValue = channelInput ? channelInput.value : '';
         const audienceValue = audienceInput ? audienceInput.value || 'all' : 'all';
         const senderValue = senderInput ? senderInput.value : '';
-        const limitValueRaw = limitInput ? limitInput.value : chatState.limit;
-        const parsedLimit = parseInt(limitValueRaw, 10);
-        const normalizedLimit = Number.isNaN(parsedLimit)
-            ? chatState.limit
-            : Math.max(10, Math.min(parsedLimit, 200));
         const searchValue = searchInput ? searchInput.value.trim() : '';
+        const windowValue = windowInput ? windowInput.value || '24' : '24';
+
+        let sinceValue = windowSinceInput ? windowSinceInput.value.trim() : '';
+        if (windowValue !== 'custom') {
+            sinceValue = '';
+            if (windowSinceInput) {
+                windowSinceInput.value = '';
+            }
+        }
 
         const previousChannel = chatState.channel;
         const previousAudience = chatState.audience;
         const previousSender = chatState.sender;
-        const previousLimit = chatState.limit;
         const previousSearch = chatState.search;
+        const previousWindow = chatState.windowValue;
+        const previousSince = chatState.windowSince;
 
         chatState.channel = channelValue;
         chatState.audience = audienceValue;
         chatState.sender = senderValue;
-        chatState.limit = normalizedLimit;
         chatState.search = searchValue;
-
-        if (limitInput && limitInput.value !== String(normalizedLimit)) {
-            limitInput.value = String(normalizedLimit);
-        }
+        chatState.windowValue = windowValue || '24';
+        chatState.windowSince = sinceValue;
 
         const searchParams = new URLSearchParams();
         if (channelValue) {
@@ -1023,7 +1618,10 @@
         if (senderValue) {
             searchParams.set('sender', senderValue);
         }
-        searchParams.set('limit', chatState.limit);
+        searchParams.set('window', chatState.windowValue);
+        if (chatState.windowValue === 'custom' && sinceValue) {
+            searchParams.set('since', sinceValue);
+        }
         if (searchValue) {
             searchParams.set('q', searchValue);
         }
@@ -1039,11 +1637,16 @@
             || previousChannel !== chatState.channel
             || previousAudience !== chatState.audience
             || previousSender !== chatState.sender
-            || previousLimit !== chatState.limit
-            || previousSearch !== chatState.search;
+            || previousSearch !== chatState.search
+            || previousWindow !== chatState.windowValue
+            || previousSince !== chatState.windowSince;
 
         if (changed) {
-            loadMessages({ showSpinner: true });
+            stopLiveUpdates();
+            chatState.reachedCap = false;
+            chatState.hasMore = false;
+            chatState.nextCursor = null;
+            loadMessages({ mode: 'replace', showSpinner: true });
         } else if (!opts.skipRefresh) {
             scheduleAutoRefresh();
         }
@@ -1222,27 +1825,31 @@
     const dropdowns = [
         { menuEl: channelMenu, inputEl: channelInput, labelEl: channelLabelEl, toggleEl: channelToggle },
         { menuEl: audienceMenu, inputEl: audienceInput, labelEl: audienceLabelEl, toggleEl: audienceToggle },
-        { menuEl: limitMenu, inputEl: limitInput, labelEl: limitLabelEl, toggleEl: limitToggle },
     ];
     dropdowns.forEach(setupDropdown);
 
-    if (refreshButton) {
-        refreshButton.addEventListener('click', () => loadMessages({ showSpinner: true }));
+    if (windowMenu && windowInput && windowLabelEl && windowToggle) {
+        setupDropdown({
+            menuEl: windowMenu,
+            inputEl: windowInput,
+            labelEl: windowLabelEl,
+            toggleEl: windowToggle,
+            beforeSelect: ({ value }) => {
+                if (value === 'custom') {
+                    bootstrap.Dropdown.getOrCreateInstance(windowToggle).hide();
+                    handleCustomWindowSelection();
+                    return false;
+                }
+                if (windowSinceInput) {
+                    windowSinceInput.value = '';
+                }
+                return true;
+            },
+        });
     }
 
-    if (refreshIntervalSelect) {
-        const onRefreshIntervalChange = () => {
-            const parsed = parseInt(refreshIntervalSelect.value, 10);
-            chatState.refreshInterval = Number.isNaN(parsed) ? 30000 : parsed;
-            // Ensure existing timers are stopped and the note updates immediately
-            cancelAutoRefresh();
-            updateAutoRefreshNote();
-            scheduleAutoRefresh();
-        };
-
-        // Handle both change and input to be robust across drivers
-        refreshIntervalSelect.addEventListener('change', onRefreshIntervalChange);
-        refreshIntervalSelect.addEventListener('input', onRefreshIntervalChange);
+    if (refreshButton) {
+        refreshButton.addEventListener('click', () => loadMessages({ mode: 'replace', showSpinner: true }));
     }
 
     if (filterForm) {
@@ -1254,10 +1861,17 @@
 
     renderSendersInitial();
     initCompactMode();
-    renderMessages(initialData.messages);
-    updateMeta(initialData.meta, initialData.messages);
+    renderMessages(chatState.messages, { replace: true });
+    updateMeta(chatState.meta);
     refreshTooltips();
-    scheduleAutoRefresh();
+    updateSentinelState();
+    initInfiniteScroll();
+    startRelativeTimeUpdates();
+    window.addEventListener('beforeunload', () => {
+        stopLiveUpdates();
+        stopRelativeTimeUpdates();
+    });
+    restartLiveUpdates();
 })();
 </script>
 {% endblock %}

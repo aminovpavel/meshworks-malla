@@ -2,6 +2,7 @@
 
 import sqlite3
 import time
+from datetime import datetime, timezone
 
 
 class TestChatFeature:
@@ -27,6 +28,10 @@ class TestChatFeature:
         assert "limit" in data
         assert "senders" in data
         assert "counts" in data
+        assert "window" in data
+        assert "window_value" in data
+        assert "window_label" in data
+        assert "next_cursor" in data
         assert data["limit"] == 5
         assert "selected_audience" in data
 
@@ -77,6 +82,7 @@ class TestChatFeature:
         counts = data["counts"]
         assert "last_hour" in counts
         assert "last_day" in counts
+        assert "last_6h" in counts
 
     def test_chat_filters_iso_timestamp_messages(self, client):
         """Timestamp-only payloads should be filtered out of chat results."""
@@ -85,6 +91,7 @@ class TestChatFeature:
         iso_text = "2025-10-15T16:17:01+03:00"
         now = time.time()
 
+        client.get("/api/chat/messages?limit=1")
         conn = sqlite3.connect(cfg.database_file)
         conn.execute(
             """
@@ -125,6 +132,7 @@ class TestChatFeature:
         now = time.time()
         unique_text = "meshworks-search-marker"
 
+        client.get("/api/chat/messages?limit=1")
         conn = sqlite3.connect(cfg.database_file)
         conn.execute(
             """
@@ -155,3 +163,100 @@ class TestChatFeature:
         assert response.status_code == 200
         data = response.get_json()
         assert any(unique_text in message["message"] for message in data["messages"])
+
+    def test_chat_time_window_filter(self, client):
+        """Time window parameter should restrict results to the selected range."""
+
+        cfg = client.application.config["APP_CONFIG"]
+        now = time.time()
+        old_text = "meshworks-window-old"
+        recent_text = "meshworks-window-recent"
+
+        conn = sqlite3.connect(cfg.database_file)
+        conn.execute(
+            """
+            INSERT INTO packet_history (
+                timestamp, topic, from_node_id, to_node_id, portnum, portnum_name,
+                gateway_id, channel_id, raw_payload, processed_successfully, mesh_packet_id
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                now - (2 * 3600),
+                "msh/msk/2/e/LongFast",
+                0x9EE9A33C,
+                0x9EE70D3C,
+                1,
+                "TEXT_MESSAGE_APP",
+                "!window_gateway",
+                "LongFast",
+                old_text.encode("utf-8"),
+                1,
+                None,
+            ),
+        )
+        conn.execute(
+            """
+            INSERT INTO packet_history (
+                timestamp, topic, from_node_id, to_node_id, portnum, portnum_name,
+                gateway_id, channel_id, raw_payload, processed_successfully, mesh_packet_id
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                now - 300,
+                "msh/msk/2/e/LongFast",
+                0x9EE9A33C,
+                0x9EE70D3C,
+                1,
+                "TEXT_MESSAGE_APP",
+                "!window_gateway",
+                "LongFast",
+                recent_text.encode("utf-8"),
+                1,
+                int(now),
+            ),
+        )
+        conn.commit()
+        conn.close()
+
+        response_recent = client.get("/api/chat/messages?window=1")
+        assert response_recent.status_code == 200
+        data_recent = response_recent.get_json()
+        recent_messages = {msg["message"] for msg in data_recent["messages"]}
+        assert recent_text in recent_messages
+        assert old_text not in recent_messages
+
+        custom_start = datetime.fromtimestamp(now - (4 * 3600), tz=timezone.utc).isoformat()
+        response_custom = client.get(
+            f"/api/chat/messages?window=custom&since={custom_start}&limit=500"
+        )
+        assert response_custom.status_code == 200
+        data_custom = response_custom.get_json()
+        custom_messages = {msg["message"] for msg in data_custom["messages"]}
+        assert recent_text in custom_messages
+        assert old_text in custom_messages
+
+    def test_chat_pagination_cursor(self, client):
+        """Cursor-based pagination should return older messages when requested."""
+
+        first_page = client.get("/api/chat/messages?limit=1")
+        assert first_page.status_code == 200
+        first_data = first_page.get_json()
+        assert first_data["has_more"] is True
+        assert first_data["next_cursor"]
+        assert first_data["messages"]
+        first_message_id = first_data["messages"][0]["id"]
+
+        cursor = first_data["next_cursor"]
+        before_ts = cursor.get("before_ts")
+        before_id = cursor.get("before_id")
+        assert before_ts is not None
+
+        second_page = client.get(
+            f"/api/chat/messages?limit=1&before={before_ts}&before_id={before_id}"
+        )
+        assert second_page.status_code == 200
+        second_data = second_page.get_json()
+        assert second_data["messages"]
+        assert second_data["messages"][0]["id"] != first_message_id
