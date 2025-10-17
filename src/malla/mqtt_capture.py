@@ -63,6 +63,24 @@ DATABASE_FILE: str = _cfg.database_file
 # Decryption key for secondary channels (optional)
 DEFAULT_CHANNEL_KEY: str = _cfg.default_channel_key
 
+CAPTURE_STORE_RAW: bool = (
+    str(getattr(_cfg, "capture_store_raw", os.getenv("MALLA_CAPTURE_STORE_RAW", "1"))).lower()
+    in {"1", "true", "yes", "on"}
+)
+WAL_AUTOCHECKPOINT_PAGES: int = int(os.getenv("MALLA_WAL_AUTOCHECKPOINT", "1000"))
+JOURNAL_SIZE_LIMIT_BYTES: int = int(
+    os.getenv("MALLA_JOURNAL_SIZE_LIMIT", str(64 * 1024 * 1024))
+)
+SQLITE_CACHE_KB: int = int(
+    os.getenv("MALLA_SQLITE_CACHE_KB", "8192")
+)  # ~8 MiB per connection
+DISABLE_MMAP: bool = str(os.getenv("MALLA_SQLITE_DISABLE_MMAP", "1")).lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+
 # Logging configuration – falls back to INFO if an invalid level was supplied
 LOG_LEVEL = _cfg.log_level.upper()
 logging.basicConfig(
@@ -1318,11 +1336,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-CAPTURE_STORE_RAW: bool = (
-    str(getattr(_cfg, "capture_store_raw", os.getenv("MALLA_CAPTURE_STORE_RAW", "1"))).lower()
-    in {"1", "true", "yes", "on"}
-)
-WAL_AUTOCHECKPOINT_PAGES: int = int(os.getenv("MALLA_WAL_AUTOCHECKPOINT", "1000"))
-JOURNAL_SIZE_LIMIT_BYTES: int = int(os.getenv("MALLA_JOURNAL_SIZE_LIMIT", str(64 * 1024 * 1024)))
-SQLITE_CACHE_KB: int = int(os.getenv("MALLA_SQLITE_CACHE_KB", "8192"))  # ~8 MiB per connection
-DISABLE_MMAP: bool = str(os.getenv("MALLA_SQLITE_DISABLE_MMAP", "1")).lower() in {"1","true","yes","on"}
