@@ -1,113 +1,126 @@
 #!/usr/bin/env python3
-"""
-Vendor selected CDN assets into src/malla/static/vendor/ at build time.
+"""Download vendored static assets declared in vendor_assets.toml."""
 
-This avoids runtime dependency on external CDNs that may be blocked.
-Safe to re-run; downloads are skipped if the target file exists with non-zero size.
-"""
 from __future__ import annotations
 
+import argparse
 import hashlib
-import os
 import sys
 import urllib.request
 from pathlib import Path
 
+try:
+    import tomllib  # Python 3.11+
+except ModuleNotFoundError:  # pragma: no cover - legacy fallback
+    import tomli as tomllib  # type: ignore[no-redef]
+
+
 ROOT = Path(__file__).resolve().parents[1]
 VENDOR = ROOT / "src" / "malla" / "static" / "vendor"
+MANIFEST = Path(__file__).with_name("vendor_assets.toml")
 
 
-def fetch(url: str, dest: Path) -> None:
+class DownloadError(RuntimeError):
+    """Raised when a download fails or checksum mismatch occurs."""
+
+
+def compute_sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fp:
+        for chunk in iter(lambda: fp.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def load_manifest() -> list[dict[str, str]]:
+    if not MANIFEST.exists():
+        raise FileNotFoundError(f"manifest not found: {MANIFEST}")
+    data = tomllib.loads(MANIFEST.read_text(encoding="utf-8"))
+    assets = []
+    for entry in data.get("asset", []):
+        base = entry.get("base")
+        name = entry.get("name", "unknown")
+        version = entry.get("version")
+        for file_spec in entry.get("file", []):
+            url = file_spec["url"]
+            if "{base}" in url:
+                if not base:
+                    raise ValueError(f"asset '{name}' references {{base}} without defining base")
+                url = url.format(base=base)
+            assets.append(
+                {
+                    "name": name,
+                    "version": version,
+                    "url": url,
+                    "path": file_spec["path"],
+                    "sha256": file_spec.get("sha256"),
+                }
+            )
+    return assets
+
+
+def download(url: str, dest: Path) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
-    if dest.exists() and dest.stat().st_size > 0:
-        return
+    with urllib.request.urlopen(url, timeout=60) as resp, dest.open("wb") as fp:
+        fp.write(resp.read())
+
+
+def process_asset(item: dict[str, str], force: bool) -> str:
+    dest = VENDOR / item["path"]
+    sha_expected = item.get("sha256")
+
+    if dest.exists() and not force:
+        if sha_expected:
+            if compute_sha256(dest) == sha_expected:
+                return "skipped"
+        elif dest.stat().st_size > 0:
+            return "skipped"
+
     try:
-        with urllib.request.urlopen(url, timeout=30) as resp, open(dest, "wb") as fp:
-            fp.write(resp.read())
-        # simple checksum log
-        h = hashlib.sha256(dest.read_bytes()).hexdigest()[:12]
-        print(f"fetched {url} -> {dest} sha256:{h}")
-    except Exception as e:
-        print(f"WARN: failed to fetch {url}: {e}", file=sys.stderr)
+        download(item["url"], dest)
+    except Exception as exc:  # pragma: no cover - network failure
+        raise DownloadError(f"failed to fetch {item['url']}: {exc}")
+
+    if sha_expected:
+        sha_actual = compute_sha256(dest)
+        if sha_actual != sha_expected:
+            raise DownloadError(
+                f"checksum mismatch for {dest} (expected {sha_expected}, got {sha_actual})"
+            )
+
+    return "updated"
 
 
-def main() -> int:
-    # Bootstrap 5.3.2
-    fetch(
-        "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css",
-        VENDOR / "bootstrap" / "css" / "bootstrap.min.css",
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="download files even if they already exist and match the expected checksum",
     )
-    fetch(
-        "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js",
-        VENDOR / "bootstrap" / "js" / "bootstrap.bundle.min.js",
-    )
+    args = parser.parse_args(argv)
 
-    # Bootstrap Icons 1.11.1
-    fetch(
-        "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css",
-        VENDOR / "bootstrap-icons" / "font" / "bootstrap-icons.css",
-    )
-    fetch(
-        "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/fonts/bootstrap-icons.woff2",
-        VENDOR / "bootstrap-icons" / "font" / "fonts" / "bootstrap-icons.woff2",
-    )
+    manifest = load_manifest()
+    updated = 0
+    skipped = 0
 
-    # Plotly 2.30.0
-    fetch(
-        "https://cdn.plot.ly/plotly-2.30.0.min.js",
-        VENDOR / "plotly" / "plotly.min.js",
-    )
+    for item in manifest:
+        label = f"{item['name']}:{item['path']}"
+        try:
+            status = process_asset(item, force=args.force)
+        except DownloadError as exc:
+            print(f"ERROR: {exc}", file=sys.stderr)
+            return 1
+        if status == "updated":
+            updated += 1
+            print(f"updated {label}")
+        else:
+            skipped += 1
+            print(f"skipped {label}")
 
-    # Chart.js 4.4.0
-    fetch(
-        "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js",
-        VENDOR / "chart.js" / "chart.umd.min.js",
-    )
-
-    # jQuery 3.7.1
-    fetch(
-        "https://code.jquery.com/jquery-3.7.1.min.js",
-        VENDOR / "jquery" / "jquery-3.7.1.min.js",
-    )
-
-    # D3 v7
-    fetch("https://d3js.org/d3.v7.min.js", VENDOR / "d3" / "d3.v7.min.js")
-
-    # Leaflet 1.9.4 (css/js + images)
-    fetch(
-        "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css",
-        VENDOR / "leaflet" / "leaflet.css",
-    )
-    fetch(
-        "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js",
-        VENDOR / "leaflet" / "leaflet.js",
-    )
-    for img in [
-        "marker-icon.png",
-        "marker-icon-2x.png",
-        "marker-shadow.png",
-    ]:
-        fetch(
-            f"https://unpkg.com/leaflet@1.9.4/dist/images/{img}",
-            VENDOR / "leaflet" / "images" / img,
-        )
-
-    # Leaflet.markercluster 1.4.1
-    base = "https://unpkg.com/leaflet.markercluster@1.4.1/dist"
-    for name in ["MarkerCluster.css", "MarkerCluster.Default.css", "leaflet.markercluster.js"]:
-        fetch(f"{base}/{name}", VENDOR / "leaflet.markercluster" / name)
-    # Default images used by CSS
-    for img in [
-        "MarkerCluster-2x.png",
-        "MarkerCluster.png",
-        "MarkerClusterDefault-2x.png",
-        "MarkerClusterDefault.png",
-    ]:
-        fetch(f"{base}/images/{img}", VENDOR / "leaflet.markercluster" / "images" / img)
-
+    print(f"done: {updated} updated, {skipped} up-to-date")
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
