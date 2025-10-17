@@ -62,3 +62,6 @@ dev-setup: install-dev ## Set up development environment
 check: sanity lint test ## Run all checks (sanity + lint + test)
 
 ci: install-dev check ## Run CI pipeline locally 
+
+vendor-assets: ## Refresh vendored static assets
+	uv run python scripts/vendor_assets.py

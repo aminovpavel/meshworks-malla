@@ -4,6 +4,10 @@ import importlib
 import sqlite3
 import tempfile
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
 
 def _setup_db_path(monkeypatch):
     tf = tempfile.NamedTemporaryFile(delete=False, suffix=".db")

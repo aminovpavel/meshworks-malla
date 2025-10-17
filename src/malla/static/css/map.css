@@ -14,6 +14,10 @@
     z-index: 1;
 }
 
+[data-bs-theme="dark"] .map-container {
+    background: #121212;
+}
+
 .map-main {
     flex: 1;
     position: relative;
@@ -24,6 +28,12 @@
 .network-map {
     width: 100%;
     height: 100%;
+    background: #f8f9fa;
+    transition: background 0.2s ease;
+}
+
+[data-bs-theme="dark"] .network-map {
+    background: #111418;
 }
 
 .loading-overlay, .error-overlay {
@@ -40,8 +50,18 @@
     z-index: 100;
 }
 
+[data-bs-theme="dark"] .loading-overlay,
+[data-bs-theme="dark"] .error-overlay {
+    background: rgba(18, 18, 18, 0.9);
+    color: #e9ecef;
+}
+
 .error-overlay {
     color: #dc3545;
+}
+
+[data-bs-theme="dark"] .error-overlay {
+    color: #ff6b6b;
 }
 
 .node-list-container {
@@ -158,6 +178,160 @@
     transition: transform 0.2s ease;
 }
 
+.map-fallback-overlay {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    right: auto;
+    max-width: min(360px, calc(100% - 2rem));
+    display: none;
+    z-index: 120;
+    pointer-events: none;
+}
+
+.map-fallback-overlay.is-visible {
+    display: block;
+}
+
+.map-fallback-card {
+    pointer-events: auto;
+    background: rgba(255, 255, 255, 0.94);
+    border-radius: 0.75rem;
+    border: 1px solid rgba(33, 37, 41, 0.12);
+    box-shadow: 0 0.75rem 1.5rem rgba(33, 37, 41, 0.16);
+    padding: 1rem 1.25rem;
+    font-size: 0.875rem;
+}
+
+[data-bs-theme="dark"] .map-fallback-card {
+    background: rgba(33, 37, 41, 0.94);
+    border-color: rgba(222, 226, 230, 0.12);
+    box-shadow: 0 0.75rem 1.5rem rgba(0, 0, 0, 0.4);
+}
+
+.map-fallback-caption {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+.map-fallback-summary {
+    display: flex;
+    gap: 1.25rem;
+    margin-bottom: 1rem;
+}
+
+.map-fallback-summary dt {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: var(--bs-secondary-color, #6c757d);
+    margin-bottom: 0.35rem;
+}
+
+.map-fallback-summary dd {
+    margin: 0;
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.map-fallback-selected {
+    border-top: 1px solid rgba(33, 37, 41, 0.12);
+    padding-top: 0.85rem;
+}
+
+[data-bs-theme="dark"] .map-fallback-selected {
+    border-top-color: rgba(222, 226, 230, 0.12);
+}
+
+.map-fallback-selected-title {
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+.map-fallback-selected-subtitle {
+    font-size: 0.75rem;
+}
+
+.map-fallback-precision {
+    margin: 0.75rem 0 1rem;
+    text-align: center;
+}
+
+.map-fallback-precision-visual {
+    --precision-size: 140px;
+    width: var(--precision-size);
+    height: var(--precision-size);
+    border-radius: 50%;
+    border: 2px dashed rgba(13, 110, 253, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 0.85rem;
+    position: relative;
+    transition: all 0.2s ease;
+}
+
+.map-fallback-precision-visual::after {
+    content: "";
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #0d6efd;
+    border: 3px solid #ffffff;
+    box-shadow: 0 4px 8px rgba(13, 110, 253, 0.35);
+}
+
+[data-bs-theme="dark"] .map-fallback-precision-visual::after {
+    border-color: rgba(33, 37, 41, 0.95);
+}
+
+.map-fallback-precision[data-fallback-precision="tight"] .map-fallback-precision-visual {
+    border-color: rgba(25, 135, 84, 0.6);
+    box-shadow: 0 0 0 8px rgba(25, 135, 84, 0.08);
+}
+
+.map-fallback-precision[data-fallback-precision="medium"] .map-fallback-precision-visual {
+    border-color: rgba(255, 193, 7, 0.6);
+    box-shadow: 0 0 0 8px rgba(255, 193, 7, 0.1);
+}
+
+.map-fallback-precision[data-fallback-precision="wide"] .map-fallback-precision-visual {
+    border-color: rgba(220, 53, 69, 0.5);
+    box-shadow: 0 0 0 8px rgba(220, 53, 69, 0.08);
+}
+
+.map-fallback-precision-text {
+    font-size: 0.8rem;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
+.map-fallback-precision-note {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--bs-secondary-color, #6c757d);
+    margin-top: 0.2rem;
+}
+
+.map-fallback-details {
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.map-fallback-details li + li {
+    margin-top: 0.25rem;
+}
+
+.map-fallback-empty {
+    margin: 0;
+    color: var(--bs-secondary-color, #6c757d);
+}
+
 .node-marker-container:hover {
     transform: scale(1.1);
 }
@@ -204,4 +378,3 @@
     margin-right: 4px;
     vertical-align: middle;
 }
-

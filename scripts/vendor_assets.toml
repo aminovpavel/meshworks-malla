@@ -1,0 +1,156 @@
+[[asset]]
+name = "bootstrap"
+version = "5.3.2"
+
+  [[asset.file]]
+  url = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+  path = "bootstrap/css/bootstrap.min.css"
+  sha256 = "3c8f27e6009ccfd710a905e6dcf12d0ee3c6f2ac7da05b0572d3e0d12e736fc8"
+
+  [[asset.file]]
+  url = "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+  path = "bootstrap/js/bootstrap.bundle.min.js"
+  sha256 = "0833b2e9c3a26c258476c46266e6877fc75218625162e0460be9a3a098a61c6c"
+
+[[asset]]
+name = "bootstrap-icons"
+version = "1.11.1"
+
+  [[asset.file]]
+  url = "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css"
+  path = "bootstrap-icons/font/bootstrap-icons.css"
+  sha256 = "4ffa6bea4304d2eda418683f56261685ed47bf00995039f27e5ad62d53938d2d"
+
+  [[asset.file]]
+  url = "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/fonts/bootstrap-icons.woff"
+  path = "bootstrap-icons/font/fonts/bootstrap-icons.woff"
+  sha256 = "bb1de989b83970f6f4e54de1cd974c5cba55b73582da5e1b225a6d0edf029483"
+
+  [[asset.file]]
+  url = "https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/fonts/bootstrap-icons.woff2"
+  path = "bootstrap-icons/font/fonts/bootstrap-icons.woff2"
+  sha256 = "476adf42b40325098fcfa8b36ab3e769186bb4f6ce6a249753e2e1a9c22bf99e"
+
+[[asset]]
+name = "plotly"
+version = "2.30.0"
+
+  [[asset.file]]
+  url = "https://cdn.plot.ly/plotly-2.30.0.min.js"
+  path = "plotly/plotly.min.js"
+  sha256 = "aeed601a83028a17d975f689908e1957576d855af8d186186f953fe1771bbc9d"
+
+[[asset]]
+name = "chart.js"
+version = "4.4.0"
+
+  [[asset.file]]
+  url = "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"
+  path = "chart.js/chart.umd.min.js"
+  sha256 = "9653a0813db743bbe78332a3896e28c7bc7546e4fff51e7e979e908d1f0471d1"
+
+[[asset]]
+name = "jquery"
+version = "3.7.1"
+
+  [[asset.file]]
+  url = "https://code.jquery.com/jquery-3.7.1.min.js"
+  path = "jquery/jquery-3.7.1.min.js"
+  sha256 = "fc9a93dd241f6b045cbff0481cf4e1901becd0e12fb45166a8f17f95823f0b1a"
+
+[[asset]]
+name = "d3"
+version = "7.8.5"
+
+  [[asset.file]]
+  url = "https://d3js.org/d3.v7.min.js"
+  path = "d3/d3.v7.min.js"
+  sha256 = "f2094bbf6141b359722c4fe454eb6c4b0f0e42cc10cc7af921fc158fceb86539"
+
+[[asset]]
+name = "leaflet"
+version = "1.9.4"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  path = "leaflet/leaflet.css"
+  sha256 = "a7837102824184820dfa198d1ebcd109ff6d0ff9a2672a074b9a1b4d147d04c6"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  path = "leaflet/leaflet.js"
+  sha256 = "db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png"
+  path = "leaflet/images/marker-icon.png"
+  sha256 = "574c3a5cca85f4114085b6841596d62f00d7c892c7b03f28cbfa301deb1dc437"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png"
+  path = "leaflet/images/marker-icon-2x.png"
+  sha256 = "00179c4c1ee830d3a108412ae0d294f55776cfeb085c60129a39aa6fc4ae2528"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png"
+  path = "leaflet/images/marker-shadow.png"
+  sha256 = "264f5c640339f042dd729062cfc04c17f8ea0f29882b538e3848ed8f10edb4da"
+
+[[asset]]
+name = "leaflet.markercluster"
+version = "1.4.1"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"
+  path = "leaflet.markercluster/MarkerCluster.css"
+  sha256 = "614dea0a98ff3f4ead74f04918f6b1d1b9ba435c25b5fc23b21a394d1e3e4d87"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"
+  path = "leaflet.markercluster/MarkerCluster.Default.css"
+  sha256 = "61258232d98d64dc2a7b1e02130d67421bc5b9bda5994eef70228ff97570c170"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"
+  path = "leaflet.markercluster/leaflet.markercluster.js"
+  sha256 = "1e4e1d22972a3926f48598e0caf14e3fe7049835d428a344fed4f9e3665b3508"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet.markercluster@1.4.1/dist/images/MarkerCluster.png"
+  path = "leaflet.markercluster/images/marker-cluster.png"
+  sha256 = "39e33ea00eb71c33473ea420dfec0a4811abbca2897fe1109f794bd7e10aa6a0"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet.markercluster@1.4.1/dist/images/MarkerCluster-2x.png"
+  path = "leaflet.markercluster/images/marker-cluster-2x.png"
+  sha256 = "bc8338943b33af3971e168837d2acca5d953f8b1675b4592ebaee50a328a9bf9"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet.markercluster@1.4.1/dist/images/MarkerClusterDefault.png"
+  path = "leaflet.markercluster/images/marker-cluster-small.png"
+  sha256 = "b21d53e7ae8bdb6b209cf6cce77e4fab7ca97d392d93e9486510b5cbcebe8dc0"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet.markercluster@1.4.1/dist/images/MarkerClusterDefault-2x.png"
+  path = "leaflet.markercluster/images/marker-cluster-small-2x.png"
+  sha256 = "bdefa4908772bd469d3a2ab628438da19ccb0c42537077faf31db438721dd845"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet.markercluster@1.4.1/dist/images/MarkerClusterGold.png"
+  path = "leaflet.markercluster/images/marker-cluster-medium.png"
+  sha256 = "50041d1e8dd92e47ca347ea6b8a3dda8c66bc6e76e7ac66ed7dbbd04502ed01c"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet.markercluster@1.4.1/dist/images/MarkerClusterGold-2x.png"
+  path = "leaflet.markercluster/images/marker-cluster-medium-2x.png"
+  sha256 = "c8b15f9e02c530039efd765ed897e70be3af935c4f4c400e997c0e72e33e58e8"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet.markercluster@1.4.1/dist/images/MarkerClusterGreen.png"
+  path = "leaflet.markercluster/images/marker-cluster-large.png"
+  sha256 = "4fe26f4092ba26d282efb8abff29870fd0471e2f23acefbb375a97a9c9ca2463"
+
+  [[asset.file]]
+  url = "https://unpkg.com/leaflet.markercluster@1.4.1/dist/images/MarkerClusterGreen-2x.png"
+  path = "leaflet.markercluster/images/marker-cluster-large-2x.png"
+  sha256 = "f414f5259f01cf2a71158be2f3cbfc1f501ae43939d34ff278799936ee4fc3ff"

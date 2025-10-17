@@ -1140,7 +1140,12 @@ class ChatRepository:
                     "limit": limit,
                     "offset": offset,
                     "has_more": False,
-                    "counts": {"count_1h": 0, "count_24h": 0},
+                    "counts": {
+                        "last_hour": 0,
+                        "last_day": 0,
+                        "count_1h": 0,
+                        "count_24h": 0,
+                    },
                     "search": search,
                     "degraded": True,
                 }
@@ -1302,24 +1307,31 @@ class ChatRepository:
     @staticmethod
     def get_channels() -> list[dict[str, Any]]:
         """Return distinct chat channels with usage counts."""
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
 
-        cursor.execute(
-            """
-            SELECT
-                COALESCE(channel_id, '') AS channel_id,
-                COUNT(*) AS count
-            FROM packet_history
-            WHERE portnum_name = ?
-            GROUP BY COALESCE(channel_id, '')
-            ORDER BY count DESC
-        """,
-            (ChatRepository._TEXT_PORT,),
-        )
+            cursor.execute(
+                """
+                SELECT
+                    COALESCE(channel_id, '') AS channel_id,
+                    COUNT(*) AS count
+                FROM packet_history
+                WHERE portnum_name = ?
+                GROUP BY COALESCE(channel_id, '')
+                ORDER BY count DESC
+            """,
+                (ChatRepository._TEXT_PORT,),
+            )
 
-        rows = cursor.fetchall()
-        conn.close()
+            rows = cursor.fetchall()
+        except sqlite3.DatabaseError as exc:
+            logger.error("ChatRepository.get_channels degraded due to DB error: %s", exc)
+            return []
+        finally:
+            if conn:
+                conn.close()
 
         channels: list[dict[str, Any]] = []
         for row in rows:
@@ -1342,24 +1354,31 @@ class ChatRepository:
     @staticmethod
     def get_senders(limit: int = 100) -> list[dict[str, Any]]:
         """Return distinct chat senders with usage counts."""
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        conn = None
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
 
-        cursor.execute(
-            """
-            SELECT from_node_id, COUNT(*) AS count
-            FROM packet_history
-            WHERE portnum_name = ?
-              AND from_node_id IS NOT NULL
-            GROUP BY from_node_id
-            ORDER BY count DESC
-            LIMIT ?
-        """,
-            (ChatRepository._TEXT_PORT, limit),
-        )
+            cursor.execute(
+                """
+                SELECT from_node_id, COUNT(*) AS count
+                FROM packet_history
+                WHERE portnum_name = ?
+                  AND from_node_id IS NOT NULL
+                GROUP BY from_node_id
+                ORDER BY count DESC
+                LIMIT ?
+            """,
+                (ChatRepository._TEXT_PORT, limit),
+            )
 
-        rows = cursor.fetchall()
-        conn.close()
+            rows = cursor.fetchall()
+        except sqlite3.DatabaseError as exc:
+            logger.error("ChatRepository.get_senders degraded due to DB error: %s", exc)
+            return []
+        finally:
+            if conn:
+                conn.close()
 
         node_ids = [
             row["from_node_id"] for row in rows if isinstance(row["from_node_id"], int)

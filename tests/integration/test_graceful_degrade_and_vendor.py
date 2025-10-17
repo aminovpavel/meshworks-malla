@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sqlite3
 import tempfile
+from pathlib import Path
 
 from src.malla.config import AppConfig
 from src.malla.web_ui import create_app
@@ -59,3 +60,30 @@ def test_graceful_degrade_on_malformed_db(monkeypatch):
         assert r2.status_code == 200
         data = r2.get_json()
         assert data["direct_receptions"] == []
+
+
+def test_map_template_includes_fallback_overlay():
+    app = _app()
+    with app.test_client() as client:
+        response = client.get("/map")
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        assert 'id="mapFallbackOverlay"' in html
+        assert 'class="map-fallback-overlay"' in html
+
+
+def test_map_css_has_fallback_styles():
+    css_path = Path("src/malla/static/css/map.css")
+    css_data = css_path.read_text(encoding="utf-8")
+    assert ".map-fallback-overlay" in css_data
+    assert ".map-fallback-precision-note" in css_data
+
+
+def test_traceroute_graph_template_uses_module():
+    app = _app()
+    with app.test_client() as client:
+        response = client.get("/traceroute-graph")
+        assert response.status_code == 200
+        html = response.get_data(as_text=True)
+        assert "js/traceroute-graph.js" in html
+        assert "TracerouteGraph.centerGraph()" in html
