@@ -6,7 +6,14 @@ import logging
 import os
 from datetime import UTC, datetime
 
-from flask import Blueprint, current_app, render_template, request, send_from_directory
+from flask import (
+    Blueprint,
+    current_app,
+    render_template,
+    request,
+    send_from_directory,
+    url_for,
+)
 
 # Import from the new modular architecture
 from ..config import get_config
@@ -126,6 +133,28 @@ def chat():
             .isoformat(timespec="seconds")
         )
 
+    chat_meta_payload = {
+        key: value for key, value in chat_data.items() if key != "messages"
+    }
+    chat_bootstrap = {
+        "apiUrl": url_for("api.api_chat_messages"),
+        "streamUrl": url_for("api.api_chat_stream"),
+        "pageSize": chat_data.get("limit", page_size),
+        "state": {
+            "channel": selected_channel or "",
+            "audience": selected_audience or "all",
+            "sender": selected_sender or "",
+            "search": search_query or "",
+            "windowValue": window_selection["value"],
+            "windowSince": selected_window_start_iso or "",
+            "windowLabel": window_selection["label"],
+        },
+        "messages": chat_data["messages"],
+        "channels": channels,
+        "senders": senders,
+        "meta": chat_meta_payload,
+    }
+
     return render_template(
         "chat.html",
         messages=chat_data["messages"],
@@ -146,6 +175,7 @@ def chat():
         time_window_options=time_window_options,
         selected_window_start_iso=selected_window_start_iso,
         mqtt_info=mqtt_info,
+        chat_bootstrap=chat_bootstrap,
     )
 
 
