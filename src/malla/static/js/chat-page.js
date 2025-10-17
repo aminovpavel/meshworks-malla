@@ -101,6 +101,9 @@
     const refreshButton = document.getElementById('chat-refresh-button');
     const liveToggleButton = document.getElementById('chat-live-toggle');
     const filterForm = document.getElementById('chat-filter-form');
+    const filterButton = document.querySelector('.chat-filter-button');
+    const filterDrawerEl = document.getElementById('chat-filter-drawer');
+    const filterClearButton = document.getElementById('chat-filter-clear');
 
     const channelInput = document.getElementById('chat-channel-input');
     const channelLabelEl = document.querySelector('#chat-channel-dropdown .chat-dropdown-label');
@@ -128,6 +131,7 @@
     const chatPanelEl = document.querySelector('.chat-panel');
     const compactToggleEl = document.getElementById('chat-compact-toggle');
     const summaryEl = document.getElementById('chat-summary');
+    const summaryDetailsEl = document.getElementById('chat-summary-details');
     const summaryFields = summaryEl ? {
         total: summaryEl.querySelector('[data-summary="total"]'),
         senders: summaryEl.querySelector('[data-summary="senders"]'),
@@ -146,6 +150,10 @@
     const customCloseBtn = document.getElementById('chat-custom-close');
     const customPresetsContainer = document.querySelector('.chat-custom-presets-buttons');
     const COMPACT_STORAGE_KEY = 'chatCompactMode';
+
+    if (summaryDetailsEl && window.matchMedia('(min-width: 992px)').matches) {
+        summaryDetailsEl.setAttribute('open', '');
+    }
 
     if (searchInput) {
         if (chatState.search) {
@@ -544,6 +552,81 @@
         });
     }
 
+    function clearFilter(filterType, options) {
+        const opts = options || {};
+        switch (filterType) {
+            case 'channel': {
+                chatState.channel = '';
+                if (channelInput) {
+                    channelInput.value = '';
+                }
+                if (channelLabelEl) {
+                    channelLabelEl.textContent = channelLabelEl.dataset.default || 'All channels';
+                }
+                if (channelMenu) {
+                    channelMenu.querySelectorAll('.dropdown-item').forEach((item) => {
+                        const value = item.dataset.value ?? '';
+                        item.classList.toggle('active', value === '');
+                    });
+                }
+                break;
+            }
+            case 'audience': {
+                chatState.audience = 'all';
+                if (audienceInput) {
+                    audienceInput.value = 'all';
+                }
+                if (audienceLabelEl) {
+                    audienceLabelEl.textContent = audienceLabelEl.dataset.default || 'All messages';
+                }
+                if (audienceMenu) {
+                    audienceMenu.querySelectorAll('.dropdown-item').forEach((item) => {
+                        item.classList.toggle('active', (item.dataset.value || '') === 'all');
+                    });
+                }
+                break;
+            }
+            case 'sender': {
+                const defaultLabel = senderLabel ? senderLabel.dataset.default || 'All senders' : 'All senders';
+                setSenderState('', defaultLabel, { silent: true });
+                break;
+            }
+            case 'search': {
+                chatState.search = '';
+                if (searchInput) {
+                    searchInput.value = '';
+                }
+                break;
+            }
+            case 'window': {
+                chatState.windowValue = '24';
+                chatState.windowSince = '';
+                if (windowInput) {
+                    windowInput.value = '24';
+                }
+                if (windowSinceInput) {
+                    windowSinceInput.value = '';
+                }
+                const defaultLabel = windowLabelEl && windowLabelEl.dataset.default
+                    ? windowLabelEl.dataset.default
+                    : 'Last 24 hours';
+                chatState.windowLabel = defaultLabel;
+                if (windowLabelEl) {
+                    windowLabelEl.textContent = defaultLabel;
+                }
+                updateQuickWindowButtons('24');
+                closeCustomWindow();
+                break;
+            }
+            default:
+                break;
+        }
+
+        if (!opts.deferApply) {
+            applyFilters({ force: true });
+        }
+    }
+
     function renderActiveFilters() {
         if (!activeFiltersEl) {
             return;
@@ -578,6 +661,9 @@
         if (!chips.length) {
             activeFiltersEl.hidden = true;
             activeFiltersEl.innerHTML = '';
+            if (filterButton) {
+                filterButton.classList.remove('is-active');
+            }
             return;
         }
 
@@ -591,6 +677,9 @@
         `).join('');
         activeFiltersEl.hidden = false;
         activeFiltersEl.innerHTML = html;
+        if (filterButton) {
+            filterButton.classList.add('is-active');
+        }
     }
 
     function formatMessageItem(message) {
@@ -1907,71 +1996,16 @@
                 return;
             }
             const filterType = clearButton.getAttribute('data-filter');
-            switch (filterType) {
-                case 'channel': {
-                    chatState.channel = '';
-                    if (channelInput) {
-                        channelInput.value = '';
-                    }
-                    if (channelLabelEl) {
-                        channelLabelEl.textContent = channelLabelEl.dataset.default || 'All channels';
-                    }
-                    if (channelMenu) {
-                        channelMenu.querySelectorAll('.dropdown-item').forEach((item) => {
-                            const value = item.dataset.value ?? '';
-                            item.classList.toggle('active', value === '');
-                        });
-                    }
-                    break;
-                }
-                case 'audience': {
-                    chatState.audience = 'all';
-                    if (audienceInput) {
-                        audienceInput.value = 'all';
-                    }
-                    if (audienceLabelEl) {
-                        audienceLabelEl.textContent = audienceLabelEl.dataset.default || 'All messages';
-                    }
-                    if (audienceMenu) {
-                        audienceMenu.querySelectorAll('.dropdown-item').forEach((item) => {
-                            item.classList.toggle('active', (item.dataset.value || '') === 'all');
-                        });
-                    }
-                    break;
-                }
-                case 'sender': {
-                    const defaultLabel = senderLabel ? senderLabel.dataset.default || 'All senders' : 'All senders';
-                    setSenderState('', defaultLabel, { silent: true });
-                    break;
-                }
-                case 'search': {
-                    chatState.search = '';
-                    if (searchInput) {
-                        searchInput.value = '';
-                    }
-                    break;
-                }
-                case 'window': {
-                    chatState.windowValue = '24';
-                    chatState.windowSince = '';
-                    if (windowInput) {
-                        windowInput.value = '24';
-                    }
-                    if (windowSinceInput) {
-                        windowSinceInput.value = '';
-                    }
-                    const defaultLabel = windowLabelEl && windowLabelEl.dataset.default ? windowLabelEl.dataset.default : 'Last 24 hours';
-                    chatState.windowLabel = defaultLabel;
-                    if (windowLabelEl) {
-                        windowLabelEl.textContent = defaultLabel;
-                    }
-                    updateQuickWindowButtons('24');
-                    closeCustomWindow();
-                    break;
-                }
-                default:
-                    break;
+            if (filterType) {
+                clearFilter(filterType);
             }
+        });
+    }
+
+    if (filterClearButton) {
+        filterClearButton.addEventListener('click', () => {
+            const filterTypes = ['channel', 'audience', 'sender', 'search', 'window'];
+            filterTypes.forEach((type) => clearFilter(type, { deferApply: true }));
             applyFilters({ force: true });
         });
     }

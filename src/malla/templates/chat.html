@@ -34,6 +34,15 @@
                     <div class="chat-last-updated text-muted small" id="chat-last-updated">Updated --</div>
                 </div>
                 <div class="chat-header-actions">
+                    <button
+                        class="btn btn-outline-secondary btn-sm chat-filter-button"
+                        type="button"
+                        data-bs-toggle="offcanvas"
+                        data-bs-target="#chat-filter-drawer"
+                        aria-controls="chat-filter-drawer"
+                    >
+                        <i class="bi bi-sliders"></i> Filters
+                    </button>
                     <button class="btn btn-outline-secondary btn-sm chat-live-toggle" type="button" id="chat-live-toggle" aria-pressed="true">
                         <span class="chat-live-dot" aria-hidden="true"></span>
                         <span class="chat-live-label" id="chat-live-status">Live updates active</span>
@@ -70,28 +79,35 @@
                 </button>
             </div>
 
-            <div class="chat-summary-grid" id="chat-summary" aria-live="polite">
-                <div class="chat-summary-item">
-                    <span class="chat-summary-label">Messages</span>
-                    <span class="chat-summary-value" data-summary="total">—</span>
+            <details class="chat-summary-details" id="chat-summary-details">
+                <summary class="chat-summary-toggle">
+                    <i class="bi bi-graph-up"></i>
+                    <span>Insights &amp; stats</span>
+                    <i class="bi bi-chevron-down ms-auto chat-summary-caret"></i>
+                </summary>
+                <div class="chat-summary-grid" id="chat-summary" aria-live="polite">
+                    <div class="chat-summary-item">
+                        <span class="chat-summary-label">Messages</span>
+                        <span class="chat-summary-value" data-summary="total">—</span>
+                    </div>
+                    <div class="chat-summary-item">
+                        <span class="chat-summary-label">Senders</span>
+                        <span class="chat-summary-value" data-summary="senders">—</span>
+                    </div>
+                    <div class="chat-summary-item">
+                        <span class="chat-summary-label">Broadcast</span>
+                        <span class="chat-summary-value" data-summary="broadcast">—</span>
+                    </div>
+                    <div class="chat-summary-item">
+                        <span class="chat-summary-label">Direct</span>
+                        <span class="chat-summary-value" data-summary="direct">—</span>
+                    </div>
+                    <div class="chat-summary-item">
+                        <span class="chat-summary-label">Gateways</span>
+                        <span class="chat-summary-value" data-summary="gateways">—</span>
+                    </div>
                 </div>
-                <div class="chat-summary-item">
-                    <span class="chat-summary-label">Senders</span>
-                    <span class="chat-summary-value" data-summary="senders">—</span>
-                </div>
-                <div class="chat-summary-item">
-                    <span class="chat-summary-label">Broadcast</span>
-                    <span class="chat-summary-value" data-summary="broadcast">—</span>
-                </div>
-                <div class="chat-summary-item">
-                    <span class="chat-summary-label">Direct</span>
-                    <span class="chat-summary-value" data-summary="direct">—</span>
-                </div>
-                <div class="chat-summary-item">
-                    <span class="chat-summary-label">Gateways</span>
-                    <span class="chat-summary-value" data-summary="gateways">—</span>
-                </div>
-            </div>
+            </details>
 
             <div class="chat-filter-chips" id="chat-active-filters" hidden></div>
 
@@ -126,142 +142,161 @@
                     <button type="button" class="btn btn-primary btn-sm" id="chat-custom-apply">Apply</button>
                 </div>
             </div>
-
-            <form class="chat-toolbar" method="get" id="chat-filter-form">
-                <div class="chat-filter-field chat-dropdown-wrapper">
-                    <label class="form-label">Channel</label>
-                    <div class="dropdown w-100">
-                        <button
-                            class="btn btn-outline-secondary btn-sm dropdown-toggle w-100"
-                            type="button"
-                            id="chat-channel-dropdown"
-                            data-bs-toggle="dropdown"
-                            aria-expanded="false"
-                        >
-                            <span class="chat-dropdown-label" data-role="label" data-default="All channels">{{ channel_label }}</span>
-                        </button>
-                        <div class="dropdown-menu chat-dropdown-menu" aria-labelledby="chat-channel-dropdown" id="chat-channel-menu">
-                            <div class="chat-dropdown-options" data-role="options">
-                                <button class="dropdown-item {% if not selected_channel %}active{% endif %}" type="button" data-value="" data-label="All channels">
-                                    All channels
-                                </button>
-                                {% for channel in channels %}
-                                    <button class="dropdown-item {% if selected_channel == channel.id %}active{% endif %}" type="button" data-value="{{ channel.id }}" data-label="{{ channel.label }}">
-                                        {{ channel.label }} <span class="text-muted">({{ channel.count }})</span>
+        </div>
+        <div
+            class="offcanvas offcanvas-end chat-filter-drawer"
+            tabindex="-1"
+            id="chat-filter-drawer"
+            aria-labelledby="chat-filter-drawer-label"
+            data-bs-scroll="true"
+        >
+            <div class="offcanvas-header">
+                <h2 class="offcanvas-title h5 mb-0" id="chat-filter-drawer-label">
+                    <i class="bi bi-sliders"></i> Filter messages
+                </h2>
+                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close filters"></button>
+            </div>
+            <div class="offcanvas-body">
+                <form class="chat-toolbar" method="get" id="chat-filter-form">
+                    <div class="chat-filter-field chat-dropdown-wrapper">
+                        <label class="form-label">Channel</label>
+                        <div class="dropdown w-100">
+                            <button
+                                class="btn btn-outline-secondary btn-sm dropdown-toggle w-100"
+                                type="button"
+                                id="chat-channel-dropdown"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                            >
+                                <span class="chat-dropdown-label" data-role="label" data-default="All channels">{{ channel_label }}</span>
+                            </button>
+                            <div class="dropdown-menu chat-dropdown-menu" aria-labelledby="chat-channel-dropdown" id="chat-channel-menu">
+                                <div class="chat-dropdown-options" data-role="options">
+                                    <button class="dropdown-item {% if not selected_channel %}active{% endif %}" type="button" data-value="" data-label="All channels">
+                                        All channels
                                     </button>
-                                {% endfor %}
-                            </div>
-                        </div>
-                        <input type="hidden" name="channel" id="chat-channel-input" value="{{ selected_channel or '' }}">
-                    </div>
-                </div>
-                <div class="chat-filter-field chat-dropdown-wrapper">
-                    <label class="form-label">Message type</label>
-                    <div class="dropdown w-100">
-                        <button
-                            class="btn btn-outline-secondary btn-sm dropdown-toggle w-100"
-                            type="button"
-                            id="chat-audience-dropdown"
-                            data-bs-toggle="dropdown"
-                            aria-expanded="false"
-                        >
-                            <span class="chat-dropdown-label" data-role="label" data-default="All messages">{{ audience_label }}</span>
-                        </button>
-                        <div class="dropdown-menu chat-dropdown-menu" aria-labelledby="chat-audience-dropdown" id="chat-audience-menu">
-                            <div class="chat-dropdown-options" data-role="options">
-                                <button class="dropdown-item {% if selected_audience == 'all' %}active{% endif %}" type="button" data-value="all" data-label="All messages">
-                                    All messages
-                                </button>
-                                <button class="dropdown-item {% if selected_audience == 'broadcast' %}active{% endif %}" type="button" data-value="broadcast" data-label="Broadcast only">
-                                    Broadcast only
-                                </button>
-                                <button class="dropdown-item {% if selected_audience == 'direct' %}active{% endif %}" type="button" data-value="direct" data-label="Direct messages">
-                                    Direct messages
-                                </button>
-                            </div>
-                        </div>
-                        <input type="hidden" name="audience" id="chat-audience-input" value="{{ selected_audience or 'all' }}">
-                    </div>
-                </div>
-                <div class="chat-filter-field chat-sender-dropdown">
-                    <label class="form-label">Sender</label>
-                    <div class="dropdown">
-                        <button
-                            class="btn btn-outline-secondary btn-sm dropdown-toggle w-100"
-                            type="button"
-                            id="chat-sender-dropdown"
-                            data-bs-toggle="dropdown"
-                            aria-expanded="false"
-                        >
-                            <span id="chat-sender-label" data-default="All senders">{{ sender_label }}</span>
-                        </button>
-                        <div class="dropdown-menu chat-dropdown-menu" aria-labelledby="chat-sender-dropdown" id="chat-sender-menu">
-                            <div class="chat-dropdown-search">
-                                <div class="input-group input-group-sm chat-search-group">
-                                    <span class="input-group-text"><i class="bi bi-search"></i></span>
-                                    <input type="search" class="form-control form-control-sm" placeholder="Search sender..." data-role="search-input" id="chat-sender-search">
+                                    {% for channel in channels %}
+                                        <button class="dropdown-item {% if selected_channel == channel.id %}active{% endif %}" type="button" data-value="{{ channel.id }}" data-label="{{ channel.label }}">
+                                            {{ channel.label }} <span class="text-muted">({{ channel.count }})</span>
+                                        </button>
+                                    {% endfor %}
                                 </div>
                             </div>
-                            <div class="chat-dropdown-options" data-role="options">
-                                <button class="dropdown-item {% if not selected_sender %}active{% endif %}" type="button" data-value="" data-label="All senders">
-                                    All senders
-                                </button>
-                                {% for sender in senders %}
-                                    <button class="dropdown-item {% if selected_sender == sender.id %}active{% endif %}" type="button" data-value="{{ sender.id }}" data-label="{{ sender.label }}">
-                                        {{ sender.label }} <span class="text-muted">({{ sender.count }})</span>
-                                    </button>
-                                {% endfor %}
-                            </div>
+                            <input type="hidden" name="channel" id="chat-channel-input" value="{{ selected_channel or '' }}">
                         </div>
-                        <input type="hidden" name="sender" id="chat-sender-input" value="{{ selected_sender or '' }}">
                     </div>
-                </div>
-                <div class="chat-filter-field chat-dropdown-wrapper">
-                    <label class="form-label">Time window</label>
-                    <div class="dropdown w-100">
-                        <button
-                            class="btn btn-outline-secondary btn-sm dropdown-toggle w-100"
-                            type="button"
-                            id="chat-window-dropdown"
-                            data-bs-toggle="dropdown"
-                            aria-expanded="false"
-                        >
-                            <span class="chat-dropdown-label" data-role="label" data-default="Last 24 hours">{{ selected_window_label }}</span>
-                        </button>
-                        <div class="dropdown-menu chat-dropdown-menu" aria-labelledby="chat-window-dropdown" id="chat-window-menu">
-                            <div class="chat-dropdown-options" data-role="options">
-                                {% for value, label in time_window_options %}
-                                    <button
-                                        class="dropdown-item {% if selected_window_value == value %}active{% endif %}"
-                                        type="button"
-                                        data-value="{{ value }}"
-                                        data-label="{{ label }}"
-                                    >
-                                        {{ label }}
+                    <div class="chat-filter-field chat-dropdown-wrapper">
+                        <label class="form-label">Message type</label>
+                        <div class="dropdown w-100">
+                            <button
+                                class="btn btn-outline-secondary btn-sm dropdown-toggle w-100"
+                                type="button"
+                                id="chat-audience-dropdown"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                            >
+                                <span class="chat-dropdown-label" data-role="label" data-default="All messages">{{ audience_label }}</span>
+                            </button>
+                            <div class="dropdown-menu chat-dropdown-menu" aria-labelledby="chat-audience-dropdown" id="chat-audience-menu">
+                                <div class="chat-dropdown-options" data-role="options">
+                                    <button class="dropdown-item {% if selected_audience == 'all' %}active{% endif %}" type="button" data-value="all" data-label="All messages">
+                                        All messages
                                     </button>
-                                {% endfor %}
+                                    <button class="dropdown-item {% if selected_audience == 'broadcast' %}active{% endif %}" type="button" data-value="broadcast" data-label="Broadcast only">
+                                        Broadcast only
+                                    </button>
+                                    <button class="dropdown-item {% if selected_audience == 'direct' %}active{% endif %}" type="button" data-value="direct" data-label="Direct messages">
+                                        Direct messages
+                                    </button>
+                                </div>
                             </div>
+                            <input type="hidden" name="audience" id="chat-audience-input" value="{{ selected_audience or 'all' }}">
                         </div>
-                        <input type="hidden" name="window" id="chat-window-input" value="{{ selected_window_value }}">
-                        <input type="hidden" name="since" id="chat-window-since" value="{{ selected_window_start_iso or '' }}">
                     </div>
-                </div>
-                <div class="chat-filter-field chat-search-field">
-                    <label for="chat-text-search" class="form-label">Search</label>
-                    <div class="input-group input-group-sm chat-search-group">
-                        <span class="input-group-text"><i class="bi bi-search"></i></span>
-                        <input
-                            type="search"
-                            class="form-control form-control-sm"
-                            id="chat-text-search"
-                            name="q"
-                            value="{{ search_query }}"
-                            placeholder="Message text"
-                            autocomplete="off"
-                        >
+                    <div class="chat-filter-field chat-sender-dropdown">
+                        <label class="form-label">Sender</label>
+                        <div class="dropdown">
+                            <button
+                                class="btn btn-outline-secondary btn-sm dropdown-toggle w-100"
+                                type="button"
+                                id="chat-sender-dropdown"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                            >
+                                <span id="chat-sender-label" data-default="All senders">{{ sender_label }}</span>
+                            </button>
+                            <div class="dropdown-menu chat-dropdown-menu" aria-labelledby="chat-sender-dropdown" id="chat-sender-menu">
+                                <div class="chat-dropdown-search">
+                                    <div class="input-group input-group-sm chat-search-group">
+                                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                                        <input type="search" class="form-control form-control-sm" placeholder="Search sender..." data-role="search-input" id="chat-sender-search">
+                                    </div>
+                                </div>
+                                <div class="chat-dropdown-options" data-role="options">
+                                    <button class="dropdown-item {% if not selected_sender %}active{% endif %}" type="button" data-value="" data-label="All senders">
+                                        All senders
+                                    </button>
+                                    {% for sender in senders %}
+                                        <button class="dropdown-item {% if selected_sender == sender.id %}active{% endif %}" type="button" data-value="{{ sender.id }}" data-label="{{ sender.label }}">
+                                            {{ sender.label }} <span class="text-muted">({{ sender.count }})</span>
+                                        </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <input type="hidden" name="sender" id="chat-sender-input" value="{{ selected_sender or '' }}">
+                        </div>
                     </div>
+                    <div class="chat-filter-field chat-dropdown-wrapper">
+                        <label class="form-label">Time window</label>
+                        <div class="dropdown w-100">
+                            <button
+                                class="btn btn-outline-secondary btn-sm dropdown-toggle w-100"
+                                type="button"
+                                id="chat-window-dropdown"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false"
+                            >
+                                <span class="chat-dropdown-label" data-role="label" data-default="Last 24 hours">{{ selected_window_label }}</span>
+                            </button>
+                            <div class="dropdown-menu chat-dropdown-menu" aria-labelledby="chat-window-dropdown" id="chat-window-menu">
+                                <div class="chat-dropdown-options" data-role="options">
+                                    {% for value, label in time_window_options %}
+                                        <button
+                                            class="dropdown-item {% if selected_window_value == value %}active{% endif %}"
+                                            type="button"
+                                            data-value="{{ value }}"
+                                            data-label="{{ label }}"
+                                        >
+                                            {{ label }}
+                                        </button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            <input type="hidden" name="window" id="chat-window-input" value="{{ selected_window_value }}">
+                            <input type="hidden" name="since" id="chat-window-since" value="{{ selected_window_start_iso or '' }}">
+                        </div>
+                    </div>
+                    <div class="chat-filter-field chat-search-field">
+                        <label for="chat-text-search" class="form-label">Search</label>
+                        <div class="input-group input-group-sm chat-search-group">
+                            <span class="input-group-text"><i class="bi bi-search"></i></span>
+                            <input
+                                type="search"
+                                class="form-control form-control-sm"
+                                id="chat-text-search"
+                                name="q"
+                                value="{{ search_query }}"
+                                placeholder="Message text"
+                                autocomplete="off"
+                            >
+                        </div>
+                    </div>
+                </form>
+                <div class="chat-filter-footer">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="offcanvas">Close</button>
+                    <button type="button" class="btn btn-link btn-sm text-danger" id="chat-filter-clear">Clear all</button>
                 </div>
-            </form>
+            </div>
         </div>
         <div class="card-body chat-card" id="chat-card-body">
             <div id="chat-loading" class="chat-loading-overlay text-center">
