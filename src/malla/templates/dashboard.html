@@ -469,25 +469,37 @@ function getDefaultChartOptions() {
 
 // Update all charts when theme changes
 function updateChartsForTheme() {
-    if (analyticsData) {
-        // Destroy existing charts
-        Object.values(chartInstances).forEach(chart => {
-            if (chart) chart.destroy();
-        });
-        chartInstances = {};
-
-        // Recreate charts with new theme
-        createTimeSeriesChart(analyticsData.temporal_patterns);
-        createNodeActivityChart(analyticsData.node_statistics);
-        createGatewayActivityChart(analyticsData.gateway_distribution);
-        createSignalDistributionChart(analyticsData.signal_quality);
-        createHopDistributionChart(analyticsData.temporal_patterns);
-        createPacketTypesChart(analyticsData.packet_types);
+    if (typeof Chart === 'undefined' || !analyticsData) {
+        return;
     }
+
+    // Destroy existing charts
+    Object.values(chartInstances).forEach(chart => {
+        if (chart) chart.destroy();
+    });
+    chartInstances = {};
+
+    // Recreate charts with new theme
+    createTimeSeriesChart(analyticsData.temporal_patterns);
+    createNodeActivityChart(analyticsData.node_statistics);
+    createGatewayActivityChart(analyticsData.gateway_distribution);
+    createSignalDistributionChart(analyticsData.signal_quality);
+    createHopDistributionChart(analyticsData.temporal_patterns);
+    createPacketTypesChart(analyticsData.packet_types);
 }
 
 // Initialize dashboard when page loads
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', async function () {
+    try {
+        if (window.VendorLoader && typeof window.VendorLoader.loadChartJS === 'function') {
+            await window.VendorLoader.loadChartJS();
+        }
+    } catch (error) {
+        console.error('Error loading Chart.js:', error);
+        hideAllLoadingSpinners();
+        return;
+    }
+
     // Load analytics data asynchronously
     loadAnalyticsData();
 
@@ -801,7 +813,4 @@ function populateTopNodesTable(topNodes) {
     });
 }
 </script>
-
-<!-- Chart.js for analytics charts (vendored) -->
-<script src="{{ url_for('static', filename='vendor/chart.js/chart.umd.min.js') }}?v={{ STATIC_VERSION }}"></script>
 {% endblock %}

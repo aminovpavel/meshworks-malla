@@ -10,104 +10,103 @@
 {{ table_layout_styles() }}
 {% endblock %}
 
-{% block content %}
-<!-- Override the base template's container to make this page full-width/full-height -->
-</div> <!-- Close the base template's container -->
-
-{% call fullscreen_table_container("tracerouteTable", "Traceroute Analysis", "bi bi-map", "toggleSidebar") %}
-    <!-- Main table content -->
-    <div id="tracerouteTable" class="modern-table-container"></div>
-{% endcall %}
-
-<!-- Sidebar content (will be injected into the sidebar) -->
-<div id="sidebarContent" style="display: none;">
-    {% call filter_section("filtersForm", "Traceroute Filters") %}
-        <div class="row g-3">
-            <div class="col-12">
-                <label for="start_time" class="form-label">Start Time</label>
-                <input type="datetime-local" class="form-control form-control-sm" id="start_time" name="start_time">
-            </div>
-            <div class="col-12">
-                <label for="end_time" class="form-label">End Time</label>
-                <input type="datetime-local" class="form-control form-control-sm" id="end_time" name="end_time">
-            </div>
-            <div class="col-12">
-                {{ node_picker(
-                    field_name="from_node",
-                    label="Source Node",
-                    selected_value="",
-                    selected_display="",
-                    placeholder="All source nodes"
-                ) }}
-            </div>
-            <div class="col-12">
-                {{ node_picker(
-                    field_name="to_node",
-                    label="Destination Node",
-                    selected_value="",
-                    selected_display="",
-                    placeholder="All destination nodes"
-                ) }}
-            </div>
-            <div class="col-12">
-                {{ node_picker(
-                    field_name="route_node",
-                    label="Route Node",
-                    selected_value="",
-                    selected_display="",
-                    placeholder="All route nodes"
-                ) }}
-                <div class="form-text">
-                    <small class="text-muted">Filter by nodes that appear anywhere in the traceroute path</small>
-                </div>
-            </div>
-            <div class="col-12">
-                {{ gateway_picker(
-                    field_name="gateway_id",
-                    label="Gateway",
-                    selected_value="",
-                    selected_display="",
-                    placeholder="All gateways"
-                ) }}
-            </div>
-            <div class="col-12">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="return_path_only" name="return_path_only" value="1">
-                    <label class="form-check-label" for="return_path_only">
-                        <i class="bi bi-arrow-return-left"></i> Return path only
-                    </label>
-                    <div class="form-text">
-                        <small class="text-muted">Show only traceroutes with return path data (completed round trip)</small>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12">
-                <label for="primary_channel" class="form-label">Primary Channel</label>
-                <select class="form-select form-select-sm" id="primary_channel" name="primary_channel">
-                    <option value="">All Channels</option>
-                    <!-- Options will be loaded dynamically -->
-                </select>
-            </div>
-        </div>
+{% block main_wrapper %}
+<section aria-labelledby="tracerouteTable-title">
+    {% call fullscreen_table_container("tracerouteTable", "Traceroute Analysis", "bi bi-map", "toggleSidebar") %}
+        <!-- Main table content -->
+        <div id="tracerouteTable" class="modern-table-container"></div>
     {% endcall %}
 
-    {{ grouping_section("group_packets", "Group by Packet ID", "Group traceroutes with the same packet ID") }}
+    <!-- Sidebar content (will be injected into the sidebar) -->
+    <div id="sidebarContent" style="display: none;">
+        {% call filter_section("filtersForm", "Traceroute Filters") %}
+            <div class="row g-3">
+                <div class="col-12">
+                    <label for="start_time" class="form-label">Start Time</label>
+                    <input type="datetime-local" class="form-control form-control-sm" id="start_time" name="start_time">
+                </div>
+                <div class="col-12">
+                    <label for="end_time" class="form-label">End Time</label>
+                    <input type="datetime-local" class="form-control form-control-sm" id="end_time" name="end_time">
+                </div>
+                <div class="col-12">
+                    {{ node_picker(
+                        field_name="from_node",
+                        label="Source Node",
+                        selected_value="",
+                        selected_display="",
+                        placeholder="All source nodes"
+                    ) }}
+                </div>
+                <div class="col-12">
+                    {{ node_picker(
+                        field_name="to_node",
+                        label="Destination Node",
+                        selected_value="",
+                        selected_display="",
+                        placeholder="All destination nodes"
+                    ) }}
+                </div>
+                <div class="col-12">
+                    {{ node_picker(
+                        field_name="route_node",
+                        label="Route Node",
+                        selected_value="",
+                        selected_display="",
+                        placeholder="All route nodes"
+                    ) }}
+                    <div class="form-text">
+                        <small class="text-muted">Filter by nodes that appear anywhere in the traceroute path</small>
+                    </div>
+                </div>
+                <div class="col-12">
+                    {{ gateway_picker(
+                        field_name="gateway_id",
+                        label="Gateway",
+                        selected_value="",
+                        selected_display="",
+                        placeholder="All gateways"
+                    ) }}
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="return_path_only" name="return_path_only" value="1">
+                        <label class="form-check-label" for="return_path_only">
+                            <i class="bi bi-arrow-return-left"></i> Return path only
+                        </label>
+                        <div class="form-text">
+                            <small class="text-muted">Show only traceroutes with return path data (completed round trip)</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label for="primary_channel" class="form-label">Primary Channel</label>
+                    <select class="form-select form-select-sm" id="primary_channel" name="primary_channel">
+                        <option value="">All Channels</option>
+                        <!-- Options will be loaded dynamically -->
+                    </select>
+                </div>
+            </div>
+        {% endcall %}
 
-    {% set table_controls = [
-        {"class": "btn-primary", "id": "applyFilters", "icon": "bi bi-search", "text": "Apply Filters", "type": "button"},
-        {"class": "btn-outline-secondary", "id": "clearFilters", "icon": "bi bi-x-circle", "text": "Clear Filters", "type": "button"},
-        {"class": "btn-outline-info", "id": "refreshTable", "icon": "bi bi-arrow-clockwise", "text": "Refresh", "type": "button"},
-    ] %}
-    {{ table_controls_section(table_controls) }}
+        {{ grouping_section("group_packets", "Group by Packet ID", "Group traceroutes with the same packet ID") }}
 
-    {% set stats_items = [
-        {"label": "Total Traceroutes", "id": "statsTotal", "default": "0"},
-        {"label": "Filtered", "id": "statsFiltered", "default": "0"},
-        {"label": "Grouped", "id": "statsGrouped", "default": "0"},
-        {"label": "Last Update", "id": "statsLastUpdate", "default": "--"}
-    ] %}
-    {{ table_stats_section("tableStats", stats_items) }}
-</div>
+        {% set table_controls = [
+            {"class": "btn-primary", "id": "applyFilters", "icon": "bi bi-search", "text": "Apply Filters", "type": "button"},
+            {"class": "btn-outline-secondary", "id": "clearFilters", "icon": "bi bi-x-circle", "text": "Clear Filters", "type": "button"},
+            {"class": "btn-outline-info", "id": "refreshTable", "icon": "bi bi-arrow-clockwise", "text": "Refresh", "type": "button"},
+        ] %}
+        {{ table_controls_section(table_controls) }}
+
+        {% set stats_items = [
+            {"label": "Total Traceroutes", "id": "statsTotal", "default": "0"},
+            {"label": "Filtered", "id": "statsFiltered", "default": "0"},
+            {"label": "Grouped", "id": "statsGrouped", "default": "0"},
+            {"label": "Last Update", "id": "statsLastUpdate", "default": "--"}
+        ] %}
+        {{ table_stats_section("tableStats", stats_items) }}
+    </div>
+</section>
 {% endblock %}
 
 {% block extra_js %}

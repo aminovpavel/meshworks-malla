@@ -7,81 +7,7 @@
 <!-- Leaflet CSS (vendored) -->
 <link rel="stylesheet" href="{{ url_for('static', filename='vendor/leaflet/leaflet.css') }}?v={{ STATIC_VERSION }}" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/traceroute-graph.css', v=STATIC_VERSION) }}">
-<style>
-    .card-metric {
-        text-align: center;
-    }
-    .metric-value {
-        font-size: 2rem;
-        font-weight: bold;
-    }
-    .metric-label {
-        color: #6c757d;
-        font-size: 0.875rem;
-    }
-    .signal-indicator {
-        padding: 2px 8px;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: bold;
-    }
-    .hop-badge {
-        background-color: #e9ecef;
-        color: #495057;
-        padding: 2px 6px;
-        border-radius: 8px;
-        font-size: 0.75rem;
-    }
-    .payload-hex {
-        font-family: 'Courier New', monospace;
-        background-color: #f8f9fa;
-        padding: 10px;
-        border-radius: 4px;
-        word-break: break-all;
-        font-size: 0.8rem;
-    }
-    .yaml-content {
-        font-family: 'Courier New', monospace;
-        background-color: #f8f9fa;
-        padding: 15px;
-        border-radius: 4px;
-        font-size: 0.85rem;
-        white-space: pre-wrap;
-        max-height: 400px;
-        overflow-y: auto;
-    }
-    .time-diff-positive { color: #28a745; }
-    .time-diff-negative { color: #dc3545; }
-    .reception-card {
-        border-left: 4px solid #007bff;
-        margin-bottom: 0.5rem;
-    }
-    .main-reception {
-        border-left-color: #28a745;
-        background-color: #f8fff9;
-    }
-    #traceroute-map {
-        position: relative;
-    }
-    #receptions-map {
-        position: relative;
-    }
-    .reception-primary {
-        background-color: #f8fff9;
-        border-left: 4px solid #28a745;
-    }
-    .signal-value {
-        font-weight: bold;
-    }
-    .channel-badge {
-        background-color: #e9ecef;
-        color: #495057;
-        padding: 2px 6px;
-        border-radius: 8px;
-        font-size: 0.75rem;
-    }
-
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/packet-detail.css', v=STATIC_VERSION) }}">
 {% endblock %}
 
 {% block content %}
@@ -563,7 +489,10 @@
                                     {% if payload_info.data.route_nodes and payload_info.data.route_nodes|length > 1 %}
                                     <div class="col-md-6">
                                         <h6><i class="bi bi-map"></i> Route Visualization</h6>
-                                        <div id="traceroute-map" style="height: 300px; border: 1px solid #dee2e6; border-radius: 0.375rem;" data-route-nodes="{% if payload_info and payload_info.data and payload_info.data.route_nodes %}{{ payload_info.data.route_nodes | safe_json | safe }}{% else %}null{% endif %}">
+                                        <div id="traceroute-map"
+                                             class="traceroute-map-container"
+                                             data-leaflet-brand="{{ 1 if APP_CONFIG.map_show_leaflet_branding else 0 }}"
+                                             data-route-nodes="{% if payload_info and payload_info.data and payload_info.data.route_nodes %}{{ payload_info.data.route_nodes | safe_json | safe }}{% else %}null{% endif %}">
                                             <div class="d-flex align-items-center justify-content-center h-100">
                                                 <div class="text-center">
                                                     <div class="spinner-border text-primary" role="status">
@@ -1066,6 +995,9 @@ async function loadTracerouteMap(routeNodes) {
         }
 
         // Initialize map
+        const mapElement = document.getElementById('traceroute-map');
+        const preserveLeafletBranding = mapElement && mapElement.dataset && mapElement.dataset.leafletBrand === '1';
+
         const map = L.map('traceroute-map').setView([
             routeLocations[0].latitude,
             routeLocations[0].longitude
@@ -1083,6 +1015,10 @@ async function loadTracerouteMap(routeNodes) {
             subdomains: 'abcd',
             maxZoom: 20
         }).addTo(map);
+
+        if (!preserveLeafletBranding && map.attributionControl && map.attributionControl.setPrefix) {
+            map.attributionControl.setPrefix('Leaflet');
+        }
 
         // Add markers and route line
         const routeCoords = [];
@@ -1188,6 +1124,9 @@ function loadReceptionMap(primaryGateway, otherReceptions, gatewayLocations) {
         console.log('Gateway map data:', gatewayMapData);
 
         // Initialize map
+        const mapElement = document.getElementById('receptions-map');
+        const preserveLeafletBranding = mapElement && mapElement.dataset && mapElement.dataset.leafletBrand === '1';
+
         const map = L.map('receptions-map').setView([
             gatewayMapData[0].latitude,
             gatewayMapData[0].longitude
@@ -1205,6 +1144,10 @@ function loadReceptionMap(primaryGateway, otherReceptions, gatewayLocations) {
             subdomains: 'abcd',
             maxZoom: 20
         }).addTo(map);
+
+        if (!preserveLeafletBranding && map.attributionControl && map.attributionControl.setPrefix) {
+            map.attributionControl.setPrefix('Leaflet');
+        }
 
         // Add markers for each gateway
         gatewayMapData.forEach((gateway, index) => {
@@ -1279,7 +1222,7 @@ function showMapError(mapId, message) {
         mapContainer.innerHTML = `
             <div class="d-flex align-items-center justify-content-center h-100">
                 <div class="text-center text-muted">
-                    <i class="bi bi-exclamation-triangle" style="font-size: 2rem;"></i>
+                    <i class="bi bi-exclamation-triangle map-error-icon"></i>
                     <p class="mt-2">${message}</p>
                 </div>
             </div>

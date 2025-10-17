@@ -17,7 +17,7 @@ Pick whichever workflow fits you best:
   curl -LsSf https://astral.sh/uv/install.sh | sh        # install uv (once)
   uv sync --dev                                         # install deps incl. Playwright tooling
   playwright install chromium --with-deps              # e2e/browser support (once per host)
-  cp config.sample.yaml config.yaml                    # adjust broker settings
+  cp ops/samples/config.sample.yaml config.yaml        # adjust broker settings
   uv run malla-capture                                  # terminal 1 – capture
   uv run malla-web                                      # terminal 2 – web UI
   ```
@@ -26,14 +26,31 @@ Pick whichever workflow fits you best:
   ```bash
   git clone https://git.meshworks.ru/MeshWorks/meshworks-malla.git
   cd meshworks-malla
-  cp env.example .env                                  # fill in MQTT credentials
+  cp ops/samples/env.example .env                      # fill in MQTT credentials
   docker pull ghcr.io/aminovpavel/meshworks-malla:latest
   export MALLA_IMAGE=ghcr.io/aminovpavel/meshworks-malla:latest
-  docker compose up -d
+  docker compose -f ops/compose/docker-compose.yml up -d
   ```
   `malla-capture` and `malla-web` share the volume `malla_data`, so captured history persists across restarts.
 
 Need demo data, screenshots, maintainer workflows or release notes on the image pipeline? See [docs/development.md](docs/development.md).
+
+### Configuration tips
+
+Most settings live in `config.yaml`, but every option can be overridden with `MALLA_*` environment variables. A few recent ones you may want to toggle:
+
+| Purpose | Env var | Default |
+| --- | --- | --- |
+| Open the web UI database in read-only mode | `MALLA_DATABASE_READ_ONLY` | `1` |
+| Honour proxy-provided `X-Forwarded-*` headers | `MALLA_TRUST_PROXY_HEADERS` | `0` |
+| Comma-separated host allowlist for inbound requests | `MALLA_ALLOWED_HOSTS` | _(empty)_ |
+| Simple rate limiting rule (Flask-Limiter syntax) | `MALLA_DEFAULT_RATE_LIMIT` | _(empty)_ |
+| Enable debugging endpoints/UI (dev only) | `MALLA_ENABLE_BROWSER_DEBUG` | `0` |
+| Token required when debug UI is enabled | `MALLA_DEBUG_TOKEN` | _(unset)_ |
+| Keep the default Leaflet attribution banner | `MALLA_MAP_SHOW_LEAFLET_BRANDING` | `0` |
+| Persist raw MQTT payloads for later inspection | `MALLA_CAPTURE_STORE_RAW` | `1` |
+
+The [Development guide](docs/development.md#configuration-reference) has a full table, defaults, and additional context.
 
 ## Running instances
 
@@ -83,6 +100,8 @@ Community instances may run different versions; feature parity is not guaranteed
 - `src/malla/templates/` – Jinja2 templates; `chat.html` contains the new chat interface.
 - `src/malla/static/` – CSS/JS assets tailored for the Meshworks fork.
 - `scripts/` – local tooling (`create_demo_database.py`, `generate_screenshots.py`).
+- `bin/` – helper entrypoints for running capture/web locally without installation.
+- `ops/` – Compose bundles and sample config/env files for Docker deployments.
 - `tests/` – unit, integration and Playwright e2e suites.
 - `.screenshots/` – auto-generated images embedded in this README.
 
@@ -148,12 +167,12 @@ You can also build an image locally and point Docker Compose at the result.
 ```bash
 git clone https://git.meshworks.ru/MeshWorks/meshworks-malla.git
 cd meshworks-malla
-cp env.example .env                      # fill in MQTT credentials
+cp ops/samples/env.example .env                      # fill in MQTT credentials
 $EDITOR .env
 docker build -t meshworks/malla:local .  # add --platform for multi-arch
 export MALLA_IMAGE=meshworks/malla:local
-docker compose up -d
-docker compose logs -f                   # watch containers
+docker compose -f ops/compose/docker-compose.yml up -d
+docker compose -f ops/compose/docker-compose.yml logs -f  # watch containers
 ```
 The compose file ships with a capture + web pair already wired to share `malla_data` volume.
 
@@ -203,7 +222,7 @@ You can also install and run this fork directly using [uv](https://docs.astral.s
 
 3. **Create a configuration file** by copying the sample file:
    ```bash
-   cp config.sample.yaml config.yaml
+   cp ops/samples/config.sample.yaml config.yaml
    $EDITOR config.yaml  # tweak values as desired
    ```
 
@@ -275,14 +294,14 @@ For a complete monitoring setup, run both tools simultaneously:
 ```bash
 uv run malla-capture
 # or, after `uv sync`, use the helper script:
-./malla-capture
+./bin/malla-capture
 ```
 
 **Terminal 2 – web UI:**
 ```bash
 uv run malla-web
 # or:
-./malla-web
+./bin/malla-web
 ```
 
 Both commands read the same SQLite database and cooperate safely thanks to the repository connection pool.

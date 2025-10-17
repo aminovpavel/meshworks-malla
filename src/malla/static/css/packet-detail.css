@@ -1,0 +1,142 @@
+/* Packet detail view specific styles */
+
+.traceroute-map-container,
+.receptions-map-container {
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  position: relative;
+  overflow: hidden;
+}
+
+.traceroute-map-container {
+  height: 300px;
+}
+
+.receptions-map-container {
+  height: 400px;
+}
+
+.map-error-icon {
+  font-size: 2rem;
+}
+
+.card-metric {
+  text-align: center;
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-label {
+  color: var(--bs-secondary-color);
+  font-size: 0.875rem;
+}
+
+.signal-indicator {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.hop-badge {
+  background-color: var(--bs-tertiary-bg);
+  color: var(--bs-body-color);
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+}
+
+.payload-hex {
+  font-family: 'Courier New', Courier, monospace;
+  background-color: var(--bs-tertiary-bg);
+  padding: 10px;
+  border-radius: var(--bs-border-radius);
+  word-break: break-all;
+  font-size: 0.8rem;
+  border: 1px solid var(--bs-border-color);
+}
+
+.yaml-content {
+  font-family: 'Courier New', Courier, monospace;
+  background-color: var(--bs-tertiary-bg);
+  padding: 15px;
+  border-radius: var(--bs-border-radius);
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid var(--bs-border-color);
+}
+
+.time-diff-positive {
+  color: #28a745;
+}
+
+.time-diff-negative {
+  color: #dc3545;
+}
+
+.reception-card {
+  border-left: 4px solid var(--bs-primary);
+  margin-bottom: 0.5rem;
+}
+
+.main-reception,
+.reception-primary {
+  border-left-color: #28a745;
+  background-color: rgba(40, 167, 69, 0.08);
+}
+
+#traceroute-map,
+#receptions-map {
+  position: relative;
+}
+
+.signal-value {
+  font-weight: 600;
+}
+
+.channel-badge {
+  background-color: var(--bs-tertiary-bg);
+  color: var(--bs-body-color);
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  border: 1px solid var(--bs-border-color);
+}
+
+.receptions-map-container {
+  height: 400px;
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  position: relative;
+  overflow: hidden;
+}
+
+.map-hop-count-label {
+  background: var(--bs-body-bg);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  box-shadow: var(--bs-box-shadow-sm);
+}
+
+[data-bs-theme=dark] .payload-hex,
+[data-bs-theme=dark] .yaml-content {
+  background-color: var(--bs-tertiary-bg);
+  border-color: rgba(255, 255, 255, 0.075);
+}
+
+[data-bs-theme=dark] .reception-card {
+  border-left-color: var(--bs-primary);
+}
+
+[data-bs-theme=dark] .reception-primary {
+  background-color: rgba(40, 167, 69, 0.12);
+}

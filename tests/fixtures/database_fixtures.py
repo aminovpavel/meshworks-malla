@@ -1087,6 +1087,41 @@ class DatabaseFixtures:
                 )
                 packets.append(packet5)
 
+        # Dedicated gateway with mixed traffic for exclude_self tests
+        self_gateway_node = 0xABCDEF01
+        self_gateway_hex = f"!{self_gateway_node:08x}"
+
+        # Self-sent packets from the gateway itself
+        for i in range(3):
+            packets.append(
+                self.create_test_packet(
+                    packet_id=60000 + i,
+                    from_node_id=self_gateway_node,
+                    to_node_id=self_gateway_node if i % 2 == 0 else 0x12345678,
+                    portnum=1,
+                    portnum_name="TEXT_MESSAGE_APP",
+                    timestamp=base_time + 3600 + (i * 120),
+                    gateway_id=self_gateway_hex,
+                    payload_data=f"Gateway self-check message {i + 1}",
+                )
+            )
+
+        # Packets from other nodes routed through the same gateway
+        other_sources = [0xCAFEBABE, 0xDEADBEEF, 0xFEEDC0DE]
+        for idx, source_id in enumerate(other_sources):
+            packets.append(
+                self.create_test_packet(
+                    packet_id=61000 + idx,
+                    from_node_id=source_id,
+                    to_node_id=self_gateway_node,
+                    portnum=1,
+                    portnum_name="TEXT_MESSAGE_APP",
+                    timestamp=base_time + 4200 + (idx * 90),
+                    gateway_id=self_gateway_hex,
+                    payload_data=f"Inbound message via gateway {idx + 1}",
+                )
+            )
+
         return packets
 
     def create_sample_traceroutes(self) -> list[dict[str, Any]]:

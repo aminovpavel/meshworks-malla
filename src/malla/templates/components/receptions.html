@@ -20,7 +20,9 @@
         <div class="row mb-4">
             <div class="col-12">
                 <h6><i class="bi bi-map"></i> Reception Locations</h6>
-                <div id="receptions-map" style="height: 400px; border: 1px solid #dee2e6; border-radius: 0.375rem;">
+                <div id="receptions-map"
+                     class="receptions-map-container"
+                     data-leaflet-brand="{{ 1 if APP_CONFIG.map_show_leaflet_branding else 0 }}">
                     <div class="d-flex align-items-center justify-content-center h-100">
                         <div class="text-center">
                             <div class="spinner-border text-primary" role="status">

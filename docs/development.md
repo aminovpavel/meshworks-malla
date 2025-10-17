@@ -12,13 +12,13 @@ cd meshworks-malla
 curl -LsSf https://astral.sh/uv/install.sh | sh   # install uv once per machine
 uv sync --dev                                    # install dependencies + tooling
 playwright install chromium --with-deps          # install headless browser
-cp config.sample.yaml config.yaml                # configure broker / instance name
+cp ops/samples/config.sample.yaml config.yaml    # configure broker / instance name
 uv run malla-capture                              # terminal 1 – capture worker
 uv run malla-web                                  # terminal 2 – web interface
 ```
 
 Both commands share the same SQLite database file. After the first `uv sync`
-you can also use the `./malla-capture` and `./malla-web` helper scripts which
+you can also use the `./bin/malla-capture` and `./bin/malla-web` helper scripts which
 wrap `uv run` for convenience.
 
 ## Demo data & screenshots
@@ -93,12 +93,12 @@ branches.
 ```bash
 git clone https://github.com/aminovpavel/meshworks-malla.git
 cd meshworks-malla
-cp env.example .env                      # provide MQTT credentials
+cp ops/samples/env.example .env                      # provide MQTT credentials
 $EDITOR .env
 docker pull ghcr.io/aminovpavel/meshworks-malla:latest
 export MALLA_IMAGE=ghcr.io/aminovpavel/meshworks-malla:latest
-docker compose up -d
-docker compose logs -f
+docker compose -f ops/compose/docker-compose.yml up -d
+docker compose -f ops/compose/docker-compose.yml logs -f
 ```
 
 - The default compose file launches both `malla-capture` and `malla-web`
@@ -107,9 +107,9 @@ docker compose logs -f
   custom tag.
 - For production we prefer running the web UI via Gunicorn. Set
   `MALLA_WEB_COMMAND=/app/.venv/bin/malla-web-gunicorn` in `.env` or use
-  `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`.
+  `docker compose -f ops/compose/docker-compose.yml -f ops/compose/docker-compose.prod.yml up -d`.
 - To inspect logs of a single service:
-  `docker compose logs -f malla-web`.
+  `docker compose -f ops/compose/docker-compose.yml logs -f malla-web`.
 
 ## Configuration reference
 
@@ -134,3 +134,19 @@ with the `MALLA_` prefix. The table lists the most relevant options:
 | `default_channel_key` | `"1PG7OiApB1nwvP+rz05pAQ=="` | Default channel key (base64) | `MALLA_DEFAULT_CHANNEL_KEY` |
 
 Environment variables always override values read from the configuration file.
+
+### Advanced toggles
+
+The following options are less common but useful during hardening or local debugging:
+
+| Key | Default | Description | Env var |
+| --- | --- | --- | --- |
+| `database_read_only` | `true` | Open the SQLite database in read-only mode from the web app | `MALLA_DATABASE_READ_ONLY` |
+| `trust_proxy_headers` | `false` | Honour `X-Forwarded-*` headers (enable when running behind a trusted proxy) | `MALLA_TRUST_PROXY_HEADERS` |
+| `allowed_hosts` | `""` | Comma-separated host allowlist checked per request | `MALLA_ALLOWED_HOSTS` |
+| `default_rate_limit` | `""` | Optional Flask-Limiter rule (e.g. `"200 per minute"`) | `MALLA_DEFAULT_RATE_LIMIT` |
+| `enable_browser_debug` | `false` | Expose debug blueprint and client UI in development | `MALLA_ENABLE_BROWSER_DEBUG` |
+| `debug_token` | `None` | Token required when `enable_browser_debug` is true | `MALLA_DEBUG_TOKEN` |
+| `debug_log_buffer_size` | `500` | Ring buffer size for debug log storage | `MALLA_DEBUG_LOG_BUFFER_SIZE` |
+| `map_show_leaflet_branding` | `false` | Keep the default Leaflet attribution link and external branding | `MALLA_MAP_SHOW_LEAFLET_BRANDING` |
+| `capture_store_raw` | `true` | Persist raw MQTT payloads in `packet_history` (set `0` to drop them) | `MALLA_CAPTURE_STORE_RAW` |

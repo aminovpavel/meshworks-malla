@@ -41,7 +41,10 @@ from paho.mqtt.enums import CallbackAPIVersion
 # ---------------------------------------------------------------------------
 # Configuration (centralised via malla.config)
 # ---------------------------------------------------------------------------
-from malla.config import get_config  # Import here to avoid circular import issues
+from malla.config import get_config, _clear_config_cache  # Import here to avoid circular import issues
+
+# Reload configuration on module import so env overrides from tests/tools take effect.
+_clear_config_cache()
 
 # Load the singleton configuration once at module import time.  This ensures the
 # capture tool honours the same YAML + optional environment override mechanism

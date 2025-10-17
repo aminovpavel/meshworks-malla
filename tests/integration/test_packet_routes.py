@@ -30,6 +30,10 @@ class TestPacketRoutes:
             assert response.status_code == 200
             assert b"Packet #" in response.data
             assert str(packet_id).encode() in response.data
+            # Ensure we are not leaking raw CSS into the HTML response
+            assert b".traceroute-graph-container {" not in response.data
+            assert b"modal-backdrop {" not in response.data
+            assert b".card-metric {" not in response.data
         else:
             pytest.skip("No packets available for testing")
 

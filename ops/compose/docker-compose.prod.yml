@@ -1,5 +1,5 @@
 # Production override for docker-compose.yml
-# Use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+# Use with: docker compose -f ops/compose/docker-compose.yml -f ops/compose/docker-compose.prod.yml up
 version: '3.8'
 
 services:

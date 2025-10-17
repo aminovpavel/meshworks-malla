@@ -271,6 +271,7 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
             "APP_CONFIG": cfg,
             "DATABASE_FILE": cfg.database_file,
             "STATIC_VERSION": static_version,
+            "APP_VERSION": package_version,
         }
 
     # Initialize database
@@ -320,6 +321,9 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
                     host_header = request.host
                 host_only = (host_header or "").split(":", 1)[0].lower()
                 if host_only not in allowed:
+                    # Permit health checks even when host headers don't match allowlist.
+                    if request.endpoint == "health_check":
+                        return None
                     abort(400)
 
     # ------------------------------------------------------------------

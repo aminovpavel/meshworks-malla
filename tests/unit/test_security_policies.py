@@ -79,14 +79,21 @@ def test_nodes_data_limit_clamp():
 def test_host_allowlist_blocks_unknown_host():
     app = _app_with_db(allowed_hosts="example.com")
     with app.test_client() as c:
-        r = c.get("/health", headers={"Host": "bad.local"})
+        r = c.get("/info", headers={"Host": "bad.local"})
         assert r.status_code == 400
 
 
 def test_host_allowlist_allows_localhost():
     app = _app_with_db(allowed_hosts="localhost")
     with app.test_client() as c:
-        r = c.get("/health", headers={"Host": "localhost"})
+        r = c.get("/info", headers={"Host": "localhost"})
+        assert r.status_code == 200
+
+
+def test_host_allowlist_allows_health_endpoint():
+    app = _app_with_db(allowed_hosts="example.com")
+    with app.test_client() as c:
+        r = c.get("/health", headers={"Host": "bad.local"})
         assert r.status_code == 200
 
 

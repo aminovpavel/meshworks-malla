@@ -51,6 +51,35 @@
                         <i class="bi bi-arrow-clockwise"></i> Refresh
                     </button>
                 </div>
+                <div class="chat-options-group">
+                    <div class="form-check form-switch chat-compact-toggle">
+                        <input class="form-check-input" type="checkbox" role="switch" id="chat-compact-toggle">
+                        <label class="form-check-label" for="chat-compact-toggle">Compact mode</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-summary" id="chat-summary" aria-live="polite">
+                <div class="chat-summary-item">
+                    <span class="chat-summary-label">Messages</span>
+                    <span class="chat-summary-value" data-summary="total">—</span>
+                </div>
+                <div class="chat-summary-item">
+                    <span class="chat-summary-label">Senders</span>
+                    <span class="chat-summary-value" data-summary="senders">—</span>
+                </div>
+                <div class="chat-summary-item">
+                    <span class="chat-summary-label">Broadcast</span>
+                    <span class="chat-summary-value" data-summary="broadcast">—</span>
+                </div>
+                <div class="chat-summary-item">
+                    <span class="chat-summary-label">Direct</span>
+                    <span class="chat-summary-value" data-summary="direct">—</span>
+                </div>
+                <div class="chat-summary-item">
+                    <span class="chat-summary-label">Gateways</span>
+                    <span class="chat-summary-value" data-summary="gateways">—</span>
+                </div>
             </div>
 
             <form class="chat-toolbar" method="get" id="chat-filter-form">
@@ -193,37 +222,39 @@
                     {% for msg in messages %}
                         <li class="chat-message py-3" data-message-id="{{ msg.id }}">
                             <div class="chat-header">
-                                {% if msg.from_node_id %}
-                                    <a class="chat-node-link text-primary fw-semibold" href="{{ url_for('node.node_detail', node_id=msg.from_node_id) }}">
-                                        {{ msg.from_name }}
-                                    </a>
-                                {% else %}
-                                    <span class="fw-semibold text-primary">{{ msg.from_name }}</span>
-                                {% endif %}
-                                <i class="bi bi-arrow-right-short text-muted"></i>
-                                {% if msg.to_node_id and not msg.to_is_broadcast %}
-                                    <a class="chat-node-link text-secondary fw-semibold" href="{{ url_for('node.node_detail', node_id=msg.to_node_id) }}">
-                                        {{ msg.to_name }}
-                                    </a>
-                                {% else %}
-                                    <span class="fw-semibold text-secondary">{{ msg.to_name }}</span>
-                                {% endif %}
-                                <span class="badge text-bg-dark chat-channel-badge">{{ msg.channel_label }}</span>
-                                {% if msg.gateway_nodes %}
-                                    <span
-                                        class="badge text-bg-secondary chat-gateway-badge"
-                                        role="button"
-                                        tabindex="0"
-                                        aria-haspopup="true"
-                                        aria-expanded="false"
-                                        data-tooltip-html="{{ msg.gateway_tooltip | e }}"
-                                    >
-                                        {{ msg.gateway_count }} gateway{% if msg.gateway_count != 1 %}s{% endif %}
-                                    </span>
-                                {% endif %}
-                            </div>
-                            <div class="chat-meta mt-1">
-                                {{ msg.time_ago }} • {{ msg.timestamp_display }}
+                                <div class="chat-header-main">
+                                    {% if msg.from_node_id %}
+                                        <a class="chat-node-link text-primary fw-semibold" href="{{ url_for('node.node_detail', node_id=msg.from_node_id) }}">
+                                            {{ msg.from_name }}
+                                        </a>
+                                    {% else %}
+                                        <span class="fw-semibold text-primary">{{ msg.from_name }}</span>
+                                    {% endif %}
+                                    <i class="bi bi-arrow-right-short text-muted"></i>
+                                    {% if msg.to_node_id and not msg.to_is_broadcast %}
+                                        <a class="chat-node-link text-secondary fw-semibold" href="{{ url_for('node.node_detail', node_id=msg.to_node_id) }}">
+                                            {{ msg.to_name }}
+                                        </a>
+                                    {% else %}
+                                        <span class="fw-semibold text-secondary">{{ msg.to_name }}</span>
+                                    {% endif %}
+                                    <span class="badge text-bg-dark chat-channel-badge">{{ msg.channel_label }}</span>
+                                    {% if msg.gateway_nodes %}
+                                        <span
+                                            class="badge text-bg-secondary chat-gateway-badge"
+                                            role="button"
+                                            tabindex="0"
+                                            aria-haspopup="true"
+                                            aria-expanded="false"
+                                            data-tooltip-html="{{ msg.gateway_tooltip | e }}"
+                                        >
+                                            {{ msg.gateway_count }} gateway{% if msg.gateway_count != 1 %}s{% endif %}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <div class="chat-meta text-muted">
+                                    {{ msg.time_ago }} • {{ msg.timestamp_display }}
+                                </div>
                             </div>
                             <div class="chat-body">{{ msg.message | e | replace('\n', '<br>') | safe }}</div>
                         </li>
@@ -293,6 +324,18 @@
     const senderToggle = document.getElementById('chat-sender-dropdown');
 
     const searchInput = document.getElementById('chat-text-search');
+    const chatPanelEl = document.querySelector('.chat-panel');
+    const compactToggleEl = document.getElementById('chat-compact-toggle');
+    const summaryEl = document.getElementById('chat-summary');
+    const summaryFields = summaryEl ? {
+        total: summaryEl.querySelector('[data-summary="total"]'),
+        senders: summaryEl.querySelector('[data-summary="senders"]'),
+        broadcast: summaryEl.querySelector('[data-summary="broadcast"]'),
+        direct: summaryEl.querySelector('[data-summary="direct"]'),
+        gateways: summaryEl.querySelector('[data-summary="gateways"]'),
+    } : null;
+
+    const COMPACT_STORAGE_KEY = 'chatCompactMode';
 
     if (searchInput) {
         if (chatState.search) {
@@ -626,21 +669,137 @@
             metaSegments.push(timestampDisplay);
         }
 
+        const metaHtml = metaSegments.length
+            ? `<div class="chat-meta">${metaSegments.join(' • ')}</div>`
+            : '';
+
         return `
             <li class="chat-message py-3" data-message-id="${message.id}">
                 <div class="chat-header">
-                    ${fromNodeLink}
-                    <i class="bi bi-arrow-right-short text-muted"></i>
-                    ${toNodeLink}
-                    <span class="badge text-bg-dark chat-channel-badge">${channel}</span>
-                    ${gatewayBadge}
-                </div>
-                <div class="chat-meta mt-1">
-                    ${metaSegments.join(' • ')}
+                    <div class="chat-header-main">
+                        ${fromNodeLink}
+                        <i class="bi bi-arrow-right-short text-muted"></i>
+                        ${toNodeLink}
+                        <span class="badge text-bg-dark chat-channel-badge">${channel}</span>
+                        ${gatewayBadge}
+                    </div>
+                    ${metaHtml}
                 </div>
                 <div class="chat-body">${messageText}</div>
             </li>
         `;
+    }
+
+    function formatCountWithPercent(count, total) {
+        if (!total || total <= 0) {
+            return '—';
+        }
+        const pct = Math.round((count / total) * 100);
+        return `${count.toLocaleString()} (${pct}%)`;
+    }
+
+    function updateSummary(messages, meta) {
+        if (!summaryFields) {
+            return;
+        }
+        const list = Array.isArray(messages) ? messages : [];
+        const totalFromMeta = meta && typeof meta.total === 'number' ? meta.total : null;
+        const totalCount = totalFromMeta ?? list.length;
+
+        const applyValue = (field, value) => {
+            if (!field) {
+                return;
+            }
+            field.textContent = value;
+        };
+
+        if (!list.length && (totalCount ?? 0) === 0) {
+            applyValue(summaryFields.total, '—');
+            applyValue(summaryFields.senders, '—');
+            applyValue(summaryFields.broadcast, '—');
+            applyValue(summaryFields.direct, '—');
+            applyValue(summaryFields.gateways, '—');
+            return;
+        }
+
+        const senders = new Set();
+        let broadcastCount = 0;
+        let gatewaySum = 0;
+        let gatewayMessages = 0;
+
+        list.forEach((message) => {
+            const senderKey = message.from_node_id ?? message.from_name ?? message.id;
+            if (senderKey !== undefined && senderKey !== null) {
+                senders.add(String(senderKey));
+            }
+            if (message.to_is_broadcast) {
+                broadcastCount += 1;
+            }
+            const gatewayCount = typeof message.gateway_count === 'number'
+                ? message.gateway_count
+                : Array.isArray(message.gateway_nodes)
+                    ? message.gateway_nodes.length
+                    : 0;
+            if (gatewayCount > 0) {
+                gatewaySum += gatewayCount;
+                gatewayMessages += 1;
+            }
+        });
+
+        const directCount = (list.length || totalCount) - broadcastCount;
+        const averageGateways = gatewayMessages
+            ? gatewaySum / gatewayMessages
+            : 0;
+
+        applyValue(summaryFields.total, totalCount.toLocaleString());
+        applyValue(summaryFields.senders, senders.size ? senders.size.toLocaleString() : '—');
+        applyValue(summaryFields.broadcast, formatCountWithPercent(broadcastCount, list.length || totalCount));
+        applyValue(summaryFields.direct, formatCountWithPercent(Math.max(directCount, 0), list.length || totalCount));
+        applyValue(
+            summaryFields.gateways,
+            gatewayMessages ? `${averageGateways.toFixed(averageGateways >= 10 ? 0 : 1)} avg` : '—',
+        );
+    }
+
+    function applyCompactMode(isCompact, options) {
+        if (!chatPanelEl) {
+            return;
+        }
+        chatPanelEl.classList.toggle('chat-compact', Boolean(isCompact));
+        if (compactToggleEl && compactToggleEl.checked !== Boolean(isCompact)) {
+            compactToggleEl.checked = Boolean(isCompact);
+        }
+        if (!options || options.persist !== false) {
+            try {
+                if (isCompact) {
+                    localStorage.setItem(COMPACT_STORAGE_KEY, '1');
+                } else {
+                    localStorage.setItem(COMPACT_STORAGE_KEY, '0');
+                }
+            } catch (_) {
+                // Ignore storage errors (private mode, etc.)
+            }
+        }
+    }
+
+    function initCompactMode() {
+        if (!chatPanelEl) {
+            return;
+        }
+        let storedValue = null;
+        if (typeof localStorage !== 'undefined') {
+            try {
+                storedValue = localStorage.getItem(COMPACT_STORAGE_KEY);
+            } catch (_) {
+                storedValue = null;
+            }
+        }
+        const enabled = storedValue === '1';
+        applyCompactMode(enabled, { persist: false });
+        if (compactToggleEl) {
+            compactToggleEl.checked = enabled;
+            compactToggleEl.addEventListener('change', () => applyCompactMode(compactToggleEl.checked));
+        }
     }
 
     function renderMessages(messages) {
@@ -772,6 +931,8 @@
         if (lastUpdatedEl) {
             lastUpdatedEl.textContent = `Updated ${formatTimestampWithOffset(new Date())}`;
         }
+
+        updateSummary(messages, meta);
     }
 
     async function loadMessages(options) {
@@ -1092,6 +1253,7 @@
     }
 
     renderSendersInitial();
+    initCompactMode();
     renderMessages(initialData.messages);
     updateMeta(initialData.meta, initialData.messages);
     refreshTooltips();

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "malla"
-version = "0.1.0"
+version = "0.3.0-dev"
 description = "A comprehensive web UI for browsing and analyzing Meshtastic mesh network health data"
 readme = "README.md"
 license = {file = "LICENSE"}
@@ -87,9 +87,9 @@ include = [
     "README.md",
     "LICENSE",
     "pyproject.toml",
-    "malla-web",
-    "malla-web-gunicorn",
-    "malla-capture",
+    "bin/malla-web",
+    "bin/malla-web-gunicorn",
+    "bin/malla-capture",
 ]
 
 # Testing configuration

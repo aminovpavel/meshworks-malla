@@ -8,88 +8,87 @@
 {{ table_layout_styles() }}
 {% endblock %}
 
-{% block content %}
-<!-- Override the base template's container to make this page full-width/full-height -->
-</div> <!-- Close the base template's container -->
-
-{% call fullscreen_table_container("nodesTable", "Network Nodes", "bi bi-diagram-3", "toggleSidebar") %}
-    <!-- Main table content -->
-    <div id="nodesTable" class="modern-table-container"></div>
-{% endcall %}
-
-<!-- Sidebar content (will be injected into the sidebar) -->
-<div id="sidebarContent" style="display: none;">
-    {% call filter_section("filtersForm", "Node Filters") %}
-        <div class="row g-3">
-            <div class="col-12">
-                <label for="search" class="form-label">Search</label>
-                <input type="text" class="form-control form-control-sm" id="search" name="search" placeholder="Search by name, ID, or hardware...">
-            </div>
-            <div class="col-12">
-                <label for="role" class="form-label">Role</label>
-                <select class="form-select form-select-sm" id="role" name="role">
-                    <option value="">All Roles</option>
-                    <!-- Options will be loaded dynamically -->
-                </select>
-            </div>
-            <div class="col-12">
-                <label for="hw_model" class="form-label">Hardware Model</label>
-                <select class="form-select form-select-sm" id="hw_model" name="hw_model">
-                    <option value="">All Hardware</option>
-                    <!-- Options will be loaded dynamically -->
-                </select>
-            </div>
-            <div class="col-12">
-                <label for="primary_channel" class="form-label">Primary Channel</label>
-                <select class="form-select form-select-sm" id="primary_channel" name="primary_channel">
-                    <option value="">All Channels</option>
-                    <!-- Options will be loaded dynamically -->
-                </select>
-            </div>
-            <div class="col-12">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="active_only" name="active_only" value="1">
-                    <label class="form-check-label" for="active_only">
-                        <i class="bi bi-activity"></i> Active nodes only (24h)
-                    </label>
-                </div>
-            </div>
-            <div class="col-12">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="named_only" name="named_only" value="1">
-                    <label class="form-check-label" for="named_only">
-                        <i class="bi bi-tag"></i> Named nodes only
-                    </label>
-                </div>
-            </div>
-        </div>
+{% block main_wrapper %}
+<section aria-labelledby="nodesTable-title">
+    {% call fullscreen_table_container("nodesTable", "Network Nodes", "bi bi-diagram-3", "toggleSidebar") %}
+        <!-- Main table content -->
+        <div id="nodesTable" class="modern-table-container"></div>
     {% endcall %}
 
-    {% set table_controls = [
-        {"class": "btn-primary", "id": "applyFilters", "icon": "bi bi-search", "text": "Apply Filters", "type": "button"},
-        {"class": "btn-outline-secondary", "id": "clearFilters", "icon": "bi bi-x-circle", "text": "Clear Filters", "type": "button"},
-        {"class": "btn-outline-info", "id": "refreshTable", "icon": "bi bi-arrow-clockwise", "text": "Refresh", "type": "button"},
-        {"class": "btn-outline-success", "id": "shareFilters", "icon": "bi bi-share", "text": "Share", "type": "button"}
-    ] %}
-    {{ table_controls_section(table_controls) }}
-
-    <!-- Legend Section -->
-    <div class="sidebar-section">
-        <h6><i class="bi bi-palette"></i> Legend</h6>
-        <div class="legend-content">
-            <div class="legend-item">
-                <span class="badge bg-primary me-2">Client</span>
-                <span class="badge bg-success me-2">Router</span>
-                <span class="badge bg-success me-2">Router Late</span>
-                <span class="badge bg-warning me-2">Repeater</span>
+    <!-- Sidebar content (will be injected into the sidebar) -->
+    <div id="sidebarContent" style="display: none;">
+        {% call filter_section("filtersForm", "Node Filters") %}
+            <div class="row g-3">
+                <div class="col-12">
+                    <label for="search" class="form-label">Search</label>
+                    <input type="text" class="form-control form-control-sm" id="search" name="search" placeholder="Search by name, ID, or hardware...">
+                </div>
+                <div class="col-12">
+                    <label for="role" class="form-label">Role</label>
+                    <select class="form-select form-select-sm" id="role" name="role">
+                        <option value="">All Roles</option>
+                        <!-- Options will be loaded dynamically -->
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label for="hw_model" class="form-label">Hardware Model</label>
+                    <select class="form-select form-select-sm" id="hw_model" name="hw_model">
+                        <option value="">All Hardware</option>
+                        <!-- Options will be loaded dynamically -->
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label for="primary_channel" class="form-label">Primary Channel</label>
+                    <select class="form-select form-select-sm" id="primary_channel" name="primary_channel">
+                        <option value="">All Channels</option>
+                        <!-- Options will be loaded dynamically -->
+                    </select>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="active_only" name="active_only" value="1">
+                        <label class="form-check-label" for="active_only">
+                            <i class="bi bi-activity"></i> Active nodes only (24h)
+                        </label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="named_only" name="named_only" value="1">
+                        <label class="form-check-label" for="named_only">
+                            <i class="bi bi-tag"></i> Named nodes only
+                        </label>
+                    </div>
+                </div>
             </div>
-            <div class="legend-item mt-2">
-                <span class="text-success me-2">Active (24h activity)</span>
-                <span class="text-muted me-2">Inactive (no recent activity)</span>
+        {% endcall %}
+
+        {% set table_controls = [
+            {"class": "btn-primary", "id": "applyFilters", "icon": "bi bi-search", "text": "Apply Filters", "type": "button"},
+            {"class": "btn-outline-secondary", "id": "clearFilters", "icon": "bi bi-x-circle", "text": "Clear Filters", "type": "button"},
+            {"class": "btn-outline-info", "id": "refreshTable", "icon": "bi bi-arrow-clockwise", "text": "Refresh", "type": "button"},
+            {"class": "btn-outline-success", "id": "shareFilters", "icon": "bi bi-share", "text": "Share", "type": "button"}
+        ] %}
+        {{ table_controls_section(table_controls) }}
+
+        <!-- Legend Section -->
+        <div class="sidebar-section">
+            <h6><i class="bi bi-palette"></i> Legend</h6>
+            <div class="legend-content">
+                <div class="legend-item">
+                    <span class="badge bg-primary me-2">Client</span>
+                    <span class="badge bg-success me-2">Router</span>
+                    <span class="badge bg-success me-2">Router Late</span>
+                    <span class="badge bg-warning me-2">Repeater</span>
+                </div>
+                <div class="legend-item mt-2">
+                    <span class="text-success me-2">Active (24h activity)</span>
+                    <span class="text-muted me-2">Inactive (no recent activity)</span>
+                </div>
             </div>
         </div>
     </div>
-</div>
+</section>
 {% endblock %}
 
 {% block extra_js %}

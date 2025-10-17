@@ -7,7 +7,8 @@ import sys
 from pathlib import Path
 
 # Add src to path for development
-src_path = Path(__file__).parent / "src"
+repo_root = Path(__file__).resolve().parent.parent
+src_path = repo_root / "src"
 sys.path.insert(0, str(src_path))
 
 from malla.mqtt_capture import main

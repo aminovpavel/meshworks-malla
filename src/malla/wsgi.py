@@ -10,7 +10,7 @@ import logging
 import os
 import sys
 
-from .config import get_config
+from .config import get_config, _clear_config_cache
 from .web_ui import create_app
 
 # Configure logging: stdout + optional file in writable location
@@ -39,6 +39,8 @@ logger = logging.getLogger(__name__)
 def create_wsgi_app():
     """Create and return the WSGI application."""
     logger.info("Creating WSGI application for Gunicorn")
+    # Allow env overrides to take effect when tests or tooling tweak variables.
+    _clear_config_cache()
     return create_app()
 
 

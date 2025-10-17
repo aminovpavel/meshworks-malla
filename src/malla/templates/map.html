@@ -14,29 +14,29 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}?v={{ STATIC_VERSION }}" />
 {% endblock %}
 
-{% block content %}
-<!-- Override the base template's container to make this page full-width/full-height -->
-</div> <!-- Close the base template's container -->
+{% block main_wrapper %}
+<section aria-labelledby="map-heading">
+    <h1 id="map-heading" class="visually-hidden">Network Map</h1>
 
-<div class="map-container">
-    <!-- Main Map Area -->
-    <div class="map-main">
-        <div id="mapLoading" class="loading-overlay">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+    <div class="map-container">
+        <!-- Main Map Area -->
+        <div class="map-main">
+            <div id="mapLoading" class="loading-overlay">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Loading node locations...</p>
             </div>
-            <p class="mt-2 text-muted">Loading node locations...</p>
+            <div id="map" class="network-map" data-leaflet-brand="{{ '1' if APP_CONFIG.map_show_leaflet_branding else '0' }}"></div>
+            <div id="mapFallbackOverlay" class="map-fallback-overlay" hidden></div>
+            <div id="mapError" class="error-overlay" style="display: none;">
+                <i class="bi bi-exclamation-triangle"></i>
+                <p class="mt-2">Error loading map data</p>
+            </div>
         </div>
-        <div id="map" class="network-map"></div>
-        <div id="mapFallbackOverlay" class="map-fallback-overlay" hidden></div>
-        <div id="mapError" class="error-overlay" style="display: none;">
-            <i class="bi bi-exclamation-triangle"></i>
-            <p class="mt-2">Error loading map data</p>
-        </div>
-    </div>
 
-    <!-- Sidebar -->
-    {% call sidebar_container("sidebar", "Network Map", "bi bi-map", "toggleSidebar") %}
+        <!-- Sidebar -->
+        {% call sidebar_container("sidebar", "Network Map", "bi bi-map", "toggleSidebar") %}
         {{ selected_details_section("clearSelection") }}
 
         <!-- Node Search and List Combined -->
@@ -82,9 +82,9 @@
                     <label for="maxAge" class="form-label">Max Age</label>
                     <select class="form-select form-select-sm" id="maxAge" name="maxAge">
                         <option value="">No Limit</option>
+                        <option value="24" selected>24 Hours</option>
                         <option value="1">1 Hour</option>
                         <option value="6">6 Hours</option>
-                        <option value="24">24 Hours</option>
                         <option value="72">3 Days</option>
                         <option value="168">1 Week</option>
                     </select>
@@ -199,6 +199,8 @@
 
 {# Sidebar styles now provided via static css; inline removed for CSP #}
 
+</section>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -210,7 +212,3 @@
 <script src="{{ url_for('static', filename='js/page-helpers.js') }}?v={{ STATIC_VERSION }}" defer></script>
 <script src="{{ url_for('static', filename='js/map.js') }}?v={{ STATIC_VERSION }}" defer></script>
 {% endblock %}
-
-</div> <!-- Close the full-width container -->
-<!-- Reopen the base template's container for the footer -->
-<div class="container mt-4">

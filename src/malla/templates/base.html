@@ -45,11 +45,6 @@
     <!-- Bootstrap Icons (vendored) -->
     <link rel="stylesheet" href="{{ url_for('static', filename='vendor/bootstrap-icons/font/bootstrap-icons.css') }}?v={{ STATIC_VERSION }}">
 
-    <!-- Plotly.js (vendored) -->
-    <script src="{{ url_for('static', filename='vendor/plotly/plotly.min.js') }}?v={{ STATIC_VERSION }}"></script>
-    <!-- Chart.js (vendored) -->
-    <script src="{{ url_for('static', filename='vendor/chart.js/chart.umd.min.js') }}?v={{ STATIC_VERSION }}"></script>
-
     <!-- Inter Font for modern typography (left on Google Fonts) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -59,6 +54,10 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/malla.css', v=STATIC_VERSION) }}">
 
     <!-- All inline styles moved to static/css/malla.css (CSP Phase 2) -->
+
+    <script src="{{ url_for('static', filename='js/vendor-loader.js', v=STATIC_VERSION) }}"
+            data-plotly-url="{{ url_for('static', filename='vendor/plotly/plotly.min.js', v=STATIC_VERSION) }}"
+            data-chartjs-url="{{ url_for('static', filename='vendor/chart.js/chart.umd.min.js', v=STATIC_VERSION) }}"></script>
 
     {% block extra_css %}{% endblock %}
 </head>
@@ -151,30 +150,45 @@
                     </li>
                 </ul>
 
-                <!-- Dark Mode Toggle -->
+                <!-- Settings Menu -->
                 <div class="navbar-nav">
-                    <button id="theme-toggle" class="btn btn-outline-light btn-sm" type="button"
-                            data-bs-toggle="tooltip" data-bs-placement="bottom"
-                            title="Toggle theme mode"
-                            aria-label="Toggle theme mode">
-                        <i class="bi bi-circle-half"></i>
-                    </button>
+                    <div class="dropdown settings-dropdown">
+                        <button id="settings-toggle" class="btn btn-outline-light btn-sm dropdown-toggle" type="button"
+                                data-bs-toggle="dropdown" data-bs-placement="bottom"
+                                aria-haspopup="true" aria-expanded="false"
+                                title="Appearance settings" aria-label="Appearance settings">
+                            <i class="bi bi-gear-fill" data-settings-icon></i>
+                            <span class="visually-hidden" data-settings-label>Appearance settings</span>
+                        </button>
+                        <div class="dropdown-menu dropdown-menu-end settings-dropdown-menu" aria-labelledby="settings-toggle">
+                            <div class="settings-menu" data-settings-menu></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <div class="container mt-4">
-        {% block content %}{% endblock %}
-    </div>
+    <main id="main-content" role="main">
+        {% block main_wrapper %}
+        <div class="container mt-4">
+            {% block content %}{% endblock %}
+        </div>
+        {% endblock %}
+    </main>
 
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
             <div class="row">
                 <div class="col-md-6">
-                    <small>Powered by <a href="https://github.com/aminovpavel/meshworks-malla" target="_blank" rel="noopener">MeshWorks Malla</a></small>
+                    <small>
+                        Powered by <a href="https://github.com/aminovpavel/meshworks-malla" target="_blank" rel="noopener">MeshWorks Malla</a>
+                        {% if APP_VERSION %}
+                            <span class="text-muted ms-1">v{{ APP_VERSION }}</span>
+                        {% endif %}
+                    </small>
                 </div>
             </div>
         </div>
@@ -191,8 +205,8 @@
     <script src="{{ url_for('static', filename='js/url-filter-manager.js', v=STATIC_VERSION) }}"></script>
     <!-- NodeCache utility (shared across pages) -->
     <script src="{{ url_for('static', filename='js/node-cache.js', v=STATIC_VERSION) }}"></script>
-    <!-- Dark Mode Toggle -->
-    <script src="{{ url_for('static', filename='js/dark-mode-toggle.js', v=STATIC_VERSION) }}"></script>
+    <!-- Theme Settings & Palette Selector -->
+    <script src="{{ url_for('static', filename='js/theme-settings.js', v=STATIC_VERSION) }}"></script>
 
     <!-- Node tooltip functionality -->
     <script src="{{ url_for('static', filename='js/node-tooltips.js', v=STATIC_VERSION) }}"></script>

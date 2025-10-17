@@ -54,6 +54,9 @@ class AppConfig:
     debug_token: str | None = None
     debug_log_buffer_size: int = 500
 
+    # Map rendering toggles
+    map_show_leaflet_branding: bool = False
+
     # Internal attribute to remember the source file used
     _config_path: Path | None = field(default=None, repr=False, compare=False)
 

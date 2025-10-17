@@ -153,7 +153,10 @@ class TestTracerouteRoutes:
         response_text = response.data.decode("utf-8")
         assert "Network Graph" in response_text
         assert "networkGraph" in response_text
-        assert "d3js.org" in response_text
+        assert (
+            "d3js.org" in response_text
+            or "vendor/d3/d3.v7.min.js" in response_text
+        )
 
     @pytest.mark.integration
     def test_traceroute_graph_with_parameters(self, client):

@@ -726,8 +726,13 @@ def api_locations():
         if request.args.get("search"):
             filters["search"] = request.args.get("search")
 
-        # Get enhanced location data with network topology
-        locations = LocationService.get_node_locations(filters)
+        include_links = get_bool_arg(request, "include_links", default=True)
+        include_network = get_bool_arg(request, "include_network", default=include_links)
+
+        # Get enhanced location data with optional network topology
+        locations = LocationService.get_node_locations(
+            filters, include_network=include_network
+        )
 
         # ------------------------------------------------------------------
         # Link data
@@ -735,8 +740,20 @@ def api_locations():
         #   • packet_links      – direct (0-hop) packet receptions
         # ------------------------------------------------------------------
 
-        traceroute_links = LocationService.get_traceroute_links(filters)
-        packet_links = LocationService.get_packet_links(filters)
+        traceroute_links = []
+        packet_links = []
+        if include_links:
+            traceroute_links = LocationService.get_traceroute_links(filters)
+            packet_links = LocationService.get_packet_links(filters)
+
+        data_period_hours = None
+        if filters.get("start_time") and filters.get("end_time"):
+            try:
+                data_period_hours = round(
+                    (filters["end_time"] - filters["start_time"]) / 3600, 2
+                )
+            except Exception:
+                data_period_hours = None
 
         return safe_jsonify(
             {
@@ -745,7 +762,9 @@ def api_locations():
                 "packet_links": packet_links,
                 "total_count": len(locations) if isinstance(locations, list) else 0,
                 "filters_applied": filters,
-                "data_period_days": 14,
+                "data_period_days": data_period_hours / 24 if data_period_hours else 14,
+                "data_period_hours": data_period_hours,
+                "links_included": include_links,
             }
         )
     except Exception as e:

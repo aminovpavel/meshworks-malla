@@ -4,7 +4,7 @@ Malla - Meshtastic MQTT to SQLite capture and web monitoring tools.
 A comprehensive web UI for browsing and analyzing Meshtastic mesh network health data.
 """
 
-__version__ = "0.1.0"
+__version__ = "0.3.0-dev"
 __title__ = "Malla"
 __description__ = "A comprehensive web UI for browsing and analyzing Meshtastic mesh network health data"
 __author__ = "Malla Contributors"

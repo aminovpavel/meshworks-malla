@@ -65,6 +65,10 @@ class DirectReceptionsChart {
         }
 
         try {
+            if (window.VendorLoader && typeof window.VendorLoader.loadPlotly === 'function') {
+                await window.VendorLoader.loadPlotly();
+            }
+
             // Show card and loading indicator
             cardContainer.style.display = 'block';
             document.getElementById('direct-receptions-loading').style.display = 'block';

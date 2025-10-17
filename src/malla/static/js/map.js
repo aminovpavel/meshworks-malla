@@ -77,7 +77,7 @@
                 } else {
                     // Leaflet not available – fallback: load data and hide overlay without map
                     try {
-                        loadNodeLocations().catch(() => hideLoading());
+                        loadMapDataTwoPhase({ showSpinner: true });
                     } catch (_) {
                         hideLoading();
                     }
@@ -102,7 +102,7 @@
                                     hideLoading();
                                 }
                             } else {
-                                loadNodeLocations().catch(() => hideLoading());
+                                loadMapDataTwoPhase({ showSpinner: true });
                             }
                         } catch (_) {
                             hideLoading();
@@ -315,6 +315,13 @@
 
         // Load channels on interface init
         loadPrimaryChannels();
+
+        // Apply default 24-hour window on initial load to limit server work
+        const maxAgeSelect = $('#maxAge');
+        if (!maxAgeSelect.val()) {
+            maxAgeSelect.val('24');
+        }
+        maxAgeSelect.trigger('change');
     }
 
     // Minimal vanilla fallback when jQuery is unavailable in tests
@@ -348,6 +355,14 @@
                     try { applyClientSideFilters(); } catch (_) {}
                 });
             }
+
+            const maxAgeSelect = document.getElementById('maxAge');
+            if (maxAgeSelect && !maxAgeSelect.value) {
+                maxAgeSelect.value = '24';
+                try {
+                    maxAgeSelect.dispatchEvent(new Event('change'));
+                } catch (_) { /* ignore */ }
+            }
         } catch (_) { /* ignore */ }
     }
 
@@ -360,6 +375,11 @@
 
         // Create map centered on a default location (will be updated when data loads)
         map = L.map('map').setView([40.0, -95.0], 4);
+        const mapEl = document.getElementById('map');
+        const preserveLeafletBranding = mapEl && mapEl.dataset && mapEl.dataset.leafletBrand === '1';
+        if (!preserveLeafletBranding && map && map.attributionControl && map.attributionControl.setPrefix) {
+            map.attributionControl.setPrefix('Leaflet');
+        }
 
         // Create light and dark tile layers
         lightTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
@@ -401,8 +421,8 @@
         });
         map.addLayer(markerClusterGroup);
 
-        // Load node data
-        loadNodeLocations();
+        // Load node data (two-phase: nodes first, links afterwards)
+        loadMapDataTwoPhase({ showSpinner: true });
     }
 
     // Build filter parameters from form
@@ -411,43 +431,74 @@
         const formData = new FormData(form);
         const params = new URLSearchParams();
 
-        // Only send server-side filters (gateway, search, etc.)
-        // Age and role filtering is now done client-side
+        // Only send server-side filters (time window) to reduce heavy aggregations
+        const startDateTime = formData.get('startDateTime');
+        const endDateTime = formData.get('endDateTime');
+
+        if (startDateTime) {
+            const startTimestamp = Math.floor(new Date(startDateTime).getTime() / 1000);
+            if (!Number.isNaN(startTimestamp)) {
+                params.set('start_time', startTimestamp.toString());
+            }
+        }
+
+        if (endDateTime) {
+            const endTimestamp = Math.floor(new Date(endDateTime).getTime() / 1000);
+            if (!Number.isNaN(endTimestamp)) {
+                params.set('end_time', endTimestamp.toString());
+            }
+        }
 
         return params;
     }
 
     // Load node locations from API
-    async function loadNodeLocations() {
+    async function loadNodeLocations(options = {}) {
+        const { includeLinks = true, quiet = false } = options;
         try {
-            showLoading();
+            if (!quiet) {
+                showLoading();
+            }
 
             const params = buildFilterParams();
+            if (!includeLinks) {
+                params.set('include_links', '0');
+                params.set('include_network', '0');
+            }
             const response = await fetch(`/api/locations?${params.toString()}`);
             const data = await response.json();
 
             if (data.error) {
-                showError(data.error);
+                if (!quiet) {
+                    showError(data.error);
+                }
                 return;
             }
 
             // Store all data for client-side filtering
             allNodeData = data.locations || [];
 
-            // Combine traceroute and packet links but tag with type for filtering
-            const tracerouteLinksFetched = (data.traceroute_links || []).map(l => ({ ...l, link_type: 'traceroute' }));
-            const packetLinksFetched = (data.packet_links || []).map(l => ({ ...l, link_type: 'packet' }));
-
-            allLinkData = [...tracerouteLinksFetched, ...packetLinksFetched];
+            if (includeLinks) {
+                // Combine traceroute and packet links but tag with type for filtering
+                const tracerouteLinksFetched = (data.traceroute_links || []).map(l => ({ ...l, link_type: 'traceroute' }));
+                const packetLinksFetched = (data.packet_links || []).map(l => ({ ...l, link_type: 'packet' }));
+                allLinkData = [...tracerouteLinksFetched, ...packetLinksFetched];
+            } else if (!quiet) {
+                allLinkData = [];
+            }
 
             // Apply client-side filters
             applyClientSideFilters();
 
-            hideLoading();
-
         } catch (error) {
             console.error('Error loading node locations:', error);
-            showError('Failed to load node locations');
+            if (!quiet) {
+                showError('Failed to load node locations');
+            }
+        } finally {
+            if (!quiet) {
+                hideLoading();
+            }
         }
     }
 
@@ -1532,6 +1583,8 @@
         if (link.success_rate < 50) qualityClass = 'text-danger';
         else if (link.success_rate < 80) qualityClass = 'text-warning';
 
+        const distanceInfo = (typeof link.distance_km === 'number') ? `<div><strong>Distance:</strong> ${link.distance_km.toFixed(1)} km</div>` : '';
+
         return `
             <div class="traceroute-link-info">
                 <div class="fw-bold mb-2">${link.link_type === 'packet' ? 'Direct Packet Link' : 'Traceroute RF Hop'}</div>
@@ -1542,6 +1595,7 @@
                 <div><strong>Last Seen:</strong> ${link.last_seen_str}</div>
                 ${link.avg_snr ? `<div><strong>Avg SNR:</strong> ${link.avg_snr.toFixed(1)} dB</div>` : ''}
                 ${link.avg_rssi ? `<div><strong>Avg RSSI:</strong> ${link.avg_rssi.toFixed(0)} dBm</div>` : ''}
+                ${distanceInfo}
                 <div class="mt-2">
                     <button class="btn btn-sm btn-primary" onclick="showTracerouteHistory(${link.from_node_id}, ${link.to_node_id})">
                         View History
@@ -1572,9 +1626,20 @@
         window.open(`/node/${nodeId}`, '_blank');
     }
 
+    function loadMapDataTwoPhase(options = {}) {
+        const { showSpinner = true } = options;
+        const initialLoad = loadNodeLocations({ includeLinks: false, quiet: !showSpinner });
+        initialLoad
+            .then(() => loadNodeLocations({ includeLinks: true, quiet: true }))
+            .catch((error) => {
+                console.error('Error loading map links:', error);
+            });
+        return initialLoad;
+    }
+
     // Refresh map
     function refreshMap() {
-        loadNodeLocations();
+        loadMapDataTwoPhase({ showSpinner: true });
     }
 
     // Loading/error functions

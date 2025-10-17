@@ -1,6 +1,8 @@
 services:
   malla-capture:
-    build: .
+    build:
+      context: ../..
+      dockerfile: Dockerfile
     image: meshworks/malla-dev:local
     container_name: malla-capture-dev
     restart: unless-stopped
@@ -21,10 +23,12 @@ services:
       - TZ=Europe/Moscow
     command: ["/app/.venv/bin/malla-capture"]
     volumes:
-      - ./devdata:/data
+      - ../../devdata:/data
 
   malla-web:
-    build: .
+    build:
+      context: ../..
+      dockerfile: Dockerfile
     image: meshworks/malla-dev:local
     container_name: malla-web-dev
     restart: unless-stopped
@@ -45,9 +49,9 @@ services:
       - MALLA_DEFAULT_RATE_LIMIT=${MALLA_DEFAULT_RATE_LIMIT:-}
       # In dev we leave SECRET_KEY unset; for prod, set it externally
       - TZ=Europe/Moscow
-    command: ["/app/.venv/bin/malla-web-gunicorn"]
+    command: ["/app/.venv/bin/malla-web"]
     ports:
       - "5008:5008"
     volumes:
-      # Web opens DB in SQLite read-only mode, but needs RW mount for WAL/SHM files.
-      - ./devdata:/data:rw
+      # Web opens DB in SQLite read-only mode, но нужен RW для WAL/SHM.
+      - ../../devdata:/data:rw

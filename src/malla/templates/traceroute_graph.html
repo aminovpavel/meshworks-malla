@@ -6,119 +6,120 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}?v={{ STATIC_VERSION }}">
 {% endblock %}
 
-{% block content %}
-<!-- Override the base template's container to make this page full-width/full-height -->
-</div> <!-- Close the base template's container -->
+{% block main_wrapper %}
+<section aria-labelledby="network-graph-heading">
+    <h1 id="network-graph-heading" class="visually-hidden">Network Graph</h1>
 
-<div class="graph-container">
-    <!-- Main Graph Area -->
-    <div class="graph-main">
-        <div id="loadingSpinner" class="loading-overlay">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+    <div class="graph-container">
+        <!-- Main Graph Area -->
+        <div class="graph-main">
+            <div id="loadingSpinner" class="loading-overlay">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2 text-muted">Building network graph...</p>
             </div>
-            <p class="mt-2 text-muted">Building network graph...</p>
-        </div>
-        <div id="networkGraph" class="network-graph"></div>
-        <div id="graphError" class="error-overlay">
-            <i class="bi bi-exclamation-triangle"></i>
-            <p class="mt-2">Error loading graph data</p>
-        </div>
-    </div>
-
-    <!-- Sidebar -->
-    {% call sidebar_container("sidebar", "Network Graph", "bi bi-diagram-3", "toggleSidebar") %}
-        {{ selected_details_section("clearSelection") }}
-
-        <!-- Hover Details -->
-        <div class="sidebar-section">
-            <h6><i class="bi bi-eye"></i> Hover Details</h6>
-            <div id="hoverDetails" class="hover-details">
-                <small class="text-muted">Hover over nodes or links for details</small>
+            <div id="networkGraph" class="network-graph"></div>
+            <div id="graphError" class="error-overlay">
+                <i class="bi bi-exclamation-triangle"></i>
+                <p class="mt-2">Error loading graph data</p>
             </div>
         </div>
 
-        {{ search_section("nodeSearch", "clearSearch", "searchResults") }}
+        <!-- Sidebar -->
+        {% call sidebar_container("sidebar", "Network Graph", "bi bi-diagram-3", "toggleSidebar") %}
+            {{ selected_details_section("clearSelection") }}
+
+            <!-- Hover Details -->
+            <div class="sidebar-section">
+                <h6><i class="bi bi-eye"></i> Hover Details</h6>
+                <div id="hoverDetails" class="hover-details">
+                    <small class="text-muted">Hover over nodes or links for details</small>
+                </div>
+            </div>
+
+            {{ search_section("nodeSearch", "clearSearch", "searchResults") }}
 
 {% set graph_controls = [
     {"class": "btn-outline-secondary", "onclick": "TracerouteGraph.centerGraph()", "icon": "bi bi-arrows-move", "text": "Center Graph"},
     {"class": "btn-outline-secondary", "onclick": "TracerouteGraph.resetZoom()", "icon": "bi bi-zoom-out", "text": "Reset Zoom"},
     {"class": "btn-outline-primary", "onclick": "TracerouteGraph.refresh()", "icon": "bi bi-arrow-clockwise", "text": "Refresh"}
 ] %}
-        {{ controls_section(graph_controls) }}
+            {{ controls_section(graph_controls) }}
 
-        <!-- Filters -->
-        <div class="sidebar-section">
-            <h6><i class="bi bi-funnel"></i> Filters</h6>
-            <form id="filterForm">
-                <div class="mb-3">
-                    <label for="hours" class="form-label">Time Period</label>
-                    <select class="form-select form-select-sm" id="hours" name="hours">
-                        <option value="1" {% if hours == 1 %}selected{% endif %}>Last Hour</option>
-                        <option value="6" {% if hours == 6 %}selected{% endif %}>Last 6 Hours</option>
-                        <option value="24" {% if hours == 24 %}selected{% endif %}>Last 24 Hours</option>
-                        <option value="72" {% if hours == 72 %}selected{% endif %}>Last 3 Days</option>
-                        <option value="168" {% if hours == 168 %}selected{% endif %}>Last Week</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label for="min_snr" class="form-label">Minimum SNR (dB)</label>
-                    <select class="form-select form-select-sm" id="min_snr" name="min_snr">
-                        <option value="-200" {% if min_snr == -200 %}selected{% endif %}>No Limit</option>
-                        <option value="-99" {% if min_snr == -99 %}selected{% endif %}>≥ -99 dB</option>
-                        <option value="-40" {% if min_snr == -40 %}selected{% endif %}>≥ -40 dB</option>
-                        <option value="-30" {% if min_snr == -30 %}selected{% endif %}>≥ -30 dB</option>
-                        <option value="-20" {% if min_snr == -20 %}selected{% endif %}>≥ -20 dB</option>
-                        <option value="-10" {% if min_snr == -10 %}selected{% endif %}>≥ -10 dB</option>
-                        <option value="0" {% if min_snr == 0 %}selected{% endif %}>≥ 0 dB</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="include_indirect" name="include_indirect" {% if include_indirect %}checked{% endif %}>
-                        <label class="form-check-label" for="include_indirect">
-                            Multi-hop Connections
-                        </label>
+            <!-- Filters -->
+            <div class="sidebar-section">
+                <h6><i class="bi bi-funnel"></i> Filters</h6>
+                <form id="filterForm">
+                    <div class="mb-3">
+                        <label for="hours" class="form-label">Time Period</label>
+                        <select class="form-select form-select-sm" id="hours" name="hours">
+                            <option value="1" {% if hours == 1 %}selected{% endif %}>Last Hour</option>
+                            <option value="6" {% if hours == 6 %}selected{% endif %}>Last 6 Hours</option>
+                            <option value="24" {% if hours == 24 %}selected{% endif %}>Last 24 Hours</option>
+                            <option value="72" {% if hours == 72 %}selected{% endif %}>Last 3 Days</option>
+                            <option value="168" {% if hours == 168 %}selected{% endif %}>Last Week</option>
+                        </select>
                     </div>
-                </div>
-                <div class="mb-3">
-                    <label for="primary_channel" class="form-label">Primary Channel</label>
-                    <select class="form-select form-select-sm" id="primary_channel" name="primary_channel">
-                        <option value="">All Channels</option>
-                        <!-- Options will be loaded dynamically -->
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-primary btn-sm w-100">
-                    <i class="bi bi-arrow-clockwise"></i> Update Graph
-                </button>
-            </form>
-        </div>
-
-        <!-- Graph Stats -->
-        <div class="sidebar-section">
-            <h6><i class="bi bi-bar-chart"></i> Statistics</h6>
-            <div id="graphStats" class="stats-content">
-                <div><strong>Nodes:</strong> <span id="statsNodes">0</span></div>
-                <div><strong>Links:</strong> <span id="statsLinks">0</span></div>
-                <div><strong>Time Period:</strong> <span id="statsTimePeriod">24h</span></div>
-                <div><strong>Last Update:</strong> <span id="statsLastUpdate">--</span></div>
+                    <div class="mb-3">
+                        <label for="min_snr" class="form-label">Minimum SNR (dB)</label>
+                        <select class="form-select form-select-sm" id="min_snr" name="min_snr">
+                            <option value="-200" {% if min_snr == -200 %}selected{% endif %}>No Limit</option>
+                            <option value="-99" {% if min_snr == -99 %}selected{% endif %}>≥ -99 dB</option>
+                            <option value="-40" {% if min_snr == -40 %}selected{% endif %}>≥ -40 dB</option>
+                            <option value="-30" {% if min_snr == -30 %}selected{% endif %}>≥ -30 dB</option>
+                            <option value="-20" {% if min_snr == -20 %}selected{% endif %}>≥ -20 dB</option>
+                            <option value="-10" {% if min_snr == -10 %}selected{% endif %}>≥ -10 dB</option>
+                            <option value="0" {% if min_snr == 0 %}selected{% endif %}>≥ 0 dB</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="include_indirect" name="include_indirect" {% if include_indirect %}checked{% endif %}>
+                            <label class="form-check-label" for="include_indirect">
+                                Multi-hop Connections
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="primary_channel" class="form-label">Primary Channel</label>
+                        <select class="form-select form-select-sm" id="primary_channel" name="primary_channel">
+                            <option value="">All Channels</option>
+                            <!-- Options will be loaded dynamically -->
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm w-100">
+                        <i class="bi bi-arrow-clockwise"></i> Update Graph
+                    </button>
+                </form>
             </div>
-        </div>
 
-        {% set legend_items = [
-            {"type": "icon", "class": "bi bi-circle-fill text-primary", "text": "Active nodes"},
-            {"type": "line", "class": "direct", "text": "Direct RF links"},
-            {"type": "line", "class": "indirect", "text": "Multi-hop paths"}
-        ] %}
-        {% call legend_section(legend_items) %}
-            <div class="legend-item mt-2">
-                <small class="text-muted">Node size = traffic volume<br>
-                Link thickness = signal strength<br>
-                Colors = SNR quality</small>
+            <!-- Graph Stats -->
+            <div class="sidebar-section">
+                <h6><i class="bi bi-bar-chart"></i> Statistics</h6>
+                <div id="graphStats" class="stats-content">
+                    <div><strong>Nodes:</strong> <span id="statsNodes">0</span></div>
+                    <div><strong>Links:</strong> <span id="statsLinks">0</span></div>
+                    <div><strong>Time Period:</strong> <span id="statsTimePeriod">24h</span></div>
+                    <div><strong>Last Update:</strong> <span id="statsLastUpdate">--</span></div>
+                </div>
             </div>
+
+            {% set legend_items = [
+                {"type": "icon", "class": "bi bi-circle-fill text-primary", "text": "Active nodes"},
+                {"type": "line", "class": "direct", "text": "Direct RF links"},
+                {"type": "line", "class": "indirect", "text": "Multi-hop paths"}
+            ] %}
+            {% call legend_section(legend_items) %}
+                <div class="legend-item mt-2">
+                    <small class="text-muted">Node size = traffic volume<br>
+                    Link thickness = signal strength<br>
+                    Colors = SNR quality</small>
+                </div>
+            {% endcall %}
         {% endcall %}
-    {% endcall %}
-</div>
+    </div>
+</section>
 
 <!-- Page-specific styles moved to static/css/traceroute-graph.css (CSP Phase 2) -->
 
@@ -127,7 +128,4 @@
 <script src="{{ url_for('static', filename='vendor/d3/d3.v7.min.js') }}?v={{ STATIC_VERSION }}" defer></script>
 <script src="{{ url_for('static', filename='js/page-helpers.js') }}?v={{ STATIC_VERSION }}" defer></script>
 <script src="{{ url_for('static', filename='js/traceroute-graph.js') }}?v={{ STATIC_VERSION }}" defer></script>
-
-<!-- Re-open the container for the footer (which we're hiding anyway) -->
-<div class="container mt-4" style="display: none;">
 {% endblock %}

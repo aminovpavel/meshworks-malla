@@ -1,8 +1,9 @@
 include README.md
 include LICENSE
 include pyproject.toml
-include malla-web
-include malla-capture
+include bin/malla-web
+include bin/malla-web-gunicorn
+include bin/malla-capture
 include uv.lock
 include .python-version
 include .envrc

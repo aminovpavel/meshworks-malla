@@ -402,6 +402,16 @@ document.getElementById('gateway2').addEventListener('change', function() {
 
 {% if comparison_data and not comparison_data.get('error') and comparison_data.chart_data %}
 <script>
+(async () => {
+    if (window.VendorLoader && typeof window.VendorLoader.loadPlotly === 'function') {
+        try {
+            await window.VendorLoader.loadPlotly();
+        } catch (error) {
+            console.error('Error loading Plotly:', error);
+            return;
+        }
+    }
+
 // Chart data from server
 const chartData = {{ comparison_data.chart_data | tojson | safe }};
 
@@ -600,6 +610,7 @@ $(document).ready(function() {
         ]
     });
 });
+})();
 </script>
 {% endif %}
 {% endblock %} 

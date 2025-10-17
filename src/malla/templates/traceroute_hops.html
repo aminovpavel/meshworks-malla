@@ -165,7 +165,15 @@
     let directionChart = null;
 
     // Load available nodes on page load
-    document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
+        if (window.VendorLoader && typeof window.VendorLoader.loadChartJS === 'function') {
+            try {
+                await window.VendorLoader.loadChartJS();
+            } catch (error) {
+                console.error('Error loading Chart.js:', error);
+            }
+        }
+
         loadAvailableNodes();
         setupEventListeners();
         
@@ -579,6 +587,9 @@
     }
 
     function updateSNRChart(traceroutes) {
+        if (typeof Chart === 'undefined') {
+            return;
+        }
         const ctx = document.getElementById('snr-chart').getContext('2d');
         
         if (snrChart) {
@@ -650,6 +661,9 @@
     }
 
     function updateDirectionChart(directionCounts) {
+        if (typeof Chart === 'undefined') {
+            return;
+        }
         const ctx = document.getElementById('direction-chart').getContext('2d');
         
         if (directionChart) {

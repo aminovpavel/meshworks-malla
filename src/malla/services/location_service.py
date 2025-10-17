@@ -12,6 +12,8 @@ from ..database.repositories import LocationRepository
 
 logger = logging.getLogger(__name__)
 
+MAX_LINK_DISTANCE_KM = 300.0
+
 
 class LocationService:
     """Service for location-related operations and calculations."""
@@ -19,12 +21,15 @@ class LocationService:
     @staticmethod
     def get_node_locations(
         filters: dict[str, Any] | None = None,
+        *,
+        include_network: bool = True,
     ) -> list[dict[str, Any]]:
         """
         Get all node locations with formatted display information and network topology data.
 
         Args:
             filters: Optional filters to apply (start_time, end_time, gateway_id, node_ids, etc.)
+            include_network: When False, skip expensive network topology enrichment.
 
         Returns:
             List of location dictionaries with additional display fields and network analysis
@@ -41,6 +46,8 @@ class LocationService:
         repo_start = time.time()
         locations = LocationRepository.get_node_locations(filters)
         timing_breakdown["repository_call"] = time.time() - repo_start
+        timing_breakdown["network_topology"] = 0.0
+        timing_breakdown["neighbor_processing"] = 0.0
 
         if not locations:
             return []
@@ -69,170 +76,175 @@ class LocationService:
         if not locations:
             return []
 
-        # Get network topology data from traceroute analysis
-        network_start = time.time()
-        try:
-            from ..services.traceroute_service import TracerouteService
-
-            # Extract time parameters from filters for network analysis
-            hours = 24  # Default to 24 hours – sufficient for map neighbour analysis
-            if filters.get("start_time") and filters.get("end_time"):
-                # Calculate hours from time range
-                time_diff = filters["end_time"] - filters["start_time"]
-                hours = max(
-                    1, min(168, int(time_diff / 3600))
-                )  # Between 1 and 168 hours
-            elif filters.get("max_age_hours"):
-                hours = min(168, filters["max_age_hours"])
-
-            # Pass the same filters to network analysis for consistency
-            network_filters = {}
-            if filters.get("start_time"):
-                network_filters["start_time"] = filters["start_time"]
-            if filters.get("end_time"):
-                network_filters["end_time"] = filters["end_time"]
-            if filters.get("gateway_id"):
-                network_filters["gateway_id"] = filters["gateway_id"]
-
-            network_data = TracerouteService.get_network_graph_data(
-                hours=hours,
-                include_indirect=False,
-                filters=network_filters,
-                limit_packets=2000,
-            )
-        except Exception as e:
-            logger.warning(f"Failed to get network topology data: {e}")
-            network_data = {"nodes": [], "links": []}
-        timing_breakdown["network_topology"] = time.time() - network_start
-
-        # Create lookup maps for network data
-        network_processing_start = time.time()
-        network_nodes = {node["id"]: node for node in network_data.get("nodes", [])}
-
-        # Create neighbor count maps
-        neighbor_counts = {}
+        network_data = {"nodes": [], "links": []}
+        network_nodes: dict[int, dict[str, Any]] = {}
+        neighbor_counts: dict[int, int] = {}
         neighbor_details: dict[int, list[dict[str, Any]]] = {}
 
-        # Process network links to build neighbor relationships
-        for link in network_data.get("links", []):
-            source_id = link["source"]
-            target_id = link["target"]
+        if include_network:
+            network_start = time.time()
+            try:
+                from ..services.traceroute_service import TracerouteService
 
-            # Track neighbors
-            if source_id not in neighbor_counts:
-                neighbor_counts[source_id] = 0
-                neighbor_details[source_id] = []
-            if target_id not in neighbor_counts:
-                neighbor_counts[target_id] = 0
-                neighbor_details[target_id] = []
+                # Extract time parameters from filters for network analysis
+                hours = 24  # Default to 24 hours – sufficient for map neighbour analysis
+                if filters.get("start_time") and filters.get("end_time"):
+                    # Calculate hours from time range
+                    time_diff = filters["end_time"] - filters["start_time"]
+                    hours = max(
+                        1, min(168, int(time_diff / 3600))
+                    )  # Between 1 and 168 hours
+                elif filters.get("max_age_hours"):
+                    hours = min(168, filters["max_age_hours"])
 
-            neighbor_counts[source_id] += 1
-            neighbor_counts[target_id] += 1
+                # Pass the same filters to network analysis for consistency
+                network_filters = {}
+                if filters.get("start_time"):
+                    network_filters["start_time"] = filters["start_time"]
+                if filters.get("end_time"):
+                    network_filters["end_time"] = filters["end_time"]
+                if filters.get("gateway_id"):
+                    network_filters["gateway_id"] = filters["gateway_id"]
 
-            # Add neighbor details with proper SNR values and traceroute count
-            avg_snr = link.get("avg_snr")
-            traceroute_count = link.get("packet_count", 0)
-
-            neighbor_details[source_id].append(
-                {
-                    "neighbor_id": target_id,
-                    "avg_snr": avg_snr,
-                    "traceroute_count": traceroute_count,
-                    "packet_count": 0,  # Will be updated if direct packets exist
-                }
-            )
-            neighbor_details[target_id].append(
-                {
-                    "neighbor_id": source_id,
-                    "avg_snr": avg_snr,
-                    "traceroute_count": traceroute_count,
-                    "packet_count": 0,  # Will be updated if direct packets exist
-                }
-            )
-
-        # Get direct packet links to include in neighbor data
-        try:
-            # Pass the same filters to get packet links for consistency
-            packet_filters = {}
-            if filters.get("start_time"):
-                packet_filters["start_time"] = filters["start_time"]
-            if filters.get("end_time"):
-                packet_filters["end_time"] = filters["end_time"]
-            if filters.get("gateway_id"):
-                packet_filters["gateway_id"] = filters["gateway_id"]
-
-            packet_links = LocationService.get_packet_links(packet_filters)
-
-            # Process packet links to add to neighbor details
-            for link in packet_links:
-                from_node_id = link["from_node_id"]
-                to_node_id = link["to_node_id"]
-                packet_count = link.get("total_hops_seen", 0)
-
-                # Initialize neighbor tracking if not already present
-                if from_node_id not in neighbor_counts:
-                    neighbor_counts[from_node_id] = 0
-                    neighbor_details[from_node_id] = []
-                if to_node_id not in neighbor_counts:
-                    neighbor_counts[to_node_id] = 0
-                    neighbor_details[to_node_id] = []
-
-                # Check if we already have this neighbor relationship from traceroute data
-                existing_neighbor_from = next(
-                    (
-                        n
-                        for n in neighbor_details[from_node_id]
-                        if n["neighbor_id"] == to_node_id
-                    ),
-                    None,
+                network_data = TracerouteService.get_network_graph_data(
+                    hours=hours,
+                    include_indirect=False,
+                    filters=network_filters,
+                    limit_packets=2000,
                 )
-                existing_neighbor_to = next(
-                    (
-                        n
-                        for n in neighbor_details[to_node_id]
-                        if n["neighbor_id"] == from_node_id
-                    ),
-                    None,
+            except Exception as e:
+                logger.warning(f"Failed to get network topology data: {e}")
+                network_data = {"nodes": [], "links": []}
+            timing_breakdown["network_topology"] = time.time() - network_start
+
+            # Create lookup maps for network data
+            network_processing_start = time.time()
+            network_nodes = {node["id"]: node for node in network_data.get("nodes", [])}
+
+            # Create neighbor count maps
+            for link in network_data.get("links", []):
+                source_id = link["source"]
+                target_id = link["target"]
+
+                # Track neighbors
+                if source_id not in neighbor_counts:
+                    neighbor_counts[source_id] = 0
+                    neighbor_details[source_id] = []
+                if target_id not in neighbor_counts:
+                    neighbor_counts[target_id] = 0
+                    neighbor_details[target_id] = []
+
+                neighbor_counts[source_id] += 1
+                neighbor_counts[target_id] += 1
+
+                # Add neighbor details with proper SNR values and traceroute count
+                avg_snr = link.get("avg_snr")
+                traceroute_count = link.get("packet_count", 0)
+
+                neighbor_details[source_id].append(
+                    {
+                        "neighbor_id": target_id,
+                        "avg_snr": avg_snr,
+                        "traceroute_count": traceroute_count,
+                        "packet_count": 0,  # Will be updated if direct packets exist
+                    }
+                )
+                neighbor_details[target_id].append(
+                    {
+                        "neighbor_id": source_id,
+                        "avg_snr": avg_snr,
+                        "traceroute_count": traceroute_count,
+                        "packet_count": 0,  # Will be updated if direct packets exist
+                    }
                 )
 
-                if existing_neighbor_from:
-                    # Update existing neighbor with packet data
-                    existing_neighbor_from["packet_count"] = packet_count
-                    existing_neighbor_from["avg_rssi"] = link.get("avg_rssi")
-                else:
-                    # Add new neighbor from packet data
-                    neighbor_counts[from_node_id] += 1
-                    neighbor_details[from_node_id].append(
-                        {
-                            "neighbor_id": to_node_id,
-                            "avg_snr": link.get("avg_snr"),
-                            "avg_rssi": link.get("avg_rssi"),
-                            "traceroute_count": 0,
-                            "packet_count": packet_count,
-                        }
+            # Get direct packet links to include in neighbor data
+            try:
+                # Pass the same filters to get packet links for consistency
+                packet_filters = {}
+                if filters.get("start_time"):
+                    packet_filters["start_time"] = filters["start_time"]
+                if filters.get("end_time"):
+                    packet_filters["end_time"] = filters["end_time"]
+                if filters.get("gateway_id"):
+                    packet_filters["gateway_id"] = filters["gateway_id"]
+
+                packet_links = LocationService.get_packet_links(packet_filters)
+
+                # Process packet links to add to neighbor details
+                for link in packet_links:
+                    from_node_id = link["from_node_id"]
+                    to_node_id = link["to_node_id"]
+                    packet_count = link.get("total_hops_seen", 0)
+
+                    # Initialize neighbor tracking if not already present
+                    if from_node_id not in neighbor_counts:
+                        neighbor_counts[from_node_id] = 0
+                        neighbor_details[from_node_id] = []
+                    if to_node_id not in neighbor_counts:
+                        neighbor_counts[to_node_id] = 0
+                        neighbor_details[to_node_id] = []
+
+                    # Check if we already have this neighbor relationship from traceroute data
+                    existing_neighbor_from = next(
+                        (
+                            n
+                            for n in neighbor_details[from_node_id]
+                            if n["neighbor_id"] == to_node_id
+                        ),
+                        None,
+                    )
+                    existing_neighbor_to = next(
+                        (
+                            n
+                            for n in neighbor_details[to_node_id]
+                            if n["neighbor_id"] == from_node_id
+                        ),
+                        None,
                     )
 
-                if existing_neighbor_to:
-                    # Update existing neighbor with packet data
-                    existing_neighbor_to["packet_count"] = packet_count
-                    existing_neighbor_to["avg_rssi"] = link.get("avg_rssi")
-                else:
-                    # Add new neighbor from packet data
-                    neighbor_counts[to_node_id] += 1
-                    neighbor_details[to_node_id].append(
-                        {
-                            "neighbor_id": from_node_id,
-                            "avg_snr": link.get("avg_snr"),
-                            "avg_rssi": link.get("avg_rssi"),
-                            "traceroute_count": 0,
-                            "packet_count": packet_count,
-                        }
-                    )
+                    if existing_neighbor_from:
+                        # Update existing neighbor with packet data
+                        existing_neighbor_from["packet_count"] = packet_count
+                        existing_neighbor_from["avg_rssi"] = link.get("avg_rssi")
+                    else:
+                        # Add new neighbor from packet data
+                        neighbor_counts[from_node_id] += 1
+                        neighbor_details[from_node_id].append(
+                            {
+                                "neighbor_id": to_node_id,
+                                "avg_snr": link.get("avg_snr"),
+                                "avg_rssi": link.get("avg_rssi"),
+                                "traceroute_count": 0,
+                                "packet_count": packet_count,
+                            }
+                        )
 
-        except Exception as e:
-            logger.warning(f"Failed to get packet links for neighbor data: {e}")
+                    if existing_neighbor_to:
+                        # Update existing neighbor with packet data
+                        existing_neighbor_to["packet_count"] = packet_count
+                        existing_neighbor_to["avg_rssi"] = link.get("avg_rssi")
+                    else:
+                        # Add new neighbor from packet data
+                        neighbor_counts[to_node_id] += 1
+                        neighbor_details[to_node_id].append(
+                            {
+                                "neighbor_id": from_node_id,
+                                "avg_snr": link.get("avg_snr"),
+                                "avg_rssi": link.get("avg_rssi"),
+                                "traceroute_count": 0,
+                                "packet_count": packet_count,
+                            }
+                        )
 
-        timing_breakdown["neighbor_processing"] = time.time() - network_processing_start
+            except Exception as e:
+                logger.warning(f"Failed to get packet links for neighbor data: {e}")
+
+            timing_breakdown["neighbor_processing"] = (
+                time.time() - network_processing_start
+            )
+        else:
+            packet_links = []
 
         # Enhance location data with network topology information
         enhancement_start = time.time()
@@ -349,6 +361,18 @@ class LocationService:
             # Convert network links to map-compatible format
             traceroute_links = []
             current_time = datetime.now().timestamp()
+            node_locations = {}
+            for node in network_data.get("nodes", []):
+                loc = node.get("location")
+                if not loc:
+                    continue
+                lat = loc.get("latitude")
+                lon = loc.get("longitude")
+                if lat is None or lon is None:
+                    continue
+                node_locations[node["id"]] = loc
+
+            skipped_due_to_distance = 0
 
             for link in network_data.get("links", []):
                 # Calculate age in hours
@@ -362,6 +386,20 @@ class LocationService:
                 # Higher packet count suggests more reliable link
                 success_rate = min(100, max(10, link["packet_count"] * 10))
 
+                distance_km = None
+                from_loc = node_locations.get(link["source"])
+                to_loc = node_locations.get(link["target"])
+                if from_loc and to_loc:
+                    distance_km = LocationService.calculate_haversine_distance(
+                        from_loc["latitude"],
+                        from_loc["longitude"],
+                        to_loc["latitude"],
+                        to_loc["longitude"],
+                    )
+                    if distance_km > MAX_LINK_DISTANCE_KM:
+                        skipped_due_to_distance += 1
+                        continue
+
                 traceroute_link = {
                     "from_node_id": link["source"],
                     "to_node_id": link["target"],
@@ -372,11 +410,20 @@ class LocationService:
                     "is_bidirectional": True,  # Network graph links are bidirectional by design
                     "total_hops_seen": link["packet_count"],
                     "last_packet_id": link.get("last_packet_id"),
+                    "distance_km": round(distance_km, 2) if distance_km is not None else None,
                 }
 
                 traceroute_links.append(traceroute_link)
 
-            logger.info(f"Generated {len(traceroute_links)} traceroute links")
+            if skipped_due_to_distance:
+                logger.info(
+                    "Generated %d traceroute links (skipped %d > %.0f km)",
+                    len(traceroute_links),
+                    skipped_due_to_distance,
+                    MAX_LINK_DISTANCE_KM,
+                )
+            else:
+                logger.info(f"Generated {len(traceroute_links)} traceroute links")
             return traceroute_links
 
         except Exception as e:
@@ -912,6 +959,7 @@ class LocationService:
             # Convert DB rows into link dictionaries.
             # ------------------------------------------------------------------
             link_map: dict[tuple[int, int], dict[str, Any]] = {}
+            node_ids_for_locations: set[int] = set()
             now_ts = datetime.now().timestamp()
 
             for row in rows:
@@ -938,6 +986,9 @@ class LocationService:
                     key: tuple[int, int] = (from_node_id, to_node_id)
                 else:
                     key = (to_node_id, from_node_id)
+
+                node_ids_for_locations.add(from_node_id)
+                node_ids_for_locations.add(to_node_id)
 
                 # Calculate derived metrics.
                 age_hours = (
@@ -1000,8 +1051,48 @@ class LocationService:
                 else:
                     link_map[key] = link_payload
 
-            logger.info("Generated %d packet-based RF links", len(link_map))
-            return list(link_map.values())
+            location_map: dict[int, dict[str, Any]] = {}
+            if node_ids_for_locations:
+                try:
+                    location_records = LocationRepository.get_node_locations(
+                        {"node_ids": list(node_ids_for_locations)}
+                    )
+                    location_map = {loc["node_id"]: loc for loc in location_records}
+                except Exception as e:
+                    logger.warning(
+                        "Failed to fetch locations for packet link distance filtering: %s",
+                        e,
+                    )
+
+            filtered_links = []
+            skipped_due_to_distance = 0
+            for link in link_map.values():
+                distance_km = None
+                from_loc = location_map.get(link["from_node_id"])
+                to_loc = location_map.get(link["to_node_id"])
+                if from_loc and to_loc:
+                    distance_km = LocationService.calculate_haversine_distance(
+                        from_loc["latitude"],
+                        from_loc["longitude"],
+                        to_loc["latitude"],
+                        to_loc["longitude"],
+                    )
+                    if distance_km > MAX_LINK_DISTANCE_KM:
+                        skipped_due_to_distance += 1
+                        continue
+                    link["distance_km"] = round(distance_km, 2)
+                filtered_links.append(link)
+
+            if skipped_due_to_distance:
+                logger.info(
+                    "Generated %d packet-based RF links (skipped %d > %.0f km)",
+                    len(filtered_links),
+                    skipped_due_to_distance,
+                    MAX_LINK_DISTANCE_KM,
+                )
+            else:
+                logger.info("Generated %d packet-based RF links", len(filtered_links))
+            return filtered_links
 
         except Exception as e:
             logger.error("Error getting packet links: %s", e)

@@ -10,134 +10,133 @@
 {{ table_layout_styles() }}
 {% endblock %}
 
-{% block content %}
-<!-- Override the base template's container to make this page full-width/full-height -->
-</div> <!-- Close the base template's container -->
-
-{% call fullscreen_table_container("packetsTable", "Packets", "bi bi-envelope", "toggleSidebar") %}
-    <!-- Main table content -->
-    <div id="packetsTable" class="modern-table-container"></div>
-{% endcall %}
-
-<!-- Sidebar content (will be injected into the sidebar) -->
-<div id="sidebarContent" style="display: none;">
-    {% call filter_section("filtersForm", "Packet Filters") %}
-        <div class="row g-3">
-            <div class="col-12">
-                <label for="start_time" class="form-label">Start Time</label>
-                <input type="datetime-local" class="form-control form-control-sm" id="start_time" name="start_time">
-            </div>
-            <div class="col-12">
-                <label for="end_time" class="form-label">End Time</label>
-                <input type="datetime-local" class="form-control form-control-sm" id="end_time" name="end_time">
-            </div>
-            <div class="col-12">
-                {{ node_picker(
-                    field_name="from_node",
-                    label="From Node",
-                    selected_value="",
-                    selected_display="",
-                    placeholder="All nodes",
-                    include_broadcast=true
-                ) }}
-            </div>
-            <div class="col-12">
-                {{ node_picker(
-                    field_name="to_node",
-                    label="To Node",
-                    selected_value="",
-                    selected_display="",
-                    placeholder="All destination nodes",
-                    include_broadcast=true
-                ) }}
-            </div>
-            <div class="col-12">
-                {{ node_picker(
-                    field_name="exclude_from",
-                    label="Exclude From Node",
-                    selected_value="",
-                    selected_display="",
-                    placeholder="No exclusions",
-                    include_broadcast=true
-                ) }}
-            </div>
-            <div class="col-12">
-                {{ node_picker(
-                    field_name="exclude_to",
-                    label="Exclude To Node",
-                    selected_value="",
-                    selected_display="",
-                    placeholder="No exclusions",
-                    include_broadcast=true
-                ) }}
-            </div>
-            <div class="col-12">
-                {{ gateway_picker(
-                    field_name="gateway_id",
-                    label="Gateway (Receiver)",
-                    selected_value="",
-                    selected_display="",
-                    placeholder="All gateways"
-                ) }}
-            </div>
-            <div class="col-12">
-                <label for="portnum" class="form-label">Packet Type</label>
-                <select class="form-select form-select-sm" id="portnum" name="portnum">
-                    <option value="">All Types</option>
-                    <!-- Options will be loaded dynamically -->
-                </select>
-            </div>
-            <div class="col-12">
-                <label for="hop_count" class="form-label">Hop Count</label>
-                <select class="form-select form-select-sm" id="hop_count" name="hop_count">
-                    <option value="">Any Hops</option>
-                    <option value="0">Direct (0 hops)</option>
-                    <option value="1">1 hop</option>
-                    <option value="2">2 hops</option>
-                    <option value="3">3 hops</option>
-                    <option value="99">4+ hops</option>
-                </select>
-            </div>
-            <div class="col-12">
-                <label for="min_rssi" class="form-label">Min RSSI</label>
-                <input type="number" class="form-control form-control-sm" id="min_rssi" name="min_rssi" placeholder="-120">
-            </div>
-            <!-- Exclude self-reported gateway messages -->
-            <div class="col-12">
-                <div class="form-check d-flex align-items-center">
-                    <input class="form-check-input me-2" type="checkbox" id="exclude_self" name="exclude_self">
-                    <label class="form-check-label mb-0" for="exclude_self">
-                        Exclude gateway self messages
-                    </label>
-                </div>
-            </div>
-            <div class="col-12">
-                <label for="primary_channel" class="form-label">Primary Channel</label>
-                <select class="form-select form-select-sm" id="primary_channel" name="primary_channel">
-                    <option value="">All Channels</option>
-                    <!-- Options will be loaded dynamically -->
-                </select>
-            </div>
-        </div>
+{% block main_wrapper %}
+<section aria-labelledby="packetsTable-title">
+    {% call fullscreen_table_container("packetsTable", "Packets", "bi bi-envelope", "toggleSidebar") %}
+        <!-- Main table content -->
+        <div id="packetsTable" class="modern-table-container"></div>
     {% endcall %}
 
-    {{ grouping_section("group_packets", "Group by Packet ID", "Group packets with the same mesh packet ID") }}
+    <!-- Sidebar content (will be injected into the sidebar) -->
+    <div id="sidebarContent" style="display: none;">
+        {% call filter_section("filtersForm", "Packet Filters") %}
+            <div class="row g-3">
+                <div class="col-12">
+                    <label for="start_time" class="form-label">Start Time</label>
+                    <input type="datetime-local" class="form-control form-control-sm" id="start_time" name="start_time">
+                </div>
+                <div class="col-12">
+                    <label for="end_time" class="form-label">End Time</label>
+                    <input type="datetime-local" class="form-control form-control-sm" id="end_time" name="end_time">
+                </div>
+                <div class="col-12">
+                    {{ node_picker(
+                        field_name="from_node",
+                        label="From Node",
+                        selected_value="",
+                        selected_display="",
+                        placeholder="All nodes",
+                        include_broadcast=true
+                    ) }}
+                </div>
+                <div class="col-12">
+                    {{ node_picker(
+                        field_name="to_node",
+                        label="To Node",
+                        selected_value="",
+                        selected_display="",
+                        placeholder="All destination nodes",
+                        include_broadcast=true
+                    ) }}
+                </div>
+                <div class="col-12">
+                    {{ node_picker(
+                        field_name="exclude_from",
+                        label="Exclude From Node",
+                        selected_value="",
+                        selected_display="",
+                        placeholder="No exclusions",
+                        include_broadcast=true
+                    ) }}
+                </div>
+                <div class="col-12">
+                    {{ node_picker(
+                        field_name="exclude_to",
+                        label="Exclude To Node",
+                        selected_value="",
+                        selected_display="",
+                        placeholder="No exclusions",
+                        include_broadcast=true
+                    ) }}
+                </div>
+                <div class="col-12">
+                    {{ gateway_picker(
+                        field_name="gateway_id",
+                        label="Gateway (Receiver)",
+                        selected_value="",
+                        selected_display="",
+                        placeholder="All gateways"
+                    ) }}
+                </div>
+                <div class="col-12">
+                    <label for="portnum" class="form-label">Packet Type</label>
+                    <select class="form-select form-select-sm" id="portnum" name="portnum">
+                        <option value="">All Types</option>
+                        <!-- Options will be loaded dynamically -->
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label for="hop_count" class="form-label">Hop Count</label>
+                    <select class="form-select form-select-sm" id="hop_count" name="hop_count">
+                        <option value="">Any Hops</option>
+                        <option value="0">Direct (0 hops)</option>
+                        <option value="1">1 hop</option>
+                        <option value="2">2 hops</option>
+                        <option value="3">3 hops</option>
+                        <option value="99">4+ hops</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label for="min_rssi" class="form-label">Min RSSI</label>
+                    <input type="number" class="form-control form-control-sm" id="min_rssi" name="min_rssi" placeholder="-120">
+                </div>
+                <!-- Exclude self-reported gateway messages -->
+                <div class="col-12">
+                    <div class="form-check d-flex align-items-center">
+                        <input class="form-check-input me-2" type="checkbox" id="exclude_self" name="exclude_self">
+                        <label class="form-check-label mb-0" for="exclude_self">
+                            Exclude gateway self messages
+                        </label>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <label for="primary_channel" class="form-label">Primary Channel</label>
+                    <select class="form-select form-select-sm" id="primary_channel" name="primary_channel">
+                        <option value="">All Channels</option>
+                        <!-- Options will be loaded dynamically -->
+                    </select>
+                </div>
+            </div>
+        {% endcall %}
 
-    {% set table_controls = [
-        {"class": "btn-primary", "id": "applyFilters", "icon": "bi bi-search", "text": "Apply Filters", "type": "button"},
-        {"class": "btn-outline-secondary", "id": "clearFilters", "icon": "bi bi-x-circle", "text": "Clear Filters", "type": "button"},
-        {"class": "btn-outline-info", "id": "refreshTable", "icon": "bi bi-arrow-clockwise", "text": "Refresh", "type": "button"},
-    ] %}
-    {{ table_controls_section(table_controls) }}
+        {{ grouping_section("group_packets", "Group by Packet ID", "Group packets with the same mesh packet ID") }}
 
-    {% set stats_items = [
-        {"label": "Total Packets", "id": "statsTotal", "default": "0"},
-        {"label": "Filtered", "id": "statsFiltered", "default": "0"},
-        {"label": "Grouped", "id": "statsGrouped", "default": "0"},
-        {"label": "Last Update", "id": "statsLastUpdate", "default": "--"}
-    ] %}
-    {{ table_stats_section("tableStats", stats_items) }}
-</div>
+        {% set table_controls = [
+            {"class": "btn-primary", "id": "applyFilters", "icon": "bi bi-search", "text": "Apply Filters", "type": "button"},
+            {"class": "btn-outline-secondary", "id": "clearFilters", "icon": "bi bi-x-circle", "text": "Clear Filters", "type": "button"},
+            {"class": "btn-outline-info", "id": "refreshTable", "icon": "bi bi-arrow-clockwise", "text": "Refresh", "type": "button"},
+        ] %}
+        {{ table_controls_section(table_controls) }}
+
+        {% set stats_items = [
+            {"label": "Total Packets", "id": "statsTotal", "default": "0"},
+            {"label": "Filtered", "id": "statsFiltered", "default": "0"},
+            {"label": "Grouped", "id": "statsGrouped", "default": "0"},
+            {"label": "Last Update", "id": "statsLastUpdate", "default": "--"}
+        ] %}
+        {{ table_stats_section("tableStats", stats_items) }}
+    </div>
+</section>
 {% endblock %}
 
 {% block extra_js %}

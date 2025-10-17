@@ -51,10 +51,10 @@ serve-docs: ## Serve documentation locally
 	@echo "Documentation serving not yet configured"
 
 run-web: ## Run the web UI
-	./malla-web
+	./bin/malla-web
 
 run-capture: ## Run the MQTT capture tool
-	./malla-capture
+	./bin/malla-capture
 
 dev-setup: install-dev ## Set up development environment
 	uv run pre-commit install

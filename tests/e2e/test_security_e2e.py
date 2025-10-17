@@ -18,7 +18,10 @@ def test_security_headers_and_csp_e2e(page: Page, test_server_url: str):
     expect(page.locator("nav.navbar")).to_be_visible()
     # Check that vendor assets loaded (local paths)
     expect(page.locator("link[href*='/static/vendor/bootstrap/css/bootstrap.min.css']")).to_have_count(1)
-    expect(page.locator("script[src*='/static/vendor/plotly/plotly.min.js']")).to_have_count(1)
+    loader = page.locator("script[src*='/static/js/vendor-loader.js']")
+    expect(loader).to_have_count(1)
+    assert loader.first.get_attribute("data-plotly-url")
+    assert loader.first.get_attribute("data-chartjs-url")
 
 
 def test_nodes_data_limit_clamp_e2e(page: Page, test_server_url: str):
@@ -27,4 +30,3 @@ def test_nodes_data_limit_clamp_e2e(page: Page, test_server_url: str):
     expect(page.get_by_role("heading", name="Nodes")).to_be_visible()
     # Table rows should be present but not explode
     expect(page.locator("table")).to_be_visible()
-
