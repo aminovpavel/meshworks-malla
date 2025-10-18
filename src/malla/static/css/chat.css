@@ -1,4 +1,8 @@
 /* Chat page styles */
+:root {
+    --chat-panel-min-width: auto;
+}
+
 .chat-panel {
     border: 1px solid var(--bs-border-color);
     border-radius: var(--bs-border-radius-lg);
@@ -6,7 +10,7 @@
     position: relative;
     overflow: visible;
     width: 100%;
-    min-width: min(100%, 520px);
+    min-width: var(--chat-panel-min-width, min(100%, 520px));
     flex: 1 1 auto;
 }
 
@@ -197,6 +201,25 @@
         width: calc(100% - 2rem);
         max-height: calc(100% - 2rem);
         padding: 1.25rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .chat-filter-layer {
+        --chat-filter-padding: 0.75rem;
+        align-items: flex-end;
+        justify-content: center;
+    }
+
+    .chat-filter-panel {
+        width: calc(100% - var(--chat-filter-padding) * 2);
+        max-width: none;
+        border-radius: 1.25rem 1.25rem 0 0;
+        transform: translateY(24px);
+    }
+
+    .chat-filter-layer:not([hidden]) .chat-filter-panel {
+        transform: translateY(0);
     }
 }
 

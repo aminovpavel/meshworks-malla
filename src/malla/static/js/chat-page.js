@@ -830,20 +830,6 @@
         return Boolean(filterLayerEl && !filterLayerEl.hasAttribute('hidden'));
     }
 
-    function focusFirstFilterControl() {
-        if (!filterLayerEl) {
-            return;
-        }
-        const focusTarget = filterLayerEl.querySelector('[data-filter-focus]') || filterLayerEl.querySelector('button, input, select, textarea');
-        if (focusTarget && typeof focusTarget.focus === 'function') {
-            try {
-                focusTarget.focus({ preventScroll: true });
-            } catch (error) {
-                focusTarget.focus();
-            }
-        }
-    }
-
     function handleFilterPanelKeydown(event) {
         if (event.key === 'Escape') {
             event.preventDefault();
@@ -852,7 +838,7 @@
         }
     }
 
-    function openFilterPanel() {
+    function openFilterPanel(shouldFocus) {
         if (!filterLayerEl) {
             return;
         }
@@ -862,12 +848,25 @@
         lastFocusedBeforeFilter = document.activeElement || null;
         filterLayerEl.hidden = false;
         if (filterPanelEl) {
+            const panelWidth = Math.ceil(filterPanelEl.getBoundingClientRect().width + 48);
+            document.documentElement.style.setProperty('--chat-panel-min-width', `${panelWidth}px`);
+        }
+        if (filterPanelEl) {
             filterPanelEl.classList.remove('dropdown-open');
         }
         if (filterButton) {
             filterButton.classList.add('is-open');
         }
-        focusFirstFilterControl();
+        if (shouldFocus && filterPanelEl) {
+            const focusTarget = filterPanelEl.querySelector('button, input, select, textarea');
+            if (focusTarget && typeof focusTarget.focus === 'function') {
+                try {
+                    focusTarget.focus({ preventScroll: true });
+                } catch (error) {
+                    focusTarget.focus();
+                }
+            }
+        }
         document.addEventListener('keydown', handleFilterPanelKeydown, true);
     }
 
@@ -898,6 +897,7 @@
         if (filterPanelEl) {
             filterPanelEl.classList.remove('dropdown-open');
         }
+        document.documentElement.style.removeProperty('--chat-panel-min-width');
         if (filterButton) {
             filterButton.classList.remove('is-open');
         }
@@ -1944,7 +1944,7 @@
             chatState.nextCursor = null;
             loadMessages({ mode: 'replace', showSpinner: true });
         } else if (!opts.skipRefresh) {
-            scheduleAutoRefresh();
+            scheduleAutoRefresh(determineAutoRefreshReason());
         }
     }
 
@@ -2120,11 +2120,12 @@
     }
 
     if (filterButton && filterLayerEl) {
-        filterButton.addEventListener('click', () => {
+        filterButton.addEventListener('click', (event) => {
             if (isFilterPanelOpen()) {
                 closeFilterPanel();
             } else {
-                openFilterPanel();
+                const shouldFocus = event.detail === 0;
+                openFilterPanel(shouldFocus);
             }
         });
     }
