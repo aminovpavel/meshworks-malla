@@ -130,7 +130,6 @@
 
     const searchInput = document.getElementById('chat-text-search');
     const scrollSentinelEl = document.getElementById('chat-scroll-sentinel');
-    const windowQuickEl = document.getElementById('chat-window-quick');
     const activeFiltersEl = document.getElementById('chat-active-filters');
     const customWindowEl = document.getElementById('chat-custom-window');
     const customInputEl = document.getElementById('chat-custom-input');
@@ -187,7 +186,6 @@
         });
     }
 
-    updateQuickWindowButtons(chatState.windowValue);
     renderActiveFilters();
 
     let autoRefreshTimer = null;
@@ -669,18 +667,6 @@
         }
     }
 
-    function updateQuickWindowButtons(activeValue) {
-        if (!windowQuickEl) {
-            return;
-        }
-        const targetValue = activeValue || chatState.windowValue || '24';
-        windowQuickEl.querySelectorAll('[data-window-value]').forEach((button) => {
-            const value = button.getAttribute('data-window-value') || '';
-            const isActive = value === targetValue || (value === 'custom' && targetValue === 'custom');
-            button.classList.toggle('active', isActive);
-        });
-    }
-
     function clearFilter(filterType, options) {
         const opts = options || {};
         switch (filterType) {
@@ -743,7 +729,6 @@
                 if (windowLabelEl) {
                     windowLabelEl.textContent = defaultLabel;
                 }
-                updateQuickWindowButtons('24');
                 closeCustomWindow();
                 break;
             }
@@ -1174,7 +1159,6 @@
         }
         customWindowEl.hidden = false;
         customWindowEl.classList.add('is-open');
-        updateQuickWindowButtons('custom');
         return true;
     }
 
@@ -1232,7 +1216,6 @@
         if (windowLabelEl) {
             windowLabelEl.textContent = chatState.windowLabel;
         }
-        updateQuickWindowButtons('custom');
         renderActiveFilters();
         applyFilters({ force: true });
     }
@@ -1287,7 +1270,6 @@
         if (windowLabelEl) {
             windowLabelEl.textContent = chatState.windowLabel;
         }
-        updateQuickWindowButtons('custom');
         closeCustomWindow();
         applyFilters({ force: true });
     }
@@ -1359,7 +1341,6 @@
             windowLabelEl.textContent = chatState.windowLabel;
         }
 
-        updateQuickWindowButtons(chatState.windowValue);
         renderActiveFilters();
     }
 
@@ -1860,7 +1841,6 @@
             searchParams.set('q', searchValue);
         }
 
-        updateQuickWindowButtons(chatState.windowValue);
         renderActiveFilters();
 
         const paramString = searchParams.toString();
@@ -2045,38 +2025,6 @@
 
     if (senderSearchInput) {
         senderSearchInput.addEventListener('input', filterSenderOptions);
-    }
-
-    if (windowQuickEl) {
-        windowQuickEl.addEventListener('click', (event) => {
-            const button = event.target.closest('[data-window-value]');
-            if (!button) {
-                return;
-            }
-            const value = button.getAttribute('data-window-value') || '';
-            if (value === 'custom') {
-                handleCustomWindowSelection();
-                return;
-            }
-            chatState.windowValue = value;
-            chatState.windowSince = '';
-            if (windowInput) {
-                windowInput.value = value;
-            }
-            if (windowSinceInput) {
-                windowSinceInput.value = '';
-            }
-            const labelText = button.dataset.label || button.textContent.trim() || 'Last 24 hours';
-            chatState.windowLabel = labelText;
-            if (windowLabelEl) {
-                windowLabelEl.textContent = labelText;
-            }
-            updateQuickWindowButtons(value);
-            if (value !== 'custom') {
-                closeCustomWindow();
-            }
-            applyFilters({ force: true });
-        });
     }
 
     if (activeFiltersEl) {

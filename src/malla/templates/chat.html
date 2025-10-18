@@ -15,11 +15,6 @@
     <div class="card shadow-sm chat-panel">
         <div class="card-header chat-header">
             <div class="chat-header-top">
-                <div class="chat-header-title">
-                    <div class="chat-heading-title">
-                        <span class="fw-semibold"><i class="bi bi-chat-square-text"></i> Recent messages</span>
-                    </div>
-                </div>
                 <div class="chat-header-actions">
                     <button
                         class="btn btn-outline-secondary btn-sm chat-filter-button"
@@ -38,28 +33,6 @@
                         <i class="bi bi-arrow-clockwise"></i> Refresh
                     </button>
                 </div>
-            </div>
-
-            {% set quick_window_values = ['1', '6', '24'] %}
-            <div class="chat-window-quick" id="chat-window-quick" role="group" aria-label="Quick time window">
-                {% for value, label in time_window_options if value in quick_window_values %}
-                    <button
-                        type="button"
-                        class="chat-window-chip {% if selected_window_value == value %}active{% endif %}"
-                        data-window-value="{{ value }}"
-                        data-label="{{ label }}"
-                    >
-                        {{ label }}
-                    </button>
-                {% endfor %}
-                <button
-                    type="button"
-                    class="chat-window-chip {% if selected_window_value == 'custom' %}active{% endif %}"
-                    data-window-value="custom"
-                    data-label="Custom window"
-                >
-                    Custom…
-                </button>
             </div>
 
             <div class="chat-filter-chips" id="chat-active-filters" hidden></div>
