@@ -45,7 +45,7 @@
                 {% for value, label in time_window_options if value in quick_window_values %}
                     <button
                         type="button"
-                        class="btn btn-sm chat-window-chip {% if selected_window_value == value %}active{% endif %}"
+                        class="chat-window-chip {% if selected_window_value == value %}active{% endif %}"
                         data-window-value="{{ value }}"
                         data-label="{{ label }}"
                     >
@@ -54,7 +54,7 @@
                 {% endfor %}
                 <button
                     type="button"
-                    class="btn btn-sm chat-window-chip {% if selected_window_value == 'custom' %}active{% endif %}"
+                    class="chat-window-chip {% if selected_window_value == 'custom' %}active{% endif %}"
                     data-window-value="custom"
                     data-label="Custom window"
                 >
@@ -96,21 +96,17 @@
                 </div>
             </div>
         </div>
-        <div
-            class="offcanvas offcanvas-end chat-filter-drawer"
-            tabindex="-1"
-            id="chat-filter-drawer"
-            aria-labelledby="chat-filter-drawer-label"
-            data-bs-scroll="true"
-        >
-            <div class="offcanvas-header">
-                <h2 class="offcanvas-title h5 mb-0" id="chat-filter-drawer-label">
-                    <i class="bi bi-sliders"></i> Filter messages
-                </h2>
-                <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close filters"></button>
-            </div>
-            <div class="offcanvas-body">
-                <form class="chat-toolbar" method="get" id="chat-filter-form">
+        <div class="chat-filter-layer" id="chat-filter-layer" hidden>
+            <div class="chat-filter-overlay" data-filter-action="close" aria-hidden="true"></div>
+            <div class="chat-filter-panel" role="dialog" aria-modal="true" aria-labelledby="chat-filter-panel-title">
+                <div class="chat-filter-panel-header">
+                    <h2 class="chat-filter-panel-title" id="chat-filter-panel-title">
+                        <i class="bi bi-sliders"></i> Filter messages
+                    </h2>
+                    <button type="button" class="btn-close" data-filter-action="close" aria-label="Close filters"></button>
+                </div>
+                <div class="chat-filter-panel-body">
+                    <form class="chat-toolbar" method="get" id="chat-filter-form">
                     <div class="chat-filter-field chat-dropdown-wrapper">
                         <label class="form-label">Channel</label>
                         <div class="dropdown w-100">
@@ -241,13 +237,15 @@
                                 value="{{ search_query }}"
                                 placeholder="Message text"
                                 autocomplete="off"
+                                data-filter-focus="true"
                             >
                         </div>
                     </div>
-                </form>
-                <div class="chat-filter-footer">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="offcanvas">Close</button>
-                    <button type="button" class="btn btn-link btn-sm text-danger" id="chat-filter-clear">Clear all</button>
+                    </form>
+                    <div class="chat-filter-footer">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-filter-action="close">Close</button>
+                        <button type="button" class="btn btn-link btn-sm text-danger" id="chat-filter-clear">Clear all</button>
+                    </div>
                 </div>
             </div>
         </div>

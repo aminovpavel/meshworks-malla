@@ -97,7 +97,13 @@
     const liveToggleButton = document.getElementById('chat-live-toggle');
     const filterForm = document.getElementById('chat-filter-form');
     const filterButton = document.querySelector('.chat-filter-button');
-    const filterDrawerEl = document.getElementById('chat-filter-drawer');
+    const filterLayerEl = document.getElementById('chat-filter-layer');
+    const filterPanelEl = filterLayerEl
+        ? filterLayerEl.querySelector('.chat-filter-panel')
+        : null;
+    const filterPanelCloseEls = filterLayerEl
+        ? filterLayerEl.querySelectorAll('[data-filter-action=\"close\"]')
+        : [];
     const filterClearButton = document.getElementById('chat-filter-clear');
 
     const channelInput = document.getElementById('chat-channel-input');
@@ -191,7 +197,9 @@
     let infiniteObserver = null;
     const tooltipInstances = new WeakMap();
     const tooltipHandlers = new WeakMap();
+    const filterDropdownMetas = [];
     let activeTooltipEl = null;
+    let lastFocusedBeforeFilter = null;
 
     function escapeHtml(value) {
         return value
@@ -317,6 +325,122 @@
         return '';
     }
 
+    function positionDetachedDropdownMenu(menuEl, toggleEl) {
+        if (!menuEl || !toggleEl) {
+            return;
+        }
+        const margin = 12;
+        const viewportWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+        const viewportHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+        const toggleRect = toggleEl.getBoundingClientRect();
+
+        const minWidth = Math.max(toggleRect.width, 220);
+        const maxWidth = Math.min(420, viewportWidth - margin * 2);
+        const width = Math.min(Math.max(minWidth, 240), maxWidth);
+
+        const spaceBelow = viewportHeight - toggleRect.bottom - margin;
+        const spaceAbove = toggleRect.top - margin;
+        const desiredHeight = 360;
+        let placeBelow = spaceBelow >= 200 || spaceBelow >= spaceAbove;
+
+        let available = placeBelow ? spaceBelow : spaceAbove;
+        if (available < 160) {
+            placeBelow = !placeBelow;
+            available = placeBelow ? spaceBelow : spaceAbove;
+        }
+        available = Math.max(available, 160);
+        let maxHeight = Math.min(available, viewportHeight - margin * 2);
+        maxHeight = Math.max(160, Math.min(maxHeight, 480));
+
+        let top;
+        if (placeBelow) {
+            top = toggleRect.bottom + margin;
+        } else {
+            top = toggleRect.top - maxHeight - margin;
+        }
+        top = Math.max(margin, Math.min(top, viewportHeight - margin - 16));
+
+        let left = toggleRect.left;
+        if (left + width + margin > viewportWidth) {
+            left = viewportWidth - width - margin;
+        }
+        left = Math.max(margin, left);
+
+        menuEl.style.position = 'fixed';
+        menuEl.style.top = `${Math.round(top)}px`;
+        menuEl.style.left = `${Math.round(left)}px`;
+        menuEl.style.width = `${Math.round(width)}px`;
+        menuEl.style.maxHeight = `${Math.round(maxHeight)}px`;
+        menuEl.style.overflowY = 'auto';
+        menuEl.style.overflowX = 'hidden';
+        menuEl.style.zIndex = '1090';
+    }
+
+    function detachDropdownMenu(meta) {
+        if (!meta || !meta.menuEl || !meta.toggleEl) {
+            return;
+        }
+        const { menuEl, toggleEl } = meta;
+
+        meta.originalParent = menuEl.parentNode;
+        meta.originalNextSibling = menuEl.nextSibling;
+
+        menuEl.classList.add('chat-dropdown-floating');
+        menuEl.dataset.chatDetached = '1';
+        menuEl.style.visibility = 'hidden';
+        menuEl.style.display = 'block';
+
+        document.body.appendChild(menuEl);
+        positionDetachedDropdownMenu(menuEl, toggleEl);
+
+        menuEl.style.visibility = '';
+        menuEl.style.display = '';
+        meta.detached = true;
+    }
+
+    function restoreDropdownMenu(meta) {
+        if (!meta || !meta.menuEl || !meta.detached) {
+            return;
+        }
+        const { menuEl, originalParent, originalNextSibling } = meta;
+
+        if (originalParent && originalParent.isConnected) {
+            if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
+                originalParent.insertBefore(menuEl, originalNextSibling);
+            } else {
+                originalParent.appendChild(menuEl);
+            }
+        }
+        menuEl.classList.remove('chat-dropdown-floating');
+        menuEl.removeAttribute('data-chat-detached');
+        menuEl.style.position = '';
+        menuEl.style.top = '';
+        menuEl.style.left = '';
+        menuEl.style.width = '';
+        menuEl.style.maxHeight = '';
+        menuEl.style.overflowY = '';
+        menuEl.style.overflowX = '';
+        menuEl.style.zIndex = '';
+        menuEl.style.visibility = '';
+        menuEl.style.display = '';
+        meta.detached = false;
+    }
+
+    function repositionActiveDropdownMenus() {
+        filterDropdownMetas.forEach((meta) => {
+            if (!meta || !meta.menuEl || !meta.detached) {
+                return;
+            }
+            if (!meta.menuEl.classList.contains('show')) {
+                return;
+            }
+            positionDetachedDropdownMenu(meta.menuEl, meta.toggleEl);
+        });
+    }
+
+    window.addEventListener('resize', repositionActiveDropdownMenus);
+    window.addEventListener('scroll', repositionActiveDropdownMenus, true);
+
     function setupDropdown(config) {
         const menuEl = config.menuEl;
         const inputEl = config.inputEl;
@@ -329,6 +453,33 @@
         if (!menuEl || !inputEl || !labelEl || !toggleEl) {
             return;
         }
+
+        toggleEl.setAttribute('data-bs-display', 'static');
+        const dropdownInstance = bootstrap.Dropdown.getOrCreateInstance(toggleEl);
+        const dropdownMeta = {
+            toggleEl,
+            menuEl,
+            instance: dropdownInstance,
+            originalParent: menuEl.parentNode,
+            originalNextSibling: menuEl.nextSibling,
+            detached: false,
+        };
+        filterDropdownMetas.push(dropdownMeta);
+
+        toggleEl.addEventListener('show.bs.dropdown', () => {
+            if (filterPanelEl) {
+                filterPanelEl.classList.add('dropdown-open');
+            }
+            detachDropdownMenu(dropdownMeta);
+            positionDetachedDropdownMenu(menuEl, toggleEl);
+        });
+
+        toggleEl.addEventListener('hidden.bs.dropdown', () => {
+            if (filterPanelEl) {
+                filterPanelEl.classList.remove('dropdown-open');
+            }
+            restoreDropdownMenu(dropdownMeta);
+        });
 
         menuEl.querySelectorAll('.dropdown-item').forEach((btn) => {
             btn.addEventListener('click', (event) => {
@@ -658,6 +809,95 @@
         if (filterButton) {
             filterButton.classList.add('is-active');
         }
+    }
+
+    function isFilterPanelOpen() {
+        return Boolean(filterLayerEl && !filterLayerEl.hasAttribute('hidden'));
+    }
+
+    function focusFirstFilterControl() {
+        if (!filterLayerEl) {
+            return;
+        }
+        const focusTarget = filterLayerEl.querySelector('[data-filter-focus]') || filterLayerEl.querySelector('button, input, select, textarea');
+        if (focusTarget && typeof focusTarget.focus === 'function') {
+            try {
+                focusTarget.focus({ preventScroll: true });
+            } catch (error) {
+                focusTarget.focus();
+            }
+        }
+    }
+
+    function handleFilterPanelKeydown(event) {
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            event.stopPropagation();
+            closeFilterPanel();
+        }
+    }
+
+    function openFilterPanel() {
+        if (!filterLayerEl) {
+            return;
+        }
+        if (!filterLayerEl.hasAttribute('hidden')) {
+            return;
+        }
+        lastFocusedBeforeFilter = document.activeElement || null;
+        filterLayerEl.hidden = false;
+        if (filterPanelEl) {
+            filterPanelEl.classList.remove('dropdown-open');
+        }
+        if (filterButton) {
+            filterButton.classList.add('is-open');
+        }
+        focusFirstFilterControl();
+        document.addEventListener('keydown', handleFilterPanelKeydown, true);
+    }
+
+    function closeFilterPanel() {
+        if (!filterLayerEl) {
+            return;
+        }
+        if (filterLayerEl.hasAttribute('hidden')) {
+            return;
+        }
+        if (filterDropdownMetas.length) {
+            filterDropdownMetas.forEach((meta) => {
+                if (!meta) {
+                    return;
+                }
+                if (meta.instance) {
+                    try {
+                        meta.instance.hide();
+                    } catch (error) {
+                        restoreDropdownMenu(meta);
+                    }
+                } else {
+                    restoreDropdownMenu(meta);
+                }
+            });
+        }
+        filterLayerEl.hidden = true;
+        if (filterPanelEl) {
+            filterPanelEl.classList.remove('dropdown-open');
+        }
+        if (filterButton) {
+            filterButton.classList.remove('is-open');
+        }
+        document.removeEventListener('keydown', handleFilterPanelKeydown, true);
+        const focusTarget = lastFocusedBeforeFilter && typeof lastFocusedBeforeFilter.focus === 'function'
+            ? lastFocusedBeforeFilter
+            : filterButton;
+        if (focusTarget && typeof focusTarget.focus === 'function') {
+            try {
+                focusTarget.focus({ preventScroll: true });
+            } catch (error) {
+                focusTarget.focus();
+            }
+        }
+        lastFocusedBeforeFilter = null;
     }
 
     function formatMessageItem(message) {
@@ -1852,6 +2092,25 @@
         });
     }
 
+    if (filterButton && filterLayerEl) {
+        filterButton.addEventListener('click', () => {
+            if (isFilterPanelOpen()) {
+                closeFilterPanel();
+            } else {
+                openFilterPanel();
+            }
+        });
+    }
+
+    if (filterPanelCloseEls.length) {
+        filterPanelCloseEls.forEach((el) => {
+            el.addEventListener('click', (event) => {
+                event.preventDefault();
+                closeFilterPanel();
+            });
+        });
+    }
+
     if (filterClearButton) {
         filterClearButton.addEventListener('click', () => {
             const filterTypes = ['channel', 'audience', 'sender', 'search', 'window'];
@@ -1955,6 +2214,35 @@
                 }
                 return true;
             },
+        });
+    }
+
+    let senderDropdownMeta = null;
+    if (senderMenu && senderToggle) {
+        senderToggle.setAttribute('data-bs-display', 'static');
+        senderDropdownMeta = {
+            toggleEl: senderToggle,
+            menuEl: senderMenu,
+            instance: bootstrap.Dropdown.getOrCreateInstance(senderToggle),
+            originalParent: senderMenu.parentNode,
+            originalNextSibling: senderMenu.nextSibling,
+            detached: false,
+        };
+        filterDropdownMetas.push(senderDropdownMeta);
+
+        senderToggle.addEventListener('show.bs.dropdown', () => {
+            if (filterPanelEl) {
+                filterPanelEl.classList.add('dropdown-open');
+            }
+            detachDropdownMenu(senderDropdownMeta);
+            positionDetachedDropdownMenu(senderMenu, senderToggle);
+        });
+
+        senderToggle.addEventListener('hidden.bs.dropdown', () => {
+            if (filterPanelEl) {
+                filterPanelEl.classList.remove('dropdown-open');
+            }
+            restoreDropdownMenu(senderDropdownMeta);
         });
     }
 
