@@ -36,38 +36,6 @@
             </div>
 
             <div class="chat-filter-chips" id="chat-active-filters" hidden></div>
-
-            <div class="chat-custom-window" id="chat-custom-window" hidden>
-                <div class="chat-custom-window-header">
-                    <h2 class="h6 mb-0">Custom time window</h2>
-                    <button type="button" class="btn btn-link btn-sm text-muted" id="chat-custom-close" aria-label="Close custom window">&times;</button>
-                </div>
-                <div class="chat-custom-window-body">
-                    <label class="form-label" for="chat-custom-input">Start datetime</label>
-                    <input
-                        type="datetime-local"
-                        class="form-control form-control-sm"
-                        id="chat-custom-input"
-                        name="custom-window"
-                        placeholder="YYYY-MM-DD HH:MM"
-                        autocomplete="off"
-                    >
-                    <div class="chat-custom-presets">
-                        <span class="text-muted small">Quick presets:</span>
-                        <div class="chat-custom-presets-buttons">
-                            <button type="button" class="btn btn-outline-secondary btn-sm" data-custom-preset="today">Today 00:00</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" data-custom-preset="yesterday">Yesterday 00:00</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" data-custom-preset="3days">3 days ago</button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm" data-custom-preset="7days">7 days ago</button>
-                        </div>
-                    </div>
-                    <p class="text-muted small mt-2 mb-0">Maximum lookback: 14 days. Times are local.</p>
-                </div>
-                <div class="chat-custom-window-footer">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" id="chat-custom-cancel">Cancel</button>
-                    <button type="button" class="btn btn-primary btn-sm" id="chat-custom-apply">Apply</button>
-                </div>
-            </div>
         </div>
         <div class="chat-filter-layer" id="chat-filter-layer" hidden>
             <div class="chat-filter-overlay" data-filter-action="close" aria-hidden="true"></div>
@@ -198,6 +166,37 @@
                             <input type="hidden" name="since" id="chat-window-since" value="{{ selected_window_start_iso or '' }}">
                         </div>
                     </div>
+                    <div class="chat-custom-window" id="chat-custom-window" hidden>
+                        <div class="chat-custom-window-header">
+                            <h2 class="h6 mb-0">Custom time window</h2>
+                            <button type="button" class="btn btn-link btn-sm text-muted" id="chat-custom-close" aria-label="Close custom window">&times;</button>
+                        </div>
+                        <div class="chat-custom-window-body">
+                            <label class="form-label" for="chat-custom-input">Start datetime</label>
+                            <input
+                                type="datetime-local"
+                                class="form-control form-control-sm"
+                                id="chat-custom-input"
+                                name="custom-window"
+                                placeholder="YYYY-MM-DD HH:MM"
+                                autocomplete="off"
+                            >
+                            <div class="chat-custom-presets">
+                                <span class="text-muted small">Quick presets:</span>
+                                <div class="chat-custom-presets-buttons">
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-custom-preset="today">Today 00:00</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-custom-preset="yesterday">Yesterday 00:00</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-custom-preset="3days">3 days ago</button>
+                                    <button type="button" class="btn btn-outline-secondary btn-sm" data-custom-preset="7days">7 days ago</button>
+                                </div>
+                            </div>
+                            <p class="text-muted small mt-2 mb-0">Maximum lookback: 14 days. Times are local.</p>
+                        </div>
+                        <div class="chat-custom-window-footer">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" id="chat-custom-cancel">Cancel</button>
+                            <button type="button" class="btn btn-primary btn-sm" id="chat-custom-apply">Apply</button>
+                        </div>
+                    </div>
                     <div class="chat-filter-field chat-search-field">
                         <label for="chat-text-search" class="form-label">Search</label>
                         <div class="input-group input-group-sm chat-search-group">
@@ -208,9 +207,9 @@
                                 id="chat-text-search"
                                 name="q"
                                 value="{{ search_query }}"
-                        placeholder="Message text"
-                        autocomplete="off"
-                    >
+                                placeholder="Message text"
+                                autocomplete="off"
+                            >
                         </div>
                     </div>
                     </form>

@@ -1,6 +1,10 @@
 /* Chat page styles */
 :root {
-    --chat-panel-min-width: auto;
+    --chat-panel-min-width: 680px;
+}
+
+body.chat-filter-open {
+    overflow: hidden;
 }
 
 .chat-panel {
@@ -10,8 +14,11 @@
     position: relative;
     overflow: visible;
     width: 100%;
-    min-width: var(--chat-panel-min-width, min(100%, 520px));
-    flex: 1 1 auto;
+    max-width: min(100%, 1080px);
+    min-width: min(100%, var(--chat-panel-min-width, 680px));
+    flex: 1 1 680px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .chat-panel .card-header {
@@ -142,12 +149,12 @@
 
 .chat-filter-layer {
     --chat-filter-padding: clamp(1rem, 2vw, 1.75rem);
-    position: absolute;
+    position: fixed;
     inset: 0;
-    z-index: 40;
+    z-index: 1040;
     display: flex;
-    justify-content: flex-end;
-    align-items: flex-start;
+    justify-content: center;
+    align-items: center;
     padding: var(--chat-filter-padding);
     pointer-events: none;
 }
@@ -157,10 +164,9 @@
 }
 
 .chat-filter-overlay {
-    position: absolute;
+    position: fixed;
     inset: 0;
     background-color: rgba(15, 23, 42, 0.55);
-    border-radius: calc(var(--bs-border-radius-lg) + 6px);
     pointer-events: auto;
 }
 
@@ -196,26 +202,19 @@
     opacity: 1;
 }
 
-@media (max-width: 576px) {
-    .chat-filter-panel {
-        width: calc(100% - 2rem);
-        max-height: calc(100% - 2rem);
-        padding: 1.25rem;
-    }
-}
-
 @media (max-width: 768px) {
     .chat-filter-layer {
         --chat-filter-padding: 0.75rem;
         align-items: flex-end;
-        justify-content: center;
+        justify-content: stretch;
     }
 
     .chat-filter-panel {
-        width: calc(100% - var(--chat-filter-padding) * 2);
+        width: 100%;
         max-width: none;
         border-radius: 1.25rem 1.25rem 0 0;
         transform: translateY(24px);
+        padding: 1.5rem 1.25rem 2rem;
     }
 
     .chat-filter-layer:not([hidden]) .chat-filter-panel {
@@ -661,11 +660,10 @@
     margin-top: 1rem;
     border: 1px solid var(--bs-border-color);
     border-radius: calc(var(--bs-border-radius) * 0.8);
-    background-color: var(--bs-body-bg);
-    box-shadow: 0 0.75rem 1.5rem rgba(15, 23, 42, 0.12);
+    background-color: var(--bs-tertiary-bg);
     padding: 1rem;
     display: none;
-    max-width: 540px;
+    max-width: none;
 }
 
 .chat-custom-window.is-open {

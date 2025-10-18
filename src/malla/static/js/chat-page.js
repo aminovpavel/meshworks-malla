@@ -223,6 +223,29 @@
         return escapeHtml(value).split('\n').join('&#10;');
     }
 
+    function linkifyText(rawValue) {
+        if (!rawValue) {
+            return '';
+        }
+        const urlRegex = /((https?:\/\/|www\.)[^\s<]+)/gi;
+        let lastIndex = 0;
+        let result = '';
+        let match;
+        while ((match = urlRegex.exec(rawValue)) !== null) {
+            const [fullMatch] = match;
+            const index = match.index;
+            result += escapeHtml(rawValue.slice(lastIndex, index));
+            let href = fullMatch;
+            if (!/^https?:\/\//i.test(href)) {
+                href = `https://${href}`;
+            }
+            result += `<a href="${escapeAttribute(href)}" target="_blank" rel="noopener">${escapeHtml(fullMatch)}</a>`;
+            lastIndex = index + fullMatch.length;
+        }
+        result += escapeHtml(rawValue.slice(lastIndex));
+        return result.split('\n').join('<br>');
+    }
+
     function updateLiveToggleUi(forceActive) {
         if (!liveToggleButton) {
             return;
@@ -838,6 +861,15 @@
         }
     }
 
+    function syncFilterPanelMinWidth() {
+        if (!filterPanelEl || !filterLayerEl || filterLayerEl.hasAttribute('hidden')) {
+            return;
+        }
+        const panelWidth = Math.ceil(filterPanelEl.getBoundingClientRect().width + 64);
+        const minWidth = Math.max(panelWidth, 680);
+        document.documentElement.style.setProperty('--chat-panel-min-width', `${minWidth}px`);
+    }
+
     function openFilterPanel(shouldFocus) {
         if (!filterLayerEl) {
             return;
@@ -847,10 +879,7 @@
         }
         lastFocusedBeforeFilter = document.activeElement || null;
         filterLayerEl.hidden = false;
-        if (filterPanelEl) {
-            const panelWidth = Math.ceil(filterPanelEl.getBoundingClientRect().width + 48);
-            document.documentElement.style.setProperty('--chat-panel-min-width', `${panelWidth}px`);
-        }
+        syncFilterPanelMinWidth();
         if (filterPanelEl) {
             filterPanelEl.classList.remove('dropdown-open');
         }
@@ -867,7 +896,9 @@
                 }
             }
         }
+        document.body.classList.add('chat-filter-open');
         document.addEventListener('keydown', handleFilterPanelKeydown, true);
+        window.addEventListener('resize', syncFilterPanelMinWidth);
     }
 
     function closeFilterPanel() {
@@ -898,10 +929,12 @@
             filterPanelEl.classList.remove('dropdown-open');
         }
         document.documentElement.style.removeProperty('--chat-panel-min-width');
+        document.body.classList.remove('chat-filter-open');
         if (filterButton) {
             filterButton.classList.remove('is-open');
         }
         document.removeEventListener('keydown', handleFilterPanelKeydown, true);
+        window.removeEventListener('resize', syncFilterPanelMinWidth);
         const focusTarget = lastFocusedBeforeFilter && typeof lastFocusedBeforeFilter.focus === 'function'
             ? lastFocusedBeforeFilter
             : filterButton;
@@ -917,7 +950,7 @@
 
     function formatMessageItem(message) {
         const messageText = message.message
-            ? escapeHtml(message.message).split('\n').join('<br>')
+            ? linkifyText(message.message)
             : '<em class="text-muted">[empty message]</em>';
 
         const fromName = escapeHtml(message.from_name || 'Unknown sender');
@@ -1509,7 +1542,7 @@
             setAutoRefreshStatus('Auto-refresh off', { mode: 'disabled' });
             return;
         }
-        const tooltip = getAutoRefreshTooltip(currentAutoRefreshReason);
+    const tooltip = getAutoRefreshTooltip(currentAutoRefreshReason);
         if (nextRefreshAt) {
             const remainingMs = Math.max(0, nextRefreshAt - Date.now());
             const seconds = Math.ceil(remainingMs / 1000);
@@ -1660,7 +1693,9 @@
         if (!supportsSSE || !chatState.streamUrl) {
             liveUpdates = false;
             if (!liveManuallyPaused) {
-                const fallbackReason = supportsSSE ? 'filters' : 'unsupported';
+                const fallbackReason = supportsSSE && chatState.streamUrl
+                    ? determineAutoRefreshReason()
+                    : 'unsupported';
                 scheduleAutoRefresh(fallbackReason);
             }
             return;
@@ -1921,6 +1956,7 @@
         }
 
         renderActiveFilters();
+        currentAutoRefreshReason = determineAutoRefreshReason();
 
         const paramString = searchParams.toString();
         const newUrl = paramString
