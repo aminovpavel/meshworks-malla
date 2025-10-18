@@ -381,6 +381,7 @@
 .chat-card {
     position: relative;
     max-height: 70vh;
+    min-height: 320px;
     overflow-y: auto;
     transition: opacity 0.25s ease;
 }
