@@ -116,6 +116,7 @@ markers = [
     "unit: marks tests as unit tests",
     "api: marks tests as API tests",
     "e2e: marks tests as end-to-end tests",
+    "ui: marks UI smoke tests that rely on Playwright (requires CHAT_UI_TEST_URL)",
 ]
 
 # Coverage configuration

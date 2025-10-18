@@ -5,6 +5,9 @@
     background-color: var(--bs-body-bg);
     position: relative;
     overflow: visible;
+    width: 100%;
+    min-width: min(100%, 520px);
+    flex: 1 1 auto;
 }
 
 .chat-panel .card-header {

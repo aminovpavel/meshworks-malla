@@ -82,11 +82,22 @@
     }
 
     const supportsSSE = typeof window.EventSource !== 'undefined';
+    const AUTO_REFRESH_TOOLTIPS = {
+        connecting: 'Connecting to live stream…',
+        live: 'Receiving updates via live stream.',
+        paused: 'Live updates are paused manually.',
+        poll: 'Live stream unavailable; polling the API.',
+        filters: 'Current filters do not support streaming; using polling.',
+        error: 'Live stream disconnected; retrying shortly.',
+        unsupported: 'EventSource is not available; using polling.',
+        disabled: 'Automatic refresh disabled by configuration.',
+    };
     let eventSource = null;
     let liveUpdates = false;
     let liveRetryTimer = null;
     let relativeUpdateTimer = null;
     let liveManuallyPaused = false;
+    let currentAutoRefreshReason = 'poll';
 
     const messageListEl = document.getElementById('chat-message-list');
     const loadingEl = document.getElementById('chat-loading');
@@ -222,10 +233,29 @@
     }
 
     function setAutoRefreshStatus(label, options) {
-        if (autoRefreshEl) {
-            autoRefreshEl.textContent = label;
+        if (!autoRefreshEl) {
+            return;
         }
         const opts = options || {};
+        autoRefreshEl.textContent = label;
+        if (opts.mode) {
+            autoRefreshEl.dataset.refreshMode = opts.mode;
+            const tooltip = opts.tooltip
+                || AUTO_REFRESH_TOOLTIPS[opts.mode]
+                || '';
+            if (tooltip) {
+                autoRefreshEl.setAttribute('title', tooltip);
+            } else {
+                autoRefreshEl.removeAttribute('title');
+            }
+        } else {
+            autoRefreshEl.removeAttribute('data-refresh-mode');
+            if (opts.tooltip) {
+                autoRefreshEl.setAttribute('title', opts.tooltip);
+            } else {
+                autoRefreshEl.removeAttribute('title');
+            }
+        }
         updateLiveToggleUi(opts.live);
     }
 
@@ -236,7 +266,7 @@
         liveManuallyPaused = true;
         stopLiveUpdates({ clearRetry: true });
         cancelAutoRefresh();
-        setAutoRefreshStatus('Live updates paused');
+        setAutoRefreshStatus('Live updates paused', { mode: 'paused' });
         updateLiveToggleUi();
     }
 
@@ -1429,28 +1459,69 @@
         return `${minutesLabel} ${secondsLabel}`;
     }
 
+    function getAutoRefreshTooltip(reason) {
+        switch (reason) {
+            case 'filters':
+                return 'Live stream disabled for current filters; polling.';
+            case 'error':
+                return 'Live stream disconnected; retrying shortly.';
+            case 'unsupported':
+                return 'EventSource unavailable; using polling.';
+            case 'pending':
+                return 'Waiting for live stream connection…';
+            default:
+                return AUTO_REFRESH_TOOLTIPS.poll;
+        }
+    }
+
+    function determineAutoRefreshReason() {
+        if (!supportsSSE) {
+            return 'unsupported';
+        }
+        if (
+            chatState.search
+            || chatState.sender
+            || chatState.channel
+            || chatState.audience !== 'all'
+            || chatState.windowValue !== '24'
+        ) {
+            return 'filters';
+        }
+        return 'pending';
+    }
+
     function updateAutoRefreshNote() {
         if (!autoRefreshEl) {
             return;
         }
         if (liveManuallyPaused) {
-            setAutoRefreshStatus('Live updates paused');
+            setAutoRefreshStatus('Live updates paused', { mode: 'paused' });
             return;
         }
         if (liveUpdates) {
-            setAutoRefreshStatus('Live updates active', { live: true });
+            setAutoRefreshStatus('Live updates active', {
+                live: true,
+                mode: 'live',
+            });
             return;
         }
         if (!chatState.refreshInterval || chatState.refreshInterval <= 0) {
-            setAutoRefreshStatus('Auto-refresh off');
+            setAutoRefreshStatus('Auto-refresh off', { mode: 'disabled' });
             return;
         }
+        const tooltip = getAutoRefreshTooltip(currentAutoRefreshReason);
         if (nextRefreshAt) {
             const remainingMs = Math.max(0, nextRefreshAt - Date.now());
             const seconds = Math.ceil(remainingMs / 1000);
-            setAutoRefreshStatus(`Auto-refresh in ${formatCountdownLabel(seconds)}`);
+            setAutoRefreshStatus(`Auto-refresh in ${formatCountdownLabel(seconds)}`, {
+                mode: 'poll',
+                tooltip,
+            });
         } else {
-            setAutoRefreshStatus(`Auto-refresh in ${formatIntervalLabel(chatState.refreshInterval)}`);
+            setAutoRefreshStatus(`Auto-refresh in ${formatIntervalLabel(chatState.refreshInterval)}`, {
+                mode: 'poll',
+                tooltip,
+            });
         }
     }
 
@@ -1467,16 +1538,23 @@
         updateAutoRefreshNote();
     }
 
-    function scheduleAutoRefresh() {
+    function scheduleAutoRefresh(reason) {
         cancelAutoRefresh();
         if (liveManuallyPaused) {
+            setAutoRefreshStatus('Live updates paused', { mode: 'paused' });
             return;
         }
+        currentAutoRefreshReason = reason || currentAutoRefreshReason || 'poll';
         if (!chatState.refreshInterval || chatState.refreshInterval <= 0) {
+            setAutoRefreshStatus('Auto-refresh off', { mode: 'disabled' });
             return;
         }
         nextRefreshAt = Date.now() + chatState.refreshInterval;
-        updateAutoRefreshNote();
+        const tooltip = getAutoRefreshTooltip(currentAutoRefreshReason);
+        setAutoRefreshStatus(`Auto-refresh in ${formatIntervalLabel(chatState.refreshInterval)}`, {
+            mode: 'poll',
+            tooltip,
+        });
         countdownTimer = setInterval(updateAutoRefreshNote, 1000);
         autoRefreshTimer = setTimeout(() => {
             loadMessages({ mode: 'replace', showSpinner: false });
@@ -1582,7 +1660,8 @@
         if (!supportsSSE || !chatState.streamUrl) {
             liveUpdates = false;
             if (!liveManuallyPaused) {
-                scheduleAutoRefresh();
+                const fallbackReason = supportsSSE ? 'filters' : 'unsupported';
+                scheduleAutoRefresh(fallbackReason);
             }
             return;
         }
@@ -1600,20 +1679,21 @@
         }
 
         const url = `${chatState.streamUrl}?${params.toString()}`;
-        setAutoRefreshStatus('Connecting to live stream…');
+        currentAutoRefreshReason = 'pending';
+        setAutoRefreshStatus('Connecting to live stream…', { mode: 'connecting' });
         try {
             eventSource = new EventSource(url, { withCredentials: true });
         } catch (error) {
             console.error('Failed to initialise EventSource', error);
             liveUpdates = false;
-            scheduleAutoRefresh();
+            scheduleAutoRefresh('error');
             return;
         }
 
         eventSource.onopen = () => {
             liveUpdates = true;
             cancelAutoRefresh();
-            setAutoRefreshStatus('Live updates active', { live: true });
+            setAutoRefreshStatus('Live updates active', { live: true, mode: 'live' });
         };
 
         eventSource.addEventListener('chat-message', (event) => {
@@ -1632,15 +1712,14 @@
 
         eventSource.addEventListener('chat-heartbeat', () => {
             if (liveUpdates) {
-                setAutoRefreshStatus('Live updates active', { live: true });
+                setAutoRefreshStatus('Live updates active', { live: true, mode: 'live' });
             }
         });
 
         eventSource.onerror = () => {
             stopLiveUpdates();
-            updateAutoRefreshNote();
             if (!liveManuallyPaused) {
-                scheduleAutoRefresh();
+                scheduleAutoRefresh('error');
             }
             if (supportsSSE && !liveRetryTimer && !liveManuallyPaused) {
                 liveRetryTimer = setTimeout(restartLiveUpdates, LIVE_RETRY_DELAY_MS);
@@ -1657,7 +1736,7 @@
         if (supportsSSE) {
             startLiveUpdates();
         } else {
-            scheduleAutoRefresh();
+            scheduleAutoRefresh('unsupported');
         }
     }
 
@@ -1785,7 +1864,7 @@
                 chatState.loading = false;
                 setLoading(false);
                 if (!liveUpdates && !liveManuallyPaused) {
-                    scheduleAutoRefresh();
+                    scheduleAutoRefresh(determineAutoRefreshReason());
                 }
             }
         }
