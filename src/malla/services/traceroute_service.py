@@ -113,6 +113,7 @@ class TracerouteService:
                 "page": page,
                 "per_page": per_page,
                 "total_pages": (result["total_count"] + per_page - 1) // per_page,
+                "has_more": bool(result.get("has_more")),
             }
 
         except Exception as e:

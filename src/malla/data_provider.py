@@ -1217,77 +1217,168 @@ class GrpcNodeDataAccess(NodeDataAccess):
     def get_bidirectional_direct_receptions(
         self, node_id: int, direction: str = "received", limit: int = 1000
     ) -> list[dict[str, Any]]:
+        normalized_direction = (direction or "received").strip().lower()
+        grpc_direction = "sent" if normalized_direction == "transmitted" else normalized_direction
+        if grpc_direction not in {"received", "sent"}:
+            raise ValueError(
+                f"Invalid direction '{direction}'. Must be 'received' or 'transmitted'."
+            )
+
         limit = max(1, min(limit, 1000))
         request = data_pb2.ListNodeDirectReceptionsRequest(
             node_id=node_id,
-            direction=direction or "received",
+            direction=grpc_direction,
             limit=limit,
         )
         try:
             response = self._client.list_node_direct_receptions(request)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Falling back to SQLite for direct receptions",
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "Meshpipe gRPC вызов ListNodeDirectReceptions завершился ошибкой",
+                exc_info=True,
                 extra={
-                    "fallback": "sqlite",
                     "context": {
                         "node_id": node_id,
-                        "direction": direction,
+                        "direction": grpc_direction,
                         "limit": limit,
-                    },
+                    }
                 },
             )
-            return self._fallback.get_bidirectional_direct_receptions(node_id, direction, limit)
+            raise RuntimeError(
+                "Meshpipe gRPC недоступен для direct-reception статистики. "
+                "Проверьте meshpipe или envoy-прокси."
+            ) from exc
+
+        receptions = list(response.receptions)
+        if not receptions:
+            return []
+
+        def _epoch(ts: Timestamp | None) -> float | None:
+            return _timestamp_to_epoch(ts)
+
+        if grpc_direction == "received":
+            groups: dict[int, list[data_pb2.NodeDirectReception]] = {}
+            for rec in receptions:
+                from_id = rec.origin_node_id
+                if not from_id or from_id == node_id:
+                    continue
+                groups.setdefault(from_id, []).append(rec)
+            if not groups:
+                return []
+
+            name_map = self.get_bulk_node_names(list(groups.keys()))
+            results: list[dict[str, Any]] = []
+            for from_id, items in groups.items():
+                rssi_values = [it.rssi for it in items if it.rssi or it.rssi == 0]
+                snr_values = [it.snr for it in items if it.snr or it.snr == 0.0]
+                timestamps = [
+                    _epoch(it.timestamp)
+                    for it in items
+                    if _epoch(it.timestamp) is not None
+                ]
+                packets = [
+                    {
+                        "packet_id": it.packet_id,
+                        "timestamp": _epoch(it.timestamp),
+                        "rssi": it.rssi if it.rssi or it.rssi == 0 else None,
+                        "snr": it.snr if it.snr or it.snr == 0.0 else None,
+                    }
+                    for it in sorted(items, key=lambda entry: _epoch(entry.timestamp) or 0.0)
+                ]
+                results.append(
+                    {
+                        "from_node_id": from_id,
+                        "from_node_name": name_map.get(from_id, f"!{from_id:08x}"),
+                        "packet_count": len(items),
+                        "rssi_avg": round(sum(rssi_values) / len(rssi_values), 1)
+                        if rssi_values
+                        else None,
+                        "rssi_min": round(min(rssi_values), 1) if rssi_values else None,
+                        "rssi_max": round(max(rssi_values), 1) if rssi_values else None,
+                        "snr_avg": round(sum(snr_values) / len(snr_values), 1)
+                        if snr_values
+                        else None,
+                        "snr_min": round(min(snr_values), 1) if snr_values else None,
+                        "snr_max": round(max(snr_values), 1) if snr_values else None,
+                        "first_seen": min(timestamps) if timestamps else None,
+                        "last_seen": max(timestamps) if timestamps else None,
+                        "packets": packets,
+                    }
+                )
+
+            results.sort(key=lambda item: item["packet_count"], reverse=True)
+            return results
+
+        # transmitted direction (sent)
+        groups: dict[str, list[data_pb2.NodeDirectReception]] = {}
+        self_hex = f"!{node_id:08x}"
+        for rec in receptions:
+            gateway = rec.gateway_id or ""
+            if not gateway or gateway == self_hex:
+                continue
+            groups.setdefault(gateway, []).append(rec)
+        if not groups:
+            return []
+
+        gateway_node_ids: list[int] = []
+        for gateway_id in groups:
+            if gateway_id.startswith("!"):
+                try:
+                    gateway_node_ids.append(int(gateway_id[1:], 16))
+                except ValueError:
+                    continue
+        gateway_names = self.get_bulk_node_names(gateway_node_ids) if gateway_node_ids else {}
+
+        def _gateway_display_name(gateway_id: str) -> str:
+            if gateway_id.startswith("!"):
+                try:
+                    node_int = int(gateway_id[1:], 16)
+                except ValueError:
+                    return gateway_id
+                return gateway_names.get(node_int, gateway_id)
+            return gateway_id or "Unknown Gateway"
 
         results: list[dict[str, Any]] = []
-        for entry in response.entries:
-            target_type = entry.WhichOneof("target")
-            base: dict[str, Any] = {
-                "display_name": entry.display_name or "",
-                "packet_count": entry.packet_count,
-                "rssi_avg": entry.avg_rssi or None,
-                "rssi_min": entry.min_rssi or None,
-                "rssi_max": entry.max_rssi or None,
-                "snr_avg": entry.avg_snr or None,
-                "snr_min": entry.min_snr or None,
-                "snr_max": entry.max_snr or None,
-                "first_seen": _timestamp_to_epoch(entry.first_seen),
-                "last_seen": _timestamp_to_epoch(entry.last_seen),
-                "packets": [
-                    {
-                        "packet_id": sample.packet_id,
-                        "timestamp": _timestamp_to_epoch(sample.timestamp),
-                        "timestamp_str": _timestamp_to_str(sample.timestamp),
-                        "rssi": sample.rssi,
-                        "snr": sample.snr,
-                        "gateway_id": sample.gateway_id or None,
-                    }
-                    for sample in entry.samples
-                ],
-            }
-
-            if target_type == "peer_node_id":
-                base["from_node_id"] = entry.peer_node_id
-                base["from_node_name"] = entry.display_name or f"!{entry.peer_node_id:08x}"
-            else:
-                base["from_node_id"] = None
-                base["from_node_name"] = entry.display_name or entry.peer_gateway_id
-            if target_type == "peer_gateway_id":
-                base["gateway_id"] = entry.peer_gateway_id
-                base["gateway_name"] = entry.display_name or entry.peer_gateway_id
-            results.append(base)
-
-        logger.info(
-            "Direct receptions fetched via Meshpipe gRPC",
-            extra={
-                "context": {
-                    "node_id": node_id,
-                    "direction": direction,
-                    "result_count": len(results),
+        for gateway_id, items in groups.items():
+            rssi_values = [it.rssi for it in items if it.rssi or it.rssi == 0]
+            snr_values = [it.snr for it in items if it.snr or it.snr == 0.0]
+            timestamps = [
+                _epoch(it.timestamp)
+                for it in items
+                if _epoch(it.timestamp) is not None
+            ]
+            packets = [
+                {
+                    "packet_id": it.packet_id,
+                    "timestamp": _epoch(it.timestamp),
+                    "rssi": it.rssi if it.rssi or it.rssi == 0 else None,
+                    "snr": it.snr if it.snr or it.snr == 0.0 else None,
+                    "gateway_id": gateway_id,
                 }
-            },
-        )
+                for it in sorted(items, key=lambda entry: _epoch(entry.timestamp) or 0.0)
+            ]
+            results.append(
+                {
+                    "from_node_id": gateway_id,
+                    "from_node_name": _gateway_display_name(gateway_id),
+                    "packet_count": len(items),
+                    "rssi_avg": round(sum(rssi_values) / len(rssi_values), 1)
+                    if rssi_values
+                    else None,
+                    "rssi_min": round(min(rssi_values), 1) if rssi_values else None,
+                    "rssi_max": round(max(rssi_values), 1) if rssi_values else None,
+                    "snr_avg": round(sum(snr_values) / len(snr_values), 1)
+                    if snr_values
+                    else None,
+                    "snr_min": round(min(snr_values), 1) if snr_values else None,
+                    "snr_max": round(max(snr_values), 1) if snr_values else None,
+                    "first_seen": min(timestamps) if timestamps else None,
+                    "last_seen": max(timestamps) if timestamps else None,
+                    "packets": packets,
+                }
+            )
 
+        results.sort(key=lambda item: item["packet_count"], reverse=True)
         return results
 
     def get_bulk_node_names(self, node_ids: list[int]) -> dict[int, str]:
@@ -1296,13 +1387,20 @@ class GrpcNodeDataAccess(NodeDataAccess):
         request = data_pb2.ListNodeNamesRequest(node_ids=node_ids)
         try:
             response = self._client.list_node_names(request)
-        except Exception:  # noqa: BLE001
-            return self._fallback.get_bulk_node_names(node_ids)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Meshpipe gRPC вызов ListNodeNames завершился ошибкой",
+                exc_info=True,
+                extra={"context": {"requested": len(node_ids)}},
+            )
+            return {node_id: f"!{node_id:08x}" for node_id in node_ids}
 
-        names = {
-            entry.node_id: entry.display_name or entry.short_name or f"!{entry.node_id:08x}"
-            for entry in response.names
-        }
+        names = {}
+        for entry in response.entries:
+            label = entry.display_name or entry.short_name or f"!{entry.node_id:08x}"
+            names[entry.node_id] = label
+        for node_id in node_ids:
+            names.setdefault(node_id, f"!{node_id:08x}")
         logger.debug(
             "Node names fetched via Meshpipe gRPC",
             extra={"context": {"requested": len(node_ids), "received": len(names)}},
@@ -1312,9 +1410,13 @@ class GrpcNodeDataAccess(NodeDataAccess):
     def get_unique_primary_channels(self) -> list[str]:
         try:
             response = self._client.list_primary_channels()
-        except Exception:  # noqa: BLE001
-            return self._fallback.get_unique_primary_channels()
-        return list(response.primary_channels)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "Meshpipe gRPC вызов ListPrimaryChannels завершился ошибкой",
+                exc_info=True,
+            )
+            return []
+        return list(response.channels)
 
     @staticmethod
     def _convert_node(node: data_pb2.Node) -> dict[str, Any]:
@@ -1520,11 +1622,17 @@ class GrpcTracerouteDataAccess(TracerouteDataAccess):
     def _convert_packet(packet: data_pb2.TraceroutePacket) -> dict[str, Any]:
         timestamp = _timestamp_to_epoch(packet.timestamp)
 
-        gateway_list = ",".join(packet.gateway_ids)
-        route_nodes = [node.node_id for node in packet.route_nodes]
+        gateway_candidates = set()
+        if packet.gateway_id:
+            gateway_candidates.add(packet.gateway_id)
+        for obs in packet.gateways:
+            if obs.gateway_id:
+                gateway_candidates.add(obs.gateway_id)
+        gateway_list = ",".join(sorted(gateway_candidates))
+        route_nodes = list(packet.route_nodes)
 
         record: dict[str, Any] = {
-            "id": packet.packet_id,
+            "id": packet.id,
             "mesh_packet_id": packet.mesh_packet_id,
             "timestamp": timestamp,
             "timestamp_str": _timestamp_to_str(packet.timestamp),
@@ -1549,6 +1657,7 @@ class GrpcTracerouteDataAccess(TracerouteDataAccess):
             "route_nodes": route_nodes,
             "route_summary": packet.route_summary or None,
             "is_grouped": packet.is_grouped,
+            "raw_payload": bytes(packet.raw_payload) if packet.raw_payload else b"",
             "gateways": [
                 {
                     "gateway_id": obs.gateway_id,
@@ -1575,8 +1684,6 @@ class GrpcTracerouteDataAccess(TracerouteDataAccess):
         if packet.hop_count:
             record["hop_range"] = (
                 str(packet.hop_count)
-                if packet.min_hop_count == packet.max_hop_count
-                else f"{packet.min_hop_count}-{packet.max_hop_count}"
             )
 
         return record
@@ -1678,7 +1785,7 @@ class GrpcTracerouteDataAccess(TracerouteDataAccess):
                 "Проверьте meshpipe или envoy-прокси."
             ) from exc
 
-        if not response.packet.packet_id:
+        if not response.packet.id:
             return None
 
         packet = self._convert_packet(response.packet)

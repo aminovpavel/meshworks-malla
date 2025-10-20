@@ -1890,6 +1890,8 @@ def api_packets_data():
             "page": page,
             "limit": limit,
             "total_pages": (result["total_count"] + limit - 1) // limit,
+            "has_more": bool(result.get("has_more")),
+            "offset": result.get("offset", offset),
         }
 
         return _json_response(response)
@@ -2286,6 +2288,8 @@ def api_traceroute_data():
             "page": page,
             "limit": limit,
             "total_pages": (result["total_count"] + limit - 1) // limit,
+            "has_more": bool(result.get("has_more")),
+            "offset": result.get("offset", offset),
         }
 
         return _json_response(response)

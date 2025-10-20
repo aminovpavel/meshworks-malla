@@ -29,7 +29,9 @@ class ModernTable {
             loading: false,
             data: [],
             totalCount: 0,
-            totalPages: 0
+            totalPages: 0,
+            hasMore: false,
+            offset: 0
         };
 
         this.searchTimeout = null;
@@ -260,7 +262,9 @@ class ModernTable {
             // Accept multiple response shapes for compatibility
             this.state.data = data.data || data.packets || data.rows || [];
             this.state.totalCount = (data.total_count ?? data.total ?? (Array.isArray(this.state.data) ? this.state.data.length : 0));
-            this.state.totalPages = Math.ceil(this.state.totalCount / this.state.pageSize);
+            this.state.totalPages = data.total_pages ?? Math.ceil(this.state.totalCount / this.state.pageSize);
+            this.state.hasMore = Boolean(data.has_more ?? data.meta?.has_more ?? false);
+            this.state.offset = data.offset ?? ((this.state.page - 1) * this.state.pageSize);
 
             // Track if this is a grouped query for pagination display
             this.state.isGrouped = params.get('group_packets') === 'true';
@@ -399,10 +403,11 @@ class ModernTable {
 
         // Handle estimated counts for grouped queries
         const totalElement = document.getElementById(`${this.container.id}-total`);
-        if (this.state.isGrouped && this.state.data.length === this.state.pageSize) {
+        const hasEstimatedTotal = this.state.isGrouped && this.state.data.length === this.state.pageSize;
+        if (hasEstimatedTotal || this.state.hasMore) {
             // For grouped queries where we got a full page, show estimated count
             totalElement.textContent = `${this.state.totalCount}+`;
-            totalElement.title = 'Estimated count (optimized for performance)';
+            totalElement.title = 'More results available';
         } else {
             totalElement.textContent = this.state.totalCount;
             totalElement.title = '';
