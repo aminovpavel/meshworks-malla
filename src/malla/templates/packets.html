@@ -302,21 +302,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 title: 'Type',
                 sortable: true,
                 render: (value, row) => {
-                    if (value) {
-                        const typeMap = {
-                            'TEXT_MESSAGE_APP': 'Text',
-                            'POSITION_APP': 'Position',
-                            'NODEINFO_APP': 'Node Info',
-                            'ROUTING_APP': 'Routing',
-                            'ADMIN_APP': 'Admin',
-                            'TELEMETRY_APP': 'Telemetry',
-                            'TRACEROUTE_APP': 'Traceroute',
-                            'NEIGHBORINFO_APP': 'Neighbor Info'
+                    const displayValue = row.port_display || value || 'Unknown';
+                    const typeMap = {
+                        'TEXT_MESSAGE_APP': 'Text',
+                        'POSITION_APP': 'Position',
+                        'NODEINFO_APP': 'Node Info',
+                        'ROUTING_APP': 'Routing',
+                        'ADMIN_APP': 'Admin',
+                        'TELEMETRY_APP': 'Telemetry',
+                        'TRACEROUTE_APP': 'Traceroute',
+                        'NEIGHBORINFO_APP': 'Neighbor Info',
+                        'Unknown (failed)': 'Unknown',
+                        'Encrypted': 'Encrypted'
+                    };
+                    const displayName = typeMap[displayValue] || typeMap[value] || displayValue;
+
+                    let badgeClass = 'bg-secondary';
+                    if (row.is_encrypted) {
+                        badgeClass = 'bg-dark';
+                    } else if (value && typeMap[value]) {
+                        const classMap = {
+                            'TEXT_MESSAGE_APP': 'bg-primary',
+                            'POSITION_APP': 'bg-success',
+                            'NODEINFO_APP': 'bg-info',
+                            'TELEMETRY_APP': 'bg-warning',
+                            'TRACEROUTE_APP': 'bg-danger'
                         };
-                        const displayName = typeMap[value] || value;
-                        return `<span class="badge bg-secondary">${displayName}</span>`;
+                        badgeClass = classMap[value] || badgeClass;
                     }
-                    return `<span class="text-muted">Unknown</span>`;
+
+                    return `<span class="badge ${badgeClass}">${displayName}</span>`;
                 }
             }
         ],

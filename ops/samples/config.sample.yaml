@@ -31,7 +31,7 @@ debug: false
 # log_level: "INFO"
 
 # ---------------------------------------------------------------------------
-# MQTT capture settings (used by malla-capture)
+# Meshpipe capture settings (used by meshpipe-go; kept for dashboard context)
 # ---------------------------------------------------------------------------
 
 # mqtt_broker_address: "127.0.0.1"
@@ -41,5 +41,5 @@ debug: false
 # mqtt_topic_prefix: "msh"
 # mqtt_topic_suffix: "/+/+/+/#"
 
-# Default channel key used for decrypting secondary channels (base64)
-# default_channel_key: "1PG7OiApB1nwvP+rz05pAQ=="
+# Default channel key used for decrypting secondary channels (base64, optional)
+# default_channel_key: ""

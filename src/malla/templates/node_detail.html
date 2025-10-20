@@ -386,7 +386,7 @@
                                         {% for packet in recent_packets %}
                                         <tr>
                                             <td><small>{{ packet.timestamp_relative }}</small></td>
-                                            <td>{{ protocol_badge(packet.protocol) }}</td>
+                                            <td>{{ protocol_badge(packet.protocol_display or packet.protocol) }}</td>
                                             <td>
                                                 {% if packet.to_node_id %}
                                                     {{ node_link(packet.to_node_id, packet.to_node_name) }}
@@ -473,7 +473,7 @@
                                         {% for packet in recent_reported_packets %}
                                         <tr>
                                             <td><small>{{ packet.timestamp_relative }}</small></td>
-                                            <td>{{ protocol_badge(packet.protocol) }}</td>
+                                            <td>{{ protocol_badge(packet.protocol_display or packet.protocol) }}</td>
                                             <td>
                                                 {% if packet.from_node_id %}
                                                     {{ node_link(packet.from_node_id, packet.from_node_name) }}

@@ -108,14 +108,13 @@
     const liveToggleButton = document.getElementById('chat-live-toggle');
     const filterForm = document.getElementById('chat-filter-form');
     const filterButton = document.querySelector('.chat-filter-button');
-    const filterLayerEl = document.getElementById('chat-filter-layer');
-    const filterPanelEl = filterLayerEl
-        ? filterLayerEl.querySelector('.chat-filter-panel')
-        : null;
-    const filterPanelCloseEls = filterLayerEl
-        ? filterLayerEl.querySelectorAll('[data-filter-action=\"close\"]')
+    const filtersContainer = document.getElementById('chat-filters');
+    const filterCloseButtons = filtersContainer
+        ? filtersContainer.querySelectorAll('[data-filter-action="close"]')
         : [];
     const filterClearButton = document.getElementById('chat-filter-clear');
+    const mobileFilterQuery = window.matchMedia('(max-width: 992px)');
+    let filterPanelMobileOpen = false;
 
     const channelInput = document.getElementById('chat-channel-input');
     const channelLabelEl = document.querySelector('#chat-channel-dropdown .chat-dropdown-label');
@@ -142,6 +141,8 @@
     const searchInput = document.getElementById('chat-text-search');
     const scrollSentinelEl = document.getElementById('chat-scroll-sentinel');
     const activeFiltersEl = document.getElementById('chat-active-filters');
+    const newMessagesButton = document.getElementById('chat-new-indicator');
+    const newMessagesLabel = document.getElementById('chat-new-indicator-label');
     const customWindowEl = document.getElementById('chat-custom-window');
     const customInputEl = document.getElementById('chat-custom-input');
     const customApplyBtn = document.getElementById('chat-custom-apply');
@@ -206,9 +207,8 @@
     let infiniteObserver = null;
     const tooltipInstances = new WeakMap();
     const tooltipHandlers = new WeakMap();
-    const filterDropdownMetas = [];
     let activeTooltipEl = null;
-    let lastFocusedBeforeFilter = null;
+    let pendingNewMessages = 0;
 
     function escapeHtml(value) {
         return value
@@ -221,6 +221,48 @@
 
     function escapeAttribute(value) {
         return escapeHtml(value).split('\n').join('&#10;');
+    }
+
+    function isListNearTop(threshold) {
+        if (!cardBodyEl) {
+            return true;
+        }
+        const limit = Number.isFinite(threshold) ? threshold : 56;
+        return cardBodyEl.scrollTop <= limit;
+    }
+
+    function updateNewMessageIndicator() {
+        if (!newMessagesButton || !newMessagesLabel) {
+            return;
+        }
+        if (pendingNewMessages > 0) {
+            newMessagesLabel.textContent = pendingNewMessages === 1
+                ? '1 new message'
+                : `${pendingNewMessages} new messages`;
+            newMessagesButton.hidden = false;
+        } else {
+            newMessagesButton.hidden = true;
+        }
+    }
+
+    function resetNewMessageIndicator() {
+        pendingNewMessages = 0;
+        updateNewMessageIndicator();
+    }
+
+    function handleIncomingMessagesCount(count) {
+        if (!count || count <= 0) {
+            return;
+        }
+        if (isListNearTop()) {
+            resetNewMessageIndicator();
+            if (cardBodyEl) {
+                cardBodyEl.scrollTo({ top: 0, behavior: 'auto' });
+            }
+            return;
+        }
+        pendingNewMessages += count;
+        updateNewMessageIndicator();
     }
 
     function linkifyText(rawValue) {
@@ -376,188 +418,6 @@
         return '';
     }
 
-    function positionDetachedDropdownMenu(menuEl, toggleEl) {
-        if (!menuEl || !toggleEl) {
-            return;
-        }
-        const margin = 12;
-        const viewportWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
-        const viewportHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
-        const toggleRect = toggleEl.getBoundingClientRect();
-
-        const minWidth = Math.max(toggleRect.width, 220);
-        const maxWidth = Math.min(420, viewportWidth - margin * 2);
-        const width = Math.min(Math.max(minWidth, 240), maxWidth);
-
-        const spaceBelow = viewportHeight - toggleRect.bottom - margin;
-        const spaceAbove = toggleRect.top - margin;
-        const desiredHeight = 360;
-        let placeBelow = spaceBelow >= 200 || spaceBelow >= spaceAbove;
-
-        let available = placeBelow ? spaceBelow : spaceAbove;
-        if (available < 160) {
-            placeBelow = !placeBelow;
-            available = placeBelow ? spaceBelow : spaceAbove;
-        }
-        available = Math.max(available, 160);
-        let maxHeight = Math.min(available, viewportHeight - margin * 2);
-        maxHeight = Math.max(160, Math.min(maxHeight, 480));
-
-        let top;
-        if (placeBelow) {
-            top = toggleRect.bottom + margin;
-        } else {
-            top = toggleRect.top - maxHeight - margin;
-        }
-        top = Math.max(margin, Math.min(top, viewportHeight - margin - 16));
-
-        let left = toggleRect.left;
-        if (left + width + margin > viewportWidth) {
-            left = viewportWidth - width - margin;
-        }
-        left = Math.max(margin, left);
-
-        menuEl.style.position = 'fixed';
-        menuEl.style.top = `${Math.round(top)}px`;
-        menuEl.style.left = `${Math.round(left)}px`;
-        menuEl.style.width = `${Math.round(width)}px`;
-        menuEl.style.maxHeight = `${Math.round(maxHeight)}px`;
-        menuEl.style.overflowY = 'auto';
-        menuEl.style.overflowX = 'hidden';
-        menuEl.style.zIndex = '1090';
-    }
-
-    function detachDropdownMenu(meta) {
-        if (!meta || !meta.menuEl || !meta.toggleEl) {
-            return;
-        }
-        const { menuEl, toggleEl } = meta;
-
-        meta.originalParent = menuEl.parentNode;
-        meta.originalNextSibling = menuEl.nextSibling;
-
-        menuEl.classList.add('chat-dropdown-floating');
-        menuEl.dataset.chatDetached = '1';
-        menuEl.style.visibility = 'hidden';
-        menuEl.style.display = 'block';
-
-        document.body.appendChild(menuEl);
-        positionDetachedDropdownMenu(menuEl, toggleEl);
-
-        menuEl.style.visibility = '';
-        menuEl.style.display = '';
-        meta.detached = true;
-    }
-
-    function restoreDropdownMenu(meta) {
-        if (!meta || !meta.menuEl || !meta.detached) {
-            return;
-        }
-        const { menuEl, originalParent, originalNextSibling } = meta;
-
-        if (originalParent && originalParent.isConnected) {
-            if (originalNextSibling && originalNextSibling.parentNode === originalParent) {
-                originalParent.insertBefore(menuEl, originalNextSibling);
-            } else {
-                originalParent.appendChild(menuEl);
-            }
-        }
-        menuEl.classList.remove('chat-dropdown-floating');
-        menuEl.removeAttribute('data-chat-detached');
-        menuEl.style.position = '';
-        menuEl.style.top = '';
-        menuEl.style.left = '';
-        menuEl.style.width = '';
-        menuEl.style.maxHeight = '';
-        menuEl.style.overflowY = '';
-        menuEl.style.overflowX = '';
-        menuEl.style.zIndex = '';
-        menuEl.style.visibility = '';
-        menuEl.style.display = '';
-        meta.detached = false;
-    }
-
-    function repositionActiveDropdownMenus() {
-        filterDropdownMetas.forEach((meta) => {
-            if (!meta || !meta.menuEl || !meta.detached) {
-                return;
-            }
-            if (!meta.menuEl.classList.contains('show')) {
-                return;
-            }
-            positionDetachedDropdownMenu(meta.menuEl, meta.toggleEl);
-        });
-    }
-
-    window.addEventListener('resize', repositionActiveDropdownMenus);
-    window.addEventListener('scroll', repositionActiveDropdownMenus, true);
-
-    function setupDropdown(config) {
-        const menuEl = config.menuEl;
-        const inputEl = config.inputEl;
-        const labelEl = config.labelEl;
-        const toggleEl = config.toggleEl;
-        const beforeSelect = typeof config.beforeSelect === 'function'
-            ? config.beforeSelect
-            : null;
-
-        if (!menuEl || !inputEl || !labelEl || !toggleEl) {
-            return;
-        }
-
-        toggleEl.setAttribute('data-bs-display', 'static');
-        const dropdownInstance = bootstrap.Dropdown.getOrCreateInstance(toggleEl);
-        const dropdownMeta = {
-            toggleEl,
-            menuEl,
-            instance: dropdownInstance,
-            originalParent: menuEl.parentNode,
-            originalNextSibling: menuEl.nextSibling,
-            detached: false,
-        };
-        filterDropdownMetas.push(dropdownMeta);
-
-        toggleEl.addEventListener('show.bs.dropdown', () => {
-            if (filterPanelEl) {
-                filterPanelEl.classList.add('dropdown-open');
-            }
-            detachDropdownMenu(dropdownMeta);
-            positionDetachedDropdownMenu(menuEl, toggleEl);
-        });
-
-        toggleEl.addEventListener('hidden.bs.dropdown', () => {
-            if (filterPanelEl) {
-                filterPanelEl.classList.remove('dropdown-open');
-            }
-            restoreDropdownMenu(dropdownMeta);
-        });
-
-        menuEl.querySelectorAll('.dropdown-item').forEach((btn) => {
-            btn.addEventListener('click', (event) => {
-                event.preventDefault();
-                const value = btn.dataset.value ?? '';
-                const labelText = btn.dataset.label || btn.textContent.trim();
-
-                if (beforeSelect) {
-                    const result = beforeSelect({ value, label: labelText, button: btn });
-                    if (result === false) {
-                        return;
-                    }
-                }
-
-                inputEl.value = value;
-                labelEl.textContent = labelText || labelEl.dataset.default || '';
-
-                menuEl.querySelectorAll('.dropdown-item').forEach((item) => {
-                    item.classList.toggle('active', item === btn);
-                });
-
-                bootstrap.Dropdown.getOrCreateInstance(toggleEl).hide();
-                applyFilters({ force: true });
-            });
-        });
-    }
-
     function updateSenderMenuActive() {
         if (!senderMenu) {
             return false;
@@ -705,6 +565,62 @@
         renderActiveFilters();
     }
 
+    function markDropdownActive(menuEl, value) {
+        if (!menuEl) {
+            return;
+        }
+        const targetValue = value ?? '';
+        menuEl.querySelectorAll('.dropdown-item').forEach((btn) => {
+            const itemValue = btn.dataset.value ?? '';
+            btn.classList.toggle('active', itemValue === targetValue);
+        });
+    }
+
+    function setupDropdown(config) {
+        const menuEl = config.menuEl;
+        const inputEl = config.inputEl;
+        const labelEl = config.labelEl;
+        const toggleEl = config.toggleEl;
+        const beforeSelect = typeof config.beforeSelect === 'function'
+            ? config.beforeSelect
+            : null;
+
+        if (!menuEl || !inputEl || !labelEl) {
+            return;
+        }
+
+        const dropdownInstance = toggleEl
+            ? bootstrap.Dropdown.getOrCreateInstance(toggleEl)
+            : null;
+
+        menuEl.querySelectorAll('.dropdown-item').forEach((btn) => {
+            btn.addEventListener('click', (event) => {
+                event.preventDefault();
+                const value = btn.dataset.value ?? '';
+                const labelText = btn.dataset.label || btn.textContent.trim();
+
+                if (beforeSelect) {
+                    const result = beforeSelect({ value, label: labelText, button: btn });
+                    if (result === false) {
+                        return;
+                    }
+                }
+
+                inputEl.value = value;
+                labelEl.textContent = labelText;
+                markDropdownActive(menuEl, value);
+
+                if (dropdownInstance) {
+                    dropdownInstance.hide();
+                }
+
+                applyFilters({ force: true });
+            });
+        });
+
+        markDropdownActive(menuEl, inputEl.value || '');
+    }
+
     function setSenderState(value, labelText, options) {
         const silent = options && options.silent === true;
         const previousValue = chatState.sender;
@@ -731,12 +647,7 @@
                 if (channelLabelEl) {
                     channelLabelEl.textContent = channelLabelEl.dataset.default || 'All channels';
                 }
-                if (channelMenu) {
-                    channelMenu.querySelectorAll('.dropdown-item').forEach((item) => {
-                        const value = item.dataset.value ?? '';
-                        item.classList.toggle('active', value === '');
-                    });
-                }
+                markDropdownActive(channelMenu, '');
                 break;
             }
             case 'audience': {
@@ -747,11 +658,7 @@
                 if (audienceLabelEl) {
                     audienceLabelEl.textContent = audienceLabelEl.dataset.default || 'All messages';
                 }
-                if (audienceMenu) {
-                    audienceMenu.querySelectorAll('.dropdown-item').forEach((item) => {
-                        item.classList.toggle('active', (item.dataset.value || '') === 'all');
-                    });
-                }
+                markDropdownActive(audienceMenu, 'all');
                 break;
             }
             case 'sender': {
@@ -782,6 +689,7 @@
                 if (windowLabelEl) {
                     windowLabelEl.textContent = defaultLabel;
                 }
+                markDropdownActive(windowMenu, '24');
                 closeCustomWindow();
                 break;
             }
@@ -792,6 +700,12 @@
         if (!opts.deferApply) {
             applyFilters({ force: true });
         }
+    }
+
+    function clearAllFilters() {
+        const filterTypes = ['channel', 'audience', 'sender', 'search', 'window'];
+        filterTypes.forEach((type) => clearFilter(type, { deferApply: true }));
+        applyFilters({ force: true });
     }
 
     function renderActiveFilters() {
@@ -849,45 +763,41 @@
         }
     }
 
-    function isFilterPanelOpen() {
-        return Boolean(filterLayerEl && !filterLayerEl.hasAttribute('hidden'));
+    function isMobileLayout() {
+        return mobileFilterQuery.matches;
     }
 
-    function handleFilterPanelKeydown(event) {
-        if (event.key === 'Escape') {
-            event.preventDefault();
-            event.stopPropagation();
-            closeFilterPanel();
-        }
-    }
-
-    function syncFilterPanelMinWidth() {
-        if (!filterPanelEl || !filterLayerEl || filterLayerEl.hasAttribute('hidden')) {
+    function syncFilterPanelVisibility() {
+        if (!filtersContainer) {
             return;
         }
-        const panelWidth = Math.ceil(filterPanelEl.getBoundingClientRect().width + 64);
-        const minWidth = Math.max(panelWidth, 680);
-        document.documentElement.style.setProperty('--chat-panel-min-width', `${minWidth}px`);
-    }
-
-    function openFilterPanel(shouldFocus) {
-        if (!filterLayerEl) {
+        if (!isMobileLayout()) {
+            filterPanelMobileOpen = false;
+            filtersContainer.hidden = false;
+            filtersContainer.classList.remove('is-open');
+            if (filterButton) {
+                filterButton.setAttribute('aria-expanded', 'false');
+                filterButton.classList.remove('is-open');
+            }
             return;
         }
-        if (!filterLayerEl.hasAttribute('hidden')) {
-            return;
-        }
-        lastFocusedBeforeFilter = document.activeElement || null;
-        filterLayerEl.hidden = false;
-        syncFilterPanelMinWidth();
-        if (filterPanelEl) {
-            filterPanelEl.classList.remove('dropdown-open');
-        }
+        filtersContainer.hidden = !filterPanelMobileOpen;
+        filtersContainer.classList.toggle('is-open', filterPanelMobileOpen);
         if (filterButton) {
-            filterButton.classList.add('is-open');
+            filterButton.setAttribute('aria-expanded', String(filterPanelMobileOpen));
+            filterButton.classList.toggle('is-open', filterPanelMobileOpen);
         }
-        if (shouldFocus && filterPanelEl) {
-            const focusTarget = filterPanelEl.querySelector('button, input, select, textarea');
+    }
+
+    function openFilterPanel(options) {
+        if (!filtersContainer || !isMobileLayout()) {
+            return;
+        }
+        filterPanelMobileOpen = true;
+        syncFilterPanelVisibility();
+        const opts = options || {};
+        if (opts.focus) {
+            const focusTarget = filtersContainer.querySelector('button, input, select, textarea');
             if (focusTarget && typeof focusTarget.focus === 'function') {
                 try {
                     focusTarget.focus({ preventScroll: true });
@@ -896,56 +806,37 @@
                 }
             }
         }
-        document.body.classList.add('chat-filter-open');
-        document.addEventListener('keydown', handleFilterPanelKeydown, true);
-        window.addEventListener('resize', syncFilterPanelMinWidth);
     }
 
-    function closeFilterPanel() {
-        if (!filterLayerEl) {
+    function closeFilterPanel(options) {
+        if (!filtersContainer || !isMobileLayout()) {
             return;
         }
-        if (filterLayerEl.hasAttribute('hidden')) {
-            return;
-        }
-        if (filterDropdownMetas.length) {
-            filterDropdownMetas.forEach((meta) => {
-                if (!meta) {
-                    return;
-                }
-                if (meta.instance) {
-                    try {
-                        meta.instance.hide();
-                    } catch (error) {
-                        restoreDropdownMenu(meta);
-                    }
-                } else {
-                    restoreDropdownMenu(meta);
-                }
-            });
-        }
-        filterLayerEl.hidden = true;
-        if (filterPanelEl) {
-            filterPanelEl.classList.remove('dropdown-open');
-        }
-        document.documentElement.style.removeProperty('--chat-panel-min-width');
-        document.body.classList.remove('chat-filter-open');
-        if (filterButton) {
-            filterButton.classList.remove('is-open');
-        }
-        document.removeEventListener('keydown', handleFilterPanelKeydown, true);
-        window.removeEventListener('resize', syncFilterPanelMinWidth);
-        const focusTarget = lastFocusedBeforeFilter && typeof lastFocusedBeforeFilter.focus === 'function'
-            ? lastFocusedBeforeFilter
-            : filterButton;
-        if (focusTarget && typeof focusTarget.focus === 'function') {
+        filterPanelMobileOpen = false;
+        syncFilterPanelVisibility();
+        const opts = options || {};
+        if (opts.focusButton && filterButton && typeof filterButton.focus === 'function') {
             try {
-                focusTarget.focus({ preventScroll: true });
+                filterButton.focus({ preventScroll: true });
             } catch (error) {
-                focusTarget.focus();
+                filterButton.focus();
             }
         }
-        lastFocusedBeforeFilter = null;
+    }
+
+    function toggleFilterPanel() {
+        if (!filtersContainer) {
+            return;
+        }
+        if (!isMobileLayout()) {
+            filtersContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            return;
+        }
+        if (filterPanelMobileOpen) {
+            closeFilterPanel({ focusButton: true });
+        } else {
+            openFilterPanel({ focus: true });
+        }
     }
 
     function formatMessageItem(message) {
@@ -1279,6 +1170,7 @@
         if (windowLabelEl) {
             windowLabelEl.textContent = chatState.windowLabel;
         }
+        markDropdownActive(windowMenu, 'custom');
         renderActiveFilters();
         applyFilters({ force: true });
     }
@@ -1333,6 +1225,7 @@
         if (windowLabelEl) {
             windowLabelEl.textContent = chatState.windowLabel;
         }
+        markDropdownActive(windowMenu, 'custom');
         closeCustomWindow();
         applyFilters({ force: true });
     }
@@ -1403,6 +1296,8 @@
         if (windowLabelEl && chatState.windowLabel) {
             windowLabelEl.textContent = chatState.windowLabel;
         }
+
+        markDropdownActive(windowMenu, chatState.windowValue || '');
 
         renderActiveFilters();
     }
@@ -1640,7 +1535,7 @@
         const sorted = messages.slice().sort(
             (a, b) => (Number(a.timestamp_unix || 0) - Number(b.timestamp_unix || 0)),
         );
-        let appended = false;
+        let addedCount = 0;
         sorted.forEach((message) => {
             const key = getMessageKey(message);
             if (key && chatState.messageKeys && chatState.messageKeys.has(key)) {
@@ -1650,10 +1545,10 @@
                 chatState.messageKeys.add(key);
             }
             chatState.messages.unshift(message);
-            appended = true;
+            addedCount += 1;
         });
 
-        if (!appended) {
+        if (addedCount === 0) {
             return;
         }
 
@@ -1670,6 +1565,7 @@
 
         renderMessages(chatState.messages, { replace: true });
         updateRelativeTimes();
+        handleIncomingMessagesCount(addedCount);
     }
 
     function stopLiveUpdates(options) {
@@ -1838,6 +1734,7 @@
             }
 
             if (mode === 'replace') {
+                resetNewMessageIndicator();
                 const incoming = Array.isArray(data.messages)
                     ? data.messages.slice(0, MAX_MESSAGES)
                     : [];
@@ -1956,6 +1853,9 @@
         }
 
         renderActiveFilters();
+        if (isMobileLayout()) {
+            closeFilterPanel();
+        }
         currentAutoRefreshReason = determineAutoRefreshReason();
 
         const paramString = searchParams.toString();
@@ -1974,6 +1874,7 @@
             || previousSince !== chatState.windowSince;
 
         if (changed) {
+            resetNewMessageIndicator();
             stopLiveUpdates();
             chatState.reachedCap = false;
             chatState.hasMore = false;
@@ -2134,9 +2035,31 @@
                 closeCustomWindow();
                 return;
             }
+            if (filterPanelMobileOpen && isMobileLayout()) {
+                closeFilterPanel({ focusButton: true });
+                return;
+            }
             hideActiveTooltip();
         }
     });
+
+    if (cardBodyEl) {
+        cardBodyEl.addEventListener('scroll', () => {
+            if (pendingNewMessages > 0 && isListNearTop()) {
+                resetNewMessageIndicator();
+            }
+        }, { passive: true });
+    }
+
+    if (newMessagesButton) {
+        newMessagesButton.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (cardBodyEl) {
+                cardBodyEl.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+            resetNewMessageIndicator();
+        });
+    }
 
     if (senderSearchInput) {
         senderSearchInput.addEventListener('input', filterSenderOptions);
@@ -2155,32 +2078,31 @@
         });
     }
 
-    if (filterButton && filterLayerEl) {
+    if (filterButton) {
         filterButton.addEventListener('click', (event) => {
-            if (isFilterPanelOpen()) {
-                closeFilterPanel();
-            } else {
-                const shouldFocus = event.detail === 0;
-                openFilterPanel(shouldFocus);
-            }
+            event.preventDefault();
+            toggleFilterPanel();
         });
     }
 
-    if (filterPanelCloseEls.length) {
-        filterPanelCloseEls.forEach((el) => {
-            el.addEventListener('click', (event) => {
+    if (filterCloseButtons.length) {
+        filterCloseButtons.forEach((btn) => {
+            btn.addEventListener('click', (event) => {
                 event.preventDefault();
-                closeFilterPanel();
+                closeFilterPanel({ focusButton: true });
             });
         });
     }
 
     if (filterClearButton) {
-        filterClearButton.addEventListener('click', () => {
-            const filterTypes = ['channel', 'audience', 'sender', 'search', 'window'];
-            filterTypes.forEach((type) => clearFilter(type, { deferApply: true }));
-            applyFilters({ force: true });
-        });
+        filterClearButton.addEventListener('click', clearAllFilters);
+    }
+
+    syncFilterPanelVisibility();
+    if (typeof mobileFilterQuery.addEventListener === 'function') {
+        mobileFilterQuery.addEventListener('change', syncFilterPanelVisibility);
+    } else if (typeof mobileFilterQuery.addListener === 'function') {
+        mobileFilterQuery.addListener(syncFilterPanelVisibility);
     }
 
     if (customApplyBtn) {
@@ -2282,33 +2204,6 @@
     }
 
     let senderDropdownMeta = null;
-    if (senderMenu && senderToggle) {
-        senderToggle.setAttribute('data-bs-display', 'static');
-        senderDropdownMeta = {
-            toggleEl: senderToggle,
-            menuEl: senderMenu,
-            instance: bootstrap.Dropdown.getOrCreateInstance(senderToggle),
-            originalParent: senderMenu.parentNode,
-            originalNextSibling: senderMenu.nextSibling,
-            detached: false,
-        };
-        filterDropdownMetas.push(senderDropdownMeta);
-
-        senderToggle.addEventListener('show.bs.dropdown', () => {
-            if (filterPanelEl) {
-                filterPanelEl.classList.add('dropdown-open');
-            }
-            detachDropdownMenu(senderDropdownMeta);
-            positionDetachedDropdownMenu(senderMenu, senderToggle);
-        });
-
-        senderToggle.addEventListener('hidden.bs.dropdown', () => {
-            if (filterPanelEl) {
-                filterPanelEl.classList.remove('dropdown-open');
-            }
-            restoreDropdownMenu(senderDropdownMeta);
-        });
-    }
 
     if (refreshButton) {
         refreshButton.addEventListener('click', () => loadMessages({ mode: 'replace', showSpinner: true }));

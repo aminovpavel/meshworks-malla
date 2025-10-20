@@ -4,10 +4,10 @@ Analytics service for Meshtastic Mesh Health Web UI
 
 import logging
 import time
-from collections import defaultdict
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from ..database.repositories import NodeRepository
+from ..database.repositories import NodeRepository, PacketRepository
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,7 @@ class AnalyticsService:
                 filters, twenty_four_hours_ago
             )
             temporal_stats = AnalyticsService._get_temporal_patterns(
-                filters, twenty_four_hours_ago
+                filters, seven_days_ago
             )
             top_nodes = AnalyticsService._get_top_active_nodes(filters, seven_days_ago)
             packet_types = AnalyticsService._get_packet_type_distribution(
@@ -306,11 +306,10 @@ class AnalyticsService:
 
     @staticmethod
     def _get_temporal_patterns(filters: dict, since_timestamp: float) -> dict[str, Any]:
-        """Get temporal patterns (hourly breakdown) efficiently using SQL aggregation."""
+        """Return hourly message counts for the requested window (default 7 days)."""
 
         from ..database.connection import get_db_connection
 
-        # Build WHERE clause similarly to PacketRepository but simplified (only params we care about)
         where_conditions: list[str] = ["timestamp >= ?"]
         params: list[Any] = [since_timestamp]
 
@@ -330,59 +329,125 @@ class AnalyticsService:
 
         query = f"""
             SELECT
-                strftime('%H', datetime(timestamp, 'unixepoch')) AS hour,
+                strftime(
+                    '%Y-%m-%dT%H:00:00Z',
+                    datetime(normalize_epoch(timestamp), 'unixepoch')
+                ) AS bucket,
                 COUNT(*) AS total_packets,
                 SUM(CASE WHEN processed_successfully = 1 THEN 1 ELSE 0 END) AS successful_packets
             FROM packet_history
             WHERE {where_clause}
-            GROUP BY hour
+            GROUP BY bucket
+            ORDER BY bucket
         """
 
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(query, params)
-
         rows = cursor.fetchall()
 
-        hourly_counts: dict[int, int] = defaultdict(int)
-        hourly_success: dict[int, int] = defaultdict(int)
-
+        bucket_totals: dict[str, int] = {}
+        bucket_success: dict[str, int] = {}
         for row in rows:
-            hour = int(row["hour"])
-            hourly_counts[hour] = row["total_packets"]
-            hourly_success[hour] = row["successful_packets"]
+            bucket = row["bucket"]
+            if not bucket:
+                continue
+            bucket_totals[bucket] = row["total_packets"] or 0
+            bucket_success[bucket] = row["successful_packets"] or 0
+
+        start_dt = datetime.fromtimestamp(since_timestamp, tz=UTC).replace(
+            minute=0, second=0, microsecond=0
+        )
+        now_dt = datetime.now(tz=UTC).replace(minute=0, second=0, microsecond=0)
 
         hourly_data: list[dict[str, Any]] = []
-        for hour in range(24):
-            count = hourly_counts.get(hour, 0)
-            success = hourly_success.get(hour, 0)
-            success_rate = (success / count * 100) if count > 0 else 0
+        daily_totals: dict[str, dict[str, float]] = {}
+        total_packets = 0
+        total_successful = 0
+
+        current = start_dt
+        while current <= now_dt:
+            bucket = current.strftime("%Y-%m-%dT%H:00:00Z")
+            count = bucket_totals.get(bucket, 0)
+            success = bucket_success.get(bucket, 0)
+            success_rate = (success / count * 100.0) if count else 0.0
 
             hourly_data.append(
                 {
-                    "hour": hour,
+                    "bucket": bucket,
+                    "label": current.strftime("%d %b %H:%M"),
                     "total_packets": count,
                     "successful_packets": success,
                     "success_rate": round(success_rate, 2),
                 }
             )
 
-        # Determine peak and quiet hours if any packets exist
-        peak_hour = (
-            max(hourly_counts, key=lambda x: hourly_counts[x])
-            if hourly_counts
-            else None
+            total_packets += count
+            total_successful += success
+
+            day_key = current.strftime("%Y-%m-%d")
+            day_entry = daily_totals.get(day_key)
+            if day_entry is None:
+                day_entry = {"total": 0.0, "successful": 0.0}
+                daily_totals[day_key] = day_entry
+            day_entry["total"] += count
+            day_entry["successful"] += success
+
+            current += timedelta(hours=1)
+
+        success_rate = (
+            round(total_successful * 100.0 / total_packets, 1) if total_packets else 0.0
         )
-        quiet_hour = (
-            min(hourly_counts, key=lambda x: hourly_counts[x])
-            if hourly_counts
-            else None
+        peak_bucket = (
+            max(bucket_totals, key=bucket_totals.get) if bucket_totals else None
         )
+        quiet_bucket = (
+            min(bucket_totals, key=bucket_totals.get) if bucket_totals else None
+        )
+
+        sorted_days = sorted(daily_totals.keys())
+        daily_breakdown: list[dict[str, Any]] = []
+        daily_moving_average: list[dict[str, Any]] = []
+        running_total = 0.0
+
+        for idx, day_key in enumerate(sorted_days):
+            day_totals = daily_totals[day_key]
+            total = int(day_totals["total"])
+            success = int(day_totals["successful"])
+            running_total += total
+            avg = running_total / float(idx + 1)
+
+            day_label = datetime.strptime(day_key, "%Y-%m-%d").strftime("%d %b")
+            day_success_rate = round(success * 100.0 / total, 1) if total else 0.0
+
+            daily_breakdown.append(
+                {
+                    "date": day_key,
+                    "label": day_label,
+                    "total_packets": total,
+                    "successful_packets": success,
+                    "success_rate": day_success_rate,
+                }
+            )
+            daily_moving_average.append(
+                {
+                    "date": day_key,
+                    "label": day_label,
+                    "average_packets": round(avg, 2),
+                }
+            )
 
         return {
             "hourly_breakdown": hourly_data,
-            "peak_hour": peak_hour,
-            "quiet_hour": quiet_hour,
+            "daily_breakdown": daily_breakdown,
+            "daily_moving_average": daily_moving_average,
+            "total_packets": total_packets,
+            "successful_packets": total_successful,
+            "success_rate": success_rate,
+            "peak_bucket": peak_bucket,
+            "quiet_bucket": quiet_bucket,
+            "peak_hour": peak_bucket,
+            "quiet_hour": quiet_bucket,
         }
 
     @staticmethod
@@ -421,10 +486,11 @@ class AnalyticsService:
     ) -> list[dict[str, Any]]:
         """Get distribution of packet types using optimized SQL query."""
         from ..database.connection import get_db_connection
-
         # Build WHERE clause
         where_conditions: list[str] = ["timestamp >= ?", "portnum_name IS NOT NULL"]
         params: list[Any] = [since_timestamp]
+
+        excluded_ports = {"MQTT_JSON"}
 
         if filters.get("gateway_id"):
             where_conditions.append("gateway_id = ?")
@@ -433,6 +499,11 @@ class AnalyticsService:
         if filters.get("from_node"):
             where_conditions.append("from_node_id = ?")
             params.append(filters["from_node"])
+
+        if excluded_ports:
+            placeholders = ", ".join("?" for _ in excluded_ports)
+            where_conditions.append(f"portnum_name NOT IN ({placeholders})")
+            params.extend(sorted(excluded_ports))
 
         where_clause = " AND ".join(where_conditions)
 
@@ -464,7 +535,14 @@ class AnalyticsService:
             params,
         )
 
-        packet_types = [dict(row) for row in cursor.fetchall()]
+        packet_types = []
+        for row in cursor.fetchall():
+            record = dict(row)
+            display_label, _ = PacketRepository._port_display_info(
+                record.get("portnum_name"), True
+            )
+            record["label"] = display_label
+            packet_types.append(record)
         conn.close()
 
         return packet_types

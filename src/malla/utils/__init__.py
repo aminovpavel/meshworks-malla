@@ -14,6 +14,7 @@ from .formatting import (
 from .geo_utils import calculate_bearing, calculate_distance
 from .node_utils import convert_node_id, get_bulk_node_names, get_node_display_name
 from .serialization_utils import convert_bytes_to_base64
+from .time_utils import datetime_from_epoch, normalize_epoch
 from .traceroute_utils import parse_traceroute_payload
 
 __all__ = [
@@ -31,4 +32,6 @@ __all__ = [
     "convert_bytes_to_base64",
     "calculate_distance",
     "calculate_bearing",
+    "normalize_epoch",
+    "datetime_from_epoch",
 ]

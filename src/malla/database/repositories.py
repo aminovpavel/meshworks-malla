@@ -17,8 +17,10 @@ from typing import Any
 
 from meshtastic import mesh_pb2
 
+from ..services.meshtastic_service import MeshtasticService
 from ..utils.formatting import format_time_ago
 from ..utils.node_utils import get_bulk_node_names
+from ..utils.time_utils import datetime_from_epoch, normalize_epoch
 from .connection import get_db_connection
 
 logger = logging.getLogger(__name__)
@@ -26,6 +28,50 @@ logger = logging.getLogger(__name__)
 ISO_TIMESTAMP_RE = re.compile(
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$"
 )
+
+
+def _choose_display_name(
+    long_name: str | None,
+    short_name: str | None,
+    user_id: str | None,
+    hex_id: str | None,
+) -> str:
+    for candidate in (
+        (long_name or "").strip(),
+        (short_name or "").strip(),
+        (user_id or "").strip(),
+        (hex_id or "").strip(),
+    ):
+        if candidate:
+            return candidate
+    return "Unknown"
+
+
+def _normalize_hw_fields(raw) -> tuple[str | None, str]:
+    canonical = MeshtasticService.normalize_hardware_value(raw)
+    if canonical is None and isinstance(raw, str) and raw.strip():
+        canonical = raw.strip().upper()
+    display = MeshtasticService.get_hardware_display(canonical)
+    if display is None and canonical is not None:
+        display = canonical.replace("_", " ").title()
+    return canonical, display or "Unknown"
+
+
+def _normalize_role_fields(raw) -> tuple[str | None, str]:
+    canonical = MeshtasticService.normalize_role_value(raw)
+    if canonical is None and isinstance(raw, str) and raw.strip():
+        canonical = raw.strip().upper()
+    display = MeshtasticService.get_role_display(canonical)
+    if display is None and canonical is not None:
+        display = canonical.replace("_", " ").title()
+    return canonical, display or "Unknown"
+
+
+def _clean_name(value: str | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = value.strip()
+    return cleaned or None
 
 
 @dataclass(frozen=True)
@@ -104,16 +150,25 @@ class DashboardRepository:
             # Get packet types separately (more efficient than JSON aggregation in SQLite)
             cursor.execute(
                 f"""
-                SELECT portnum_name, COUNT(*) as count
+                SELECT portnum_name, processed_successfully, COUNT(*) as count
                 FROM packet_history
                 WHERE portnum_name IS NOT NULL AND timestamp > ?{gateway_filter}
-                GROUP BY portnum_name
+                GROUP BY portnum_name, processed_successfully
                 ORDER BY count DESC
             """,
                 [twenty_four_hours_ago] + gateway_params,
             )
 
-            packet_types = [dict(row) for row in cursor.fetchall()]
+            packet_types = []
+            for row in cursor.fetchall():
+                record = dict(row)
+                display_label, is_encrypted = PacketRepository._port_display_info(
+                    record.get("portnum_name"),
+                    bool(record.get("processed_successfully")),
+                )
+                record["label"] = display_label
+                record["is_encrypted"] = is_encrypted
+                packet_types.append(record)
 
             conn.close()
 
@@ -186,6 +241,47 @@ class PacketRepository:
             return text_content
         except (AttributeError, TypeError, UnicodeDecodeError):
             return None
+
+    @staticmethod
+    def _port_display_info(
+        portnum_name: Any,
+        processed_successfully: bool,
+        raw_payload: Any = None,
+        pki_encrypted: Any = None,
+    ) -> tuple[str, bool]:
+        """
+        Determine a human-friendly display label for a port number.
+
+        Returns:
+            Tuple of (display_label, is_encrypted)
+        """
+        normalized = (portnum_name or "").upper()
+        encrypted_hint = processed_successfully
+
+        if raw_payload is not None:
+            try:
+                encrypted_hint = encrypted_hint and len(raw_payload) > 0
+            except TypeError:
+                encrypted_hint = encrypted_hint and bool(raw_payload)
+
+        if pki_encrypted is not None:
+            try:
+                encrypted_hint = encrypted_hint or bool(int(pki_encrypted))
+            except (TypeError, ValueError):
+                encrypted_hint = encrypted_hint or bool(pki_encrypted)
+
+        if normalized == "MQTT_JSON":
+            return "Gateway JSON", False
+
+        if normalized == "UNKNOWN_APP":
+            if encrypted_hint:
+                return "Encrypted", True
+            return "Unknown (failed)", False
+
+        if not normalized:
+            return "Unknown", False
+
+        return portnum_name, False
 
     @staticmethod
     def decode_text_payload(raw_payload: Any) -> str | None:
@@ -350,10 +446,24 @@ class PacketRepository:
 
                 query = f"""
                     SELECT
-                        id, timestamp, from_node_id, to_node_id, portnum, portnum_name,
-                        gateway_id, channel_id, mesh_packet_id, rssi, snr, hop_limit, hop_start,
-                        payload_length, processed_successfully, raw_payload,
-                        datetime(timestamp, 'unixepoch') as timestamp_str,
+                        id,
+                        normalize_epoch(timestamp) AS timestamp,
+                        from_node_id,
+                        to_node_id,
+                        portnum,
+                        portnum_name,
+                        gateway_id,
+                        channel_id,
+                        mesh_packet_id,
+                        rssi,
+                        snr,
+                        hop_limit,
+                        hop_start,
+                        payload_length,
+                        processed_successfully,
+                        pki_encrypted,
+                        raw_payload,
+                        datetime(normalize_epoch(timestamp), 'unixepoch') as timestamp_str,
                         (hop_start - hop_limit) as hop_count
                     FROM packet_history
                     {where_clause}
@@ -420,6 +530,12 @@ class PacketRepository:
                     representative_packet = min(
                         packets_in_group, key=lambda p: p["timestamp"]
                     )
+                    rep_dict = dict(representative_packet)
+
+                    timestamp_str = None
+                    ts_dt = datetime_from_epoch(group_data["min_timestamp"])
+                    if ts_dt is not None:
+                        timestamp_str = ts_dt.strftime("%Y-%m-%d %H:%M:%S")
 
                     packet = {
                         "id": representative_packet["id"],
@@ -445,9 +561,7 @@ class PacketRepository:
                         "processed_successfully": min(
                             p["processed_successfully"] for p in packets_in_group
                         ),
-                        "timestamp_str": datetime.fromtimestamp(
-                            group_data["min_timestamp"]
-                        ).strftime("%Y-%m-%d %H:%M:%S"),
+                        "timestamp_str": timestamp_str,
                         "reception_count": len(packets_in_group),
                         "is_grouped": True,
                         "success": min(
@@ -455,9 +569,18 @@ class PacketRepository:
                         ),
                         # Decode text content from representative packet
                         "text_content": PacketRepository._decode_text_content(
-                            dict(representative_packet)
+                            rep_dict
                         ),
                     }
+
+                    display_label, is_encrypted = PacketRepository._port_display_info(
+                        portnum_name,
+                        packet["processed_successfully"],
+                        rep_dict.get("raw_payload"),
+                        rep_dict.get("pki_encrypted"),
+                    )
+                    packet["port_display"] = display_label
+                    packet["is_encrypted"] = is_encrypted
 
                     # Format hop range
                     if (
@@ -568,12 +691,33 @@ class PacketRepository:
 
                 query = f"""
                     SELECT
-                        id, timestamp, from_node_id, to_node_id, portnum, portnum_name,
-                        gateway_id, channel_id, mesh_packet_id, rssi, snr, hop_limit, hop_start,
-                        payload_length, processed_successfully, raw_payload,
-                        via_mqtt, want_ack, priority, delayed, channel_index, rx_time,
-                        pki_encrypted, next_hop, relay_node, tx_after,
-                        datetime(timestamp, 'unixepoch') as timestamp_str,
+                        id,
+                        normalize_epoch(timestamp) AS timestamp,
+                        from_node_id,
+                        to_node_id,
+                        portnum,
+                        portnum_name,
+                        gateway_id,
+                        channel_id,
+                        mesh_packet_id,
+                        rssi,
+                        snr,
+                        hop_limit,
+                        hop_start,
+                        payload_length,
+                        processed_successfully,
+                        raw_payload,
+                        via_mqtt,
+                        want_ack,
+                        priority,
+                        delayed,
+                        channel_index,
+                        rx_time,
+                        pki_encrypted,
+                        next_hop,
+                        relay_node,
+                        tx_after,
+                        datetime(normalize_epoch(timestamp), 'unixepoch') as timestamp_str,
                         (hop_start - hop_limit) as hop_count
                     FROM packet_history
                     {where_clause}
@@ -590,9 +734,13 @@ class PacketRepository:
 
                     # Format timestamp if not already formatted
                     if packet["timestamp_str"] is None:
-                        packet["timestamp_str"] = datetime.fromtimestamp(
-                            packet["timestamp"]
-                        ).strftime("%Y-%m-%d %H:%M:%S")
+                        ts_dt = datetime_from_epoch(packet["timestamp"])
+                        if ts_dt is not None:
+                            packet["timestamp_str"] = ts_dt.strftime(
+                                "%Y-%m-%d %H:%M:%S"
+                            )
+                        else:
+                            packet["timestamp_str"] = None
 
                     # Calculate hop count if not already set
                     if (
@@ -610,6 +758,15 @@ class PacketRepository:
                     packet["text_content"] = PacketRepository._decode_text_content(
                         packet
                     )
+
+                    display_label, is_encrypted = PacketRepository._port_display_info(
+                        packet.get("portnum_name"),
+                        packet.get("processed_successfully"),
+                        packet.get("raw_payload"),
+                        packet.get("pki_encrypted"),
+                    )
+                    packet["port_display"] = display_label
+                    packet["is_encrypted"] = is_encrypted
 
                     packets.append(packet)
 
@@ -693,7 +850,7 @@ class PacketRepository:
             query = f"""
                 SELECT
                     timestamp, from_node_id, to_node_id, rssi, snr, portnum_name,
-                    datetime(timestamp, 'unixepoch') as timestamp_str
+                    datetime(normalize_epoch(timestamp), 'unixepoch') as timestamp_str
                 FROM packet_history
                 {where_clause}
                 ORDER BY timestamp DESC
@@ -813,7 +970,7 @@ class PacketRepository:
                     p2.snr as gateway2_snr,
                     (p2.rssi - p1.rssi) as rssi_diff,
                     (p2.snr - p1.snr) as snr_diff,
-                    datetime(p1.timestamp, 'unixepoch') as timestamp_str,
+                    datetime(normalize_epoch(p1.timestamp), 'unixepoch') as timestamp_str,
                     ABS(p1.timestamp - p2.timestamp) as time_diff
                 FROM packet_history p1
                 INNER JOIN packet_history p2 ON (
@@ -961,6 +1118,10 @@ class ChatRepository:
 
     _TEXT_PORT = "TEXT_MESSAGE_APP"
     _BROADCAST_NODE_ID = 0xFFFFFFFF
+
+    @staticmethod
+    def _normalize_timestamp_sql(column: str = "timestamp") -> str:
+        return f"normalize_epoch({column})"
 
     @staticmethod
     def get_recent_messages(
@@ -1153,7 +1314,7 @@ class ChatRepository:
             )
             query_params.append(ChatRepository._BROADCAST_NODE_ID)
 
-        where_clauses.append("timestamp >= ?")
+        where_clauses.append(f"{ChatRepository._normalize_timestamp_sql()} >= ?")
         query_params.append(params.window_start)
 
         clause = " AND ".join(where_clauses)
@@ -1167,6 +1328,7 @@ class ChatRepository:
         window_end_ts: float,
     ) -> dict[str, Any]:
         group_expr = "COALESCE(mesh_packet_id, id)"
+        normalized_ts = ChatRepository._normalize_timestamp_sql("timestamp")
         query = f"""
         WITH filtered_packets AS (
             SELECT
@@ -1174,7 +1336,7 @@ class ChatRepository:
                 from_node_id,
                 to_node_id,
                 channel_id,
-                timestamp
+                {normalized_ts} AS normalized_timestamp
             FROM packet_history
             {where_clause}
         ),
@@ -1184,7 +1346,7 @@ class ChatRepository:
                 from_node_id,
                 to_node_id,
                 channel_id,
-                MAX(timestamp) AS last_timestamp
+                MAX(normalized_timestamp) AS last_timestamp
             FROM filtered_packets
             GROUP BY message_group_id, from_node_id, to_node_id, channel_id
         )
@@ -1236,18 +1398,20 @@ class ChatRepository:
                 data_where_clause = "WHERE gm.last_timestamp < ?"
                 data_params.append(params.before_ts)
 
+        normalized_ts = ChatRepository._normalize_timestamp_sql("timestamp")
         query = f"""
         WITH filtered_packets AS (
             SELECT
                 *,
-                {group_expr} AS message_group_id
+                {group_expr} AS message_group_id,
+                {normalized_ts} AS normalized_timestamp
             FROM packet_history
             {where_clause}
         ),
         grouped_messages AS (
             SELECT
                 MIN(id) AS id,
-                MAX(timestamp) AS last_timestamp,
+                MAX(normalized_timestamp) AS last_timestamp,
                 from_node_id,
                 to_node_id,
                 channel_id,
@@ -1449,7 +1613,9 @@ class ChatRepository:
                 break
 
             timestamp_value = float(row["timestamp"] or 0.0)
-            timestamp_utc = datetime.fromtimestamp(timestamp_value, tz=UTC)
+            timestamp_utc = datetime_from_epoch(timestamp_value, tz=UTC)
+            if timestamp_utc is None:
+                continue
             channel_raw = row["channel_id"]
             if isinstance(channel_raw, bytes):
                 channel_raw = channel_raw.decode("utf-8", errors="replace")
@@ -1819,6 +1985,41 @@ class NodeRepository:
     """Repository for node operations."""
 
     @staticmethod
+    def _prepare_node_record(node: dict[str, Any]) -> None:
+        node_id = node.get("node_id")
+        hex_id = node.get("hex_id") or (f"!{node_id:08x}" if node_id is not None else None)
+        node["hex_id"] = hex_id
+
+        long_name = _clean_name(node.get("long_name"))
+        short_name = _clean_name(node.get("short_name"))
+        user_id = _clean_name(node.get("user_id"))
+
+        node["long_name"] = long_name
+        node["short_name"] = short_name
+        node["user_id"] = user_id
+
+        display_name = _choose_display_name(long_name, short_name, user_id, hex_id)
+        node["display_name"] = display_name
+        node["node_name"] = display_name
+
+        hw_value, hw_display = _normalize_hw_fields(node.get("hw_model"))
+        node["hw_model_value"] = hw_value
+        node["hw_model_display"] = hw_display
+        node["hw_model"] = hw_display
+
+        role_value, role_display = _normalize_role_fields(node.get("role"))
+        node["role_value"] = role_value
+        node["role_display"] = role_display
+        node["role"] = role_value or role_display or "UNKNOWN"
+
+        # Normalize last packet string if missing
+        if not node.get("last_packet_str"):
+            ts = node.get("last_packet_time")
+            ts_dt = datetime_from_epoch(ts)
+            if ts_dt is not None:
+                node["last_packet_str"] = ts_dt.strftime("%Y-%m-%d %H:%M:%S")
+
+    @staticmethod
     def get_nodes(
         limit: int = 100,
         offset: int = 0,
@@ -1933,12 +2134,13 @@ class NodeRepository:
                         ni.hw_model,
                         ni.role,
                         ni.primary_channel,
+                        ni.user_id,
                         ni.last_updated,
                         printf('!%08x', ni.node_id) as hex_id,
                         COALESCE(stats.packet_count_24h, 0) as packet_count_24h,
                         COALESCE(gstats.gateway_packet_count_24h, 0) as gateway_packet_count_24h,
                         COALESCE(stats.last_packet_time, ni.last_updated) as last_packet_time,
-                        datetime(COALESCE(stats.last_packet_time, ni.last_updated), 'unixepoch') as last_packet_str
+                        datetime(normalize_epoch(COALESCE(stats.last_packet_time, ni.last_updated)), 'unixepoch') as last_packet_str
                     FROM node_info ni
                     LEFT JOIN (
                         SELECT
@@ -1980,12 +2182,13 @@ class NodeRepository:
                         ni.hw_model,
                         ni.role,
                         ni.primary_channel,
+                        ni.user_id,
                         ni.last_updated,
                         printf('!%08x', ni.node_id) as hex_id,
                         0 as packet_count_24h,
                         0 as gateway_packet_count_24h,
                         ni.last_updated as last_packet_time,
-                        datetime(ni.last_updated, 'unixepoch') as last_packet_str
+                        datetime(normalize_epoch(ni.last_updated), 'unixepoch') as last_packet_str
                     FROM node_info ni
                     {where_clause}
                     ORDER BY {order_column} {order_dir}
@@ -1996,6 +2199,8 @@ class NodeRepository:
             query_params = params + [limit, offset]
             cursor.execute(query, query_params)
             nodes = [dict(row) for row in cursor.fetchall()]
+            for node in nodes:
+                NodeRepository._prepare_node_record(node)
 
             conn.close()
 
@@ -2109,8 +2314,10 @@ class NodeRepository:
                 }
 
             # Convert Unix timestamps to UTC datetimes to avoid local timezone drift
-            last_seen = datetime.fromtimestamp(node_row["last_seen"], UTC)
-            first_seen = datetime.fromtimestamp(node_row["first_seen"], UTC)
+            last_seen_dt = datetime_from_epoch(node_row["last_seen"], tz=UTC)
+            first_seen_dt = datetime_from_epoch(node_row["first_seen"], tz=UTC)
+            last_seen = last_seen_dt if last_seen_dt else None
+            first_seen = first_seen_dt if first_seen_dt else None
 
             # Use proper hex formatting for node name
             proper_node_name = (
@@ -2150,6 +2357,7 @@ class NodeRepository:
             SELECT
                 p.id, p.timestamp, p.to_node_id, p.gateway_id, p.portnum_name,
                 p.rssi, p.snr, p.hop_start, p.hop_limit, p.mesh_packet_id,
+                p.processed_successfully, p.raw_payload, p.pki_encrypted,
                 CASE WHEN p.hop_start IS NOT NULL AND p.hop_limit IS NOT NULL
                      THEN (p.hop_start - p.hop_limit) ELSE NULL END as hop_count
             FROM packet_history p
@@ -2182,7 +2390,19 @@ class NodeRepository:
                             "max_rssi": None,
                             "min_snr": None,
                             "max_snr": None,
+                            "processed_successfully": row["processed_successfully"],
+                            "raw_payload": row["raw_payload"],
+                            "pki_encrypted": row["pki_encrypted"],
                         }
+
+                        display_label, is_encrypted = PacketRepository._port_display_info(
+                            row["portnum_name"],
+                            row["processed_successfully"],
+                            row["raw_payload"],
+                            row["pki_encrypted"],
+                        )
+                        grouped_packets[mesh_id]["port_display"] = display_label
+                        grouped_packets[mesh_id]["is_encrypted"] = is_encrypted
 
                     # Add gateway info
                     gateway_info = {
@@ -2252,8 +2472,21 @@ class NodeRepository:
                         "max_rssi": row["rssi"],
                         "min_snr": row["snr"],
                         "max_snr": row["snr"],
+                        "processed_successfully": row["processed_successfully"],
+                        "raw_payload": row["raw_payload"],
+                        "pki_encrypted": row["pki_encrypted"],
                     }
                 )
+
+            for packet in all_packets:
+                display_label, is_encrypted = PacketRepository._port_display_info(
+                    packet.get("portnum_name"),
+                    packet.get("processed_successfully"),
+                    packet.get("raw_payload"),
+                    packet.get("pki_encrypted"),
+                )
+                packet["port_display"] = display_label
+                packet["is_encrypted"] = is_encrypted
 
             # Sort by timestamp descending and limit to 20
             all_packets.sort(key=lambda x: x["timestamp"], reverse=True)
@@ -2286,7 +2519,10 @@ class NodeRepository:
             # Build recent packets list with proper node names and gateway info
             recent_packets = []
             for packet in all_packets:
-                timestamp = datetime.fromtimestamp(packet["timestamp"], UTC)
+                ts_dt = datetime_from_epoch(packet["timestamp"], tz=UTC)
+                if ts_dt is None:
+                    continue
+                timestamp = ts_dt
 
                 # Determine to_node_name
                 to_node_id_for_link: int | None = None
@@ -2354,6 +2590,10 @@ class NodeRepository:
                             "to_node_name": to_node_name,
                             "to_node_id": to_node_id_for_link,
                             "protocol": packet["portnum_name"] or "Unknown",
+                            "protocol_display": packet.get("port_display")
+                            or packet["portnum_name"]
+                            or "Unknown",
+                            "is_encrypted": packet.get("is_encrypted", False),
                             "hop_count": packet["hop_count"],
                             "is_grouped": True,
                             "gateway_display": gateway_display,
@@ -2392,6 +2632,10 @@ class NodeRepository:
                             "to_node_name": to_node_name,
                             "to_node_id": to_node_id_for_link,
                             "protocol": packet["portnum_name"] or "Unknown",
+                            "protocol_display": packet.get("port_display")
+                            or packet["portnum_name"]
+                            or "Unknown",
+                            "is_encrypted": packet.get("is_encrypted", False),
                             "hop_count": packet["hop_count"],
                             "is_grouped": False,
                             "gateway_id": gateway_id,
@@ -2446,7 +2690,9 @@ class NodeRepository:
 
             recent_reported_packets: list[dict[str, Any]] = []
             for row in reported_rows:
-                ts = datetime.fromtimestamp(row["timestamp"], UTC)
+                ts = datetime_from_epoch(row["timestamp"], tz=UTC)
+                if ts is None:
+                    continue
 
                 hop_count_val = (
                     row["hop_start"] - row["hop_limit"]
@@ -2574,7 +2820,7 @@ class NodeRepository:
 
             received_gateways = []
             for row in gateways_raw:
-                last_received = datetime.fromtimestamp(row["last_received"], UTC)
+                last_received = datetime_from_epoch(row["last_received"], tz=UTC)
                 gateway_id = row["gateway_id"]
 
                 # Determine gateway display name
@@ -2646,8 +2892,8 @@ class NodeRepository:
             try:
                 latest_location = LocationRepository.get_latest_node_location(node_id)
                 if latest_location:
-                    location_timestamp = datetime.fromtimestamp(
-                        latest_location["timestamp"], UTC
+                    location_timestamp = datetime_from_epoch(
+                        latest_location["timestamp"], tz=UTC
                     )
                     location_info = {
                         "latitude": latest_location["latitude"],
@@ -2655,8 +2901,12 @@ class NodeRepository:
                         "altitude": latest_location.get("altitude"),
                         "timestamp": location_timestamp.strftime(
                             "%Y-%m-%d %H:%M:%S UTC"
-                        ),
-                        "timestamp_relative": format_time_ago(location_timestamp),
+                        )
+                        if location_timestamp
+                        else None,
+                        "timestamp_relative": format_time_ago(location_timestamp)
+                        if location_timestamp
+                        else None,
                     }
             except Exception as e:
                 logger.warning(f"Failed to get location for node {node_id}: {e}")
@@ -2796,7 +3046,7 @@ class NodeRepository:
                     printf('!%08x', ni.node_id) as hex_id,
                     ni.role,
                     ni.primary_channel,
-                    datetime(COALESCE(stats.last_packet, ni.last_updated), 'unixepoch') as last_packet_str,
+                    datetime(normalize_epoch(COALESCE(stats.last_packet, ni.last_updated)), 'unixepoch') as last_packet_str,
                     COALESCE(stats.packet_count_24h, 0) as packet_count_24h,
                     COALESCE(stats.gateway_count, 0) as gateway_count_24h
                 FROM node_info ni
@@ -3455,7 +3705,7 @@ class TracerouteRepository:
                         id, timestamp, from_node_id, to_node_id, gateway_id,
                         hop_start, hop_limit, rssi, snr, payload_length, raw_payload,
                         processed_successfully, mesh_packet_id,
-                        datetime(timestamp, 'unixepoch') as timestamp_str
+                        datetime(normalize_epoch(timestamp), 'unixepoch') as timestamp_str
                     FROM packet_history
                     {where_clause}
                     ORDER BY timestamp DESC
@@ -3523,7 +3773,8 @@ class TracerouteRepository:
 
                     # Find the packet with the longest payload (most complete route data)
                     best_payload_packet = max(
-                        packets_in_group, key=lambda x: len(x.get("raw_payload", b""))
+                        packets_in_group,
+                        key=lambda x: len((x.get("raw_payload") or b"")),
                     )
 
                     # Create aggregated packet
@@ -3771,10 +4022,20 @@ class TracerouteRepository:
 
                 query = f"""
                     SELECT
-                        id, timestamp, from_node_id, to_node_id, gateway_id,
-                        hop_start, hop_limit, rssi, snr, payload_length, raw_payload,
-                        processed_successfully, mesh_packet_id,
-                        datetime(timestamp, 'unixepoch') as timestamp_str,
+                        id,
+                        normalize_epoch(timestamp) AS timestamp,
+                        from_node_id,
+                        to_node_id,
+                        gateway_id,
+                        hop_start,
+                        hop_limit,
+                        rssi,
+                        snr,
+                        payload_length,
+                        raw_payload,
+                        processed_successfully,
+                        mesh_packet_id,
+                        datetime(normalize_epoch(timestamp), 'unixepoch') as timestamp_str,
                         (hop_start - hop_limit) AS hop_count
                     FROM packet_history
                     {where_clause}
@@ -3789,9 +4050,13 @@ class TracerouteRepository:
 
                     # Format timestamp if not already formatted
                     if packet["timestamp_str"] is None:
-                        packet["timestamp_str"] = datetime.fromtimestamp(
-                            packet["timestamp"]
-                        ).strftime("%Y-%m-%d %H:%M:%S")
+                        ts_dt = datetime_from_epoch(packet["timestamp"])
+                        if ts_dt is not None:
+                            packet["timestamp_str"] = ts_dt.strftime(
+                                "%Y-%m-%d %H:%M:%S"
+                            )
+                        else:
+                            packet["timestamp_str"] = None
 
                     # Add success indicator
                     packet["success"] = packet["processed_successfully"]
@@ -3887,7 +4152,7 @@ class TracerouteRepository:
                     id, timestamp, from_node_id, to_node_id, gateway_id,
                     hop_start, hop_limit, rssi, snr, payload_length, raw_payload,
                     processed_successfully,
-                    datetime(timestamp, 'unixepoch') as timestamp_str
+                    datetime(normalize_epoch(timestamp), 'unixepoch') as timestamp_str
                 FROM packet_history
                 WHERE id = ? AND portnum_name = 'TRACEROUTE_APP'
             """
@@ -4011,6 +4276,11 @@ class LocationRepository:
                         skip_count += 1
                         continue
 
+                    timestamp = normalize_epoch(row["timestamp"])
+                    if timestamp is None:
+                        skip_count += 1
+                        continue
+
                     # Decode position from raw protobuf payload
                     position = mesh_pb2.Position()
                     position.ParseFromString(row["raw_payload"])
@@ -4114,7 +4384,7 @@ class LocationRepository:
                             "latitude": latitude,
                             "longitude": longitude,
                             "altitude": altitude,
-                            "timestamp": row["timestamp"],
+                            "timestamp": timestamp,
                             "precision_bits": precision_bits,
                             "precision_meters": precision_meters,
                             "sats_in_view": sats_in_view,
@@ -4178,9 +4448,8 @@ class LocationRepository:
 
             query = """
                 SELECT
-                    timestamp,
-                    raw_payload,
-                    datetime(timestamp, 'unixepoch') as timestamp_str
+                    normalize_epoch(timestamp) AS timestamp,
+                    raw_payload
                 FROM packet_history
                 WHERE from_node_id = ?
                 AND portnum = 3  -- POSITION_APP
@@ -4214,13 +4483,21 @@ class LocationRepository:
                     if not latitude or not longitude:
                         continue
 
+                    ts = normalize_epoch(row["timestamp"])
+                    if ts is None:
+                        continue
+                    ts_dt = datetime_from_epoch(ts)
+                    timestamp_str = (
+                        ts_dt.strftime("%Y-%m-%d %H:%M:%S") if ts_dt else None
+                    )
+
                     locations.append(
                         {
                             "latitude": latitude,
                             "longitude": longitude,
                             "altitude": altitude,
-                            "timestamp": row["timestamp"],
-                            "timestamp_str": row["timestamp_str"],
+                            "timestamp": ts,
+                            "timestamp_str": timestamp_str,
                         }
                     )
                 except Exception as e:
@@ -4262,7 +4539,7 @@ class LocationRepository:
             # Fetch the most recent POSITION_APP packet for this node
             cursor.execute(
                 """
-                SELECT timestamp, raw_payload
+                SELECT normalize_epoch(timestamp) AS timestamp, raw_payload
                 FROM packet_history
                 WHERE from_node_id = ?
                   AND portnum = 3            -- POSITION_APP
@@ -4291,11 +4568,16 @@ class LocationRepository:
                     conn.close()
                     return None
 
+                timestamp = normalize_epoch(row["timestamp"])
+                if timestamp is None:
+                    conn.close()
+                    return None
+
                 result = {
                     "latitude": latitude,
                     "longitude": longitude,
                     "altitude": altitude,
-                    "timestamp": row["timestamp"],
+                    "timestamp": timestamp,
                 }
                 conn.close()
                 return result

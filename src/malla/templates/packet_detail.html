@@ -29,7 +29,7 @@
                     <span class="badge bg-danger">Failed</span>
                 {% endif %}
             </h1>
-            <p class="text-muted">{{ packet.portnum_name or "Unknown Protocol" }} packet from {{ packet.from_node_name }} to {{ packet.to_node_name }}</p>
+            <p class="text-muted">{{ packet.port_display or packet.portnum_name or "Unknown Protocol" }} packet from {{ packet.from_node_name }} to {{ packet.to_node_name }}</p>
         </div>
     </div>
 
@@ -136,7 +136,7 @@
                                 <tr>
                                     <th>Protocol:</th>
                                     <td>
-                                        {{ protocol_badge(packet.portnum_name or "Unknown") }}
+                                        {{ protocol_badge(packet.port_display or packet.portnum_name or "Unknown") }}
                                         <br><small class="text-muted">Port: {{ packet.portnum }}</small>
                                     </td>
                                 </tr>

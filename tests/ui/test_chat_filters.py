@@ -46,30 +46,35 @@ def test_chat_filters_live_resume(page):
         timeout=10000,
     )
 
-    # Open filters and enter a random search query that should return nothing.
-    page.click(".chat-filter-button")
-    page.wait_for_selector("#chat-filter-layer:not([hidden])", state="attached", timeout=2000)
-
+    # Enter a random search query that should return nothing.
     random_query = "playwright-" + "".join(random.choices(string.ascii_lowercase, k=10))
     page.fill("#chat-text-search", random_query)
 
     # Wait for the "no results" state to propagate.
     page.wait_for_selector(".chat-card .chat-empty", timeout=5000)
 
-    # Layout sanity: chat card should stay at least as wide as the filter panel.
+    # Layout sanity: chat content should stay at least as wide as the filter panel.
     card_width = page.eval_on_selector(
-        ".chat-panel",
+        ".chat-card",
         "el => el.getBoundingClientRect().width",
     )
     panel_width = page.eval_on_selector(
-        ".chat-filter-panel",
+        "#chat-filters",
         "el => el.getBoundingClientRect().width",
     )
-    assert card_width >= panel_width, "Chat panel shrank below filter panel width"
+    assert card_width >= panel_width, "Chat content shrank below filter panel width"
 
-    # Clear filters, ensure overlay closes, and live updates resume.
+    # Clear filters and ensure live updates resume.
     page.click("#chat-filter-clear")
-    page.wait_for_selector("#chat-filter-layer[hidden]", timeout=2000)
+    page.wait_for_function(
+        """
+        () => {
+            const input = document.querySelector('#chat-text-search');
+            return input && !input.value;
+        }
+        """,
+        timeout=3000,
+    )
 
     # Wait for live status to return.
     if page.evaluate("() => !!window.EventSource"):

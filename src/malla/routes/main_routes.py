@@ -17,7 +17,7 @@ from flask import (
 
 # Import from the new modular architecture
 from ..config import get_config
-from ..database.repositories import ChatRepository, DashboardRepository
+from ..data_provider import get_data_provider
 from ..utils.chat_windows import (
     list_window_options,
     parse_timestamp_param,
@@ -34,7 +34,8 @@ def dashboard():
     """Dashboard route with network statistics."""
     try:
         # Get basic dashboard stats
-        stats = DashboardRepository.get_stats()
+        provider = get_data_provider()
+        stats = provider.get_dashboard_stats()
 
         # Get gateway statistics from the new cached service
         from ..services.gateway_service import GatewayService
@@ -50,7 +51,8 @@ def dashboard():
     except Exception as e:
         logger.error(f"Error loading dashboard: {e}")
         # Fallback to basic stats without gateway info
-        stats = DashboardRepository.get_stats()
+        provider = get_data_provider()
+        stats = provider.get_dashboard_stats()
         return render_template(
             "dashboard.html",
             stats=stats,
@@ -81,10 +83,14 @@ def chat():
         except ValueError:
             sender_id = None
 
-    chat_data = ChatRepository.get_recent_messages(
+    provider = get_data_provider()
+    chat_data = provider.get_recent_chat_messages(
         limit=page_size,
+        before=None,
+        before_id=None,
         channel=selected_channel,
         audience=selected_audience,
+        node_id=None,
         sender_id=sender_id,
         search=search_query,
         window_start=window_selection["start_ts"],
@@ -92,8 +98,8 @@ def chat():
     )
     chat_data["window_value"] = window_selection["value"]
     chat_data["window_label"] = window_selection["label"]
-    channels = ChatRepository.get_channels()
-    senders = ChatRepository.get_senders()
+    channels = provider.get_chat_channels()
+    senders = provider.get_chat_senders()
 
     channel_label = "All channels"
     if selected_channel:

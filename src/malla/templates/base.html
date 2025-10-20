@@ -150,6 +150,13 @@
                     </li>
                 </ul>
 
+                <div class="navbar-nav me-3">
+                    <span id="data-source-indicator" class="badge rounded-pill bg-secondary" title="Data backend">
+                        <i class="bi bi-database"></i>
+                        <span class="data-source-label">{{ DATA_PROVIDER_MODE|upper }}</span>
+                    </span>
+                </div>
+
                 <!-- Settings Menu -->
                 <div class="navbar-nav">
                     <div class="dropdown settings-dropdown">
@@ -372,6 +379,7 @@
     </script>
     -->
 
+    <script src="{{ url_for('static', filename='js/data-source-indicator.js', v=STATIC_VERSION) }}" defer></script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

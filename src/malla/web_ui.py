@@ -22,6 +22,7 @@ from werkzeug.exceptions import HTTPException
 from . import __version__ as package_version
 from .config import AppConfig, get_config
 from .database.connection import init_database
+from .data_provider import init_data_provider
 from .routes import register_routes
 from .routes.debug_routes import debug_bp
 from .utils.formatting import format_node_id, format_time_ago
@@ -115,6 +116,12 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
     # Persist config on Flask instance for later use
     app.config["APP_CONFIG"] = cfg
 
+    # Register the data provider and expose its mode to templates/UI.
+    data_provider = init_data_provider(app, cfg)
+    app.config["DATA_PROVIDER_MODE"] = getattr(data_provider, "mode", "sqlite")
+    if hasattr(data_provider, "close"):
+        atexit.register(data_provider.close)
+
     static_version = os.getenv("MALLA_STATIC_VERSION") or package_version
     app.config["STATIC_VERSION"] = static_version
     # Bound maximum request body size (bytes) to avoid large uploads (esp. debug endpoints)
@@ -159,6 +166,12 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
     os.environ["MALLA_DATABASE_FILE"] = str(cfg.database_file)
 
     # ---------------------------------------------------------------------
+
+    @app.context_processor
+    def inject_data_provider_mode():
+        return {
+            "DATA_PROVIDER_MODE": app.config.get("DATA_PROVIDER_MODE", "sqlite"),
+        }
 
     # Add template filters for consistent formatting
     @app.template_filter("format_node_id")

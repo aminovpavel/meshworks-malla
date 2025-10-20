@@ -13,13 +13,18 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # install uv once per machine
 uv sync --dev                                    # install dependencies + tooling
 playwright install chromium --with-deps          # install headless browser
 cp ops/samples/config.sample.yaml config.yaml    # configure broker / instance name
-uv run malla-capture                              # terminal 1 – capture worker
+mkdir -p devdata
+docker run -d --name meshpipe-dev \
+  -e MESHPIPE_MQTT_BROKER_ADDRESS=meshtastic.taubetele.com \
+  -e MESHPIPE_MQTT_USERNAME=meshdev \
+  -e MESHPIPE_MQTT_PASSWORD=large4cats \
+  -e MESHPIPE_DATABASE_FILE=/data/meshtastic_history.db \
+  -v $(pwd)/devdata:/data \
+  ghcr.io/aminovpavel/meshpipe-go:latest meshpipe     # terminal 1 – capture (Go)
 uv run malla-web                                  # terminal 2 – web interface
 ```
 
-Both commands share the same SQLite database file. After the first `uv sync`
-you can also use the `./bin/malla-capture` and `./bin/malla-web` helper scripts which
-wrap `uv run` for convenience.
+Meshpipe and the web UI share the same SQLite file. After the first `uv sync` you can use `./bin/malla-web`; Meshpipe is typically run via its container or the Go binary from [meshpipe-go](https://github.com/aminovpavel/meshpipe-go).
 
 ## Demo data & screenshots
 
@@ -101,8 +106,8 @@ docker compose -f ops/compose/docker-compose.yml up -d
 docker compose -f ops/compose/docker-compose.yml logs -f
 ```
 
-- The default compose file launches both `malla-capture` and `malla-web`
-  containers and shares the SQLite database through the `malla_data` volume.
+- The default compose file launches `meshpipe` (Go capture) alongside `malla-web`
+  and shares the SQLite database through the `malla_data` volume.
 - Need local tweaks? Build your own image and override `MALLA_IMAGE` with the
   custom tag.
 - For production we prefer running the web UI via Gunicorn. Set
@@ -125,13 +130,13 @@ with the `MALLA_` prefix. The table lists the most relevant options:
 | `host` | `"0.0.0.0"` | Bind address for the web UI | `MALLA_HOST` |
 | `port` | `5008` | Web UI port | `MALLA_PORT` |
 | `debug` | `false` | Flask debug mode (avoid in prod) | `MALLA_DEBUG` |
-| `mqtt_broker_address` | `"127.0.0.1"` | MQTT broker host | `MALLA_MQTT_BROKER_ADDRESS` |
-| `mqtt_port` | `1883` | MQTT port | `MALLA_MQTT_PORT` |
-| `mqtt_username` | `""` | MQTT username | `MALLA_MQTT_USERNAME` |
-| `mqtt_password` | `""` | MQTT password | `MALLA_MQTT_PASSWORD` |
-| `mqtt_topic_prefix` | `"msh"` | Topic prefix | `MALLA_MQTT_TOPIC_PREFIX` |
-| `mqtt_topic_suffix` | `"/+/+/+/#"` | Topic suffix | `MALLA_MQTT_TOPIC_SUFFIX` |
-| `default_channel_key` | `"1PG7OiApB1nwvP+rz05pAQ=="` | Default channel key (base64) | `MALLA_DEFAULT_CHANNEL_KEY` |
+| `mqtt_broker_address` | `"127.0.0.1"` | MQTT broker host | `MESHPIPE_MQTT_BROKER_ADDRESS` (legacy `MALLA_MQTT_BROKER_ADDRESS`) |
+| `mqtt_port` | `1883` | MQTT port | `MESHPIPE_MQTT_PORT` (legacy `MALLA_MQTT_PORT`) |
+| `mqtt_username` | `""` | MQTT username | `MESHPIPE_MQTT_USERNAME` (legacy `MALLA_MQTT_USERNAME`) |
+| `mqtt_password` | `""` | MQTT password | `MESHPIPE_MQTT_PASSWORD` (legacy `MALLA_MQTT_PASSWORD`) |
+| `mqtt_topic_prefix` | `"msh"` | Topic prefix | `MESHPIPE_MQTT_TOPIC_PREFIX` (legacy `MALLA_MQTT_TOPIC_PREFIX`) |
+| `mqtt_topic_suffix` | `"/+/+/+/#"` | Topic suffix | `MESHPIPE_MQTT_TOPIC_SUFFIX` (legacy `MALLA_MQTT_TOPIC_SUFFIX`) |
+| `default_channel_key` | `""` | Optional default channel key for legacy decryption (leave empty to disable) | `MALLA_DEFAULT_CHANNEL_KEY` |
 
 Environment variables always override values read from the configuration file.
 
@@ -149,4 +154,10 @@ The following options are less common but useful during hardening or local debug
 | `debug_token` | `None` | Token required when `enable_browser_debug` is true | `MALLA_DEBUG_TOKEN` |
 | `debug_log_buffer_size` | `500` | Ring buffer size for debug log storage | `MALLA_DEBUG_LOG_BUFFER_SIZE` |
 | `map_show_leaflet_branding` | `false` | Keep the default Leaflet attribution link and external branding | `MALLA_MAP_SHOW_LEAFLET_BRANDING` |
-| `capture_store_raw` | `true` | Persist raw MQTT payloads in `packet_history` (set `0` to drop them) | `MALLA_CAPTURE_STORE_RAW` |
+| `capture_store_raw` | `true` | Persist raw MQTT payloads in `packet_history` (set `0` to drop them) | `MESHPIPE_CAPTURE_STORE_RAW` (legacy `MALLA_CAPTURE_STORE_RAW`) |
+| `meshpipe_use_grpc` | `false` | Feature flag: read data via Meshpipe gRPC instead of SQLite | `MALLA_MESHPIPE_USE_GRPC` |
+| `meshpipe_grpc_endpoint` | `"127.0.0.1:7443"` | Direct Meshpipe gRPC endpoint (`host:port`) | `MALLA_MESHPIPE_GRPC_ENDPOINT` |
+| `meshpipe_grpc_use_proxy` | `false` | Route gRPC calls through the Envoy proxy sidecar | `MALLA_MESHPIPE_GRPC_USE_PROXY` |
+| `meshpipe_grpc_proxy_endpoint` | `"127.0.0.1:8443"` | Envoy proxy endpoint used when proxying gRPC requests | `MALLA_MESHPIPE_GRPC_PROXY_ENDPOINT` |
+| `meshpipe_grpc_token` | `None` | Bearer token injected into gRPC metadata (optional) | `MALLA_MESHPIPE_GRPC_TOKEN` |
+| `meshpipe_grpc_timeout_seconds` | `5.0` | Per-request timeout applied to Meshpipe gRPC calls | `MALLA_MESHPIPE_GRPC_TIMEOUT_SECONDS` |

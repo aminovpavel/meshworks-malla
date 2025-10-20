@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 # Import from the new modular architecture
-from ..database import NodeRepository
+from ..data_provider import get_data_provider
 from ..services.location_service import LocationService
 from ..services.traceroute_service import TracerouteService
 from ..utils.node_utils import convert_node_id
@@ -42,8 +42,10 @@ class NodeService:
         # Convert node_id to int
         node_id_int = convert_node_id(node_id)
 
-        # Get node data directly from repository using get_node_details
-        node_details = NodeRepository.get_node_details(node_id_int)
+        provider = get_data_provider()
+
+        # Get node data directly from provider using get_node_details
+        node_details = provider.nodes.get_node_details(node_id_int)
 
         if not node_details:
             raise NodeNotFoundError("Node not found")

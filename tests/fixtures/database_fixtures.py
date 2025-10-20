@@ -100,6 +100,7 @@ class DatabaseFixtures:
                 hw_model TEXT,
                 role TEXT,
                 primary_channel TEXT,
+                user_id TEXT,
                 is_licensed BOOLEAN,
                 mac_address TEXT,
                 first_seen REAL,
@@ -408,8 +409,8 @@ class DatabaseFixtures:
             cursor.execute(
                 """
                 INSERT INTO node_info
-                (node_id, hex_id, long_name, short_name, hw_model, role, primary_channel, is_licensed, mac_address, first_seen, last_updated)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (node_id, hex_id, long_name, short_name, hw_model, role, primary_channel, user_id, is_licensed, mac_address, first_seen, last_updated)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     node["node_id"],
@@ -419,6 +420,7 @@ class DatabaseFixtures:
                     node["hw_model"],
                     node["role"],
                     node["primary_channel"],
+                    node.get("user_id"),
                     node["is_licensed"],
                     node["mac_address"],
                     node["first_seen"],
@@ -431,8 +433,8 @@ class DatabaseFixtures:
             cursor.execute(
                 """
                 INSERT INTO node_info
-                (node_id, hex_id, long_name, short_name, hw_model, role, primary_channel, is_licensed, mac_address, first_seen, last_updated)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (node_id, hex_id, long_name, short_name, hw_model, role, primary_channel, user_id, is_licensed, mac_address, first_seen, last_updated)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     node["node_id"],
@@ -442,6 +444,7 @@ class DatabaseFixtures:
                     node["hw_model"],
                     node["role"],
                     node["primary_channel"],
+                    node.get("user_id"),
                     node["is_licensed"],
                     node["mac_address"],
                     node["first_seen"],

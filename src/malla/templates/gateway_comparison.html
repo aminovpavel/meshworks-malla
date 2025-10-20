@@ -343,7 +343,7 @@
                             <tr>
                                 <td>{{ packet.timestamp_str }}</td>
                                 <td>{{ packet.from_node_name or packet.from_node_id }}</td>
-                                <td>{{ packet.portnum_name or 'Unknown' }}</td>
+                                <td>{{ packet.port_display or packet.portnum_name or 'Unknown' }}</td>
                                 <td>{{ packet.hop_limit }}</td>
                                 <td>{{ packet.gateway1_rssi }} dBm</td>
                                 <td>{{ packet.gateway2_rssi }} dBm</td>

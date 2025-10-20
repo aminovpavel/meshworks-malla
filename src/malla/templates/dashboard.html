@@ -552,23 +552,82 @@ function showErrorMessage(message) {
 }
 
 function createTimeSeriesChart(temporalData) {
-    if (!temporalData || !temporalData.hourly_breakdown) return;
+    if (!temporalData) return;
 
     hideLoadingSpinner('timeSeriesChart');
     const ctx = document.getElementById('timeSeriesChart');
     if (!ctx) return;
 
-    // Convert hourly data to chart format
+    const colors = getChartColors();
+    const options = getDefaultChartOptions();
+
+    const dailyData = temporalData.daily_breakdown || [];
+    const movingAverage = temporalData.daily_moving_average || [];
+
+    if (dailyData.length > 0) {
+        const labels = dailyData.map(item => item.label || item.date);
+        const totals = dailyData.map(item => item.total_packets || 0);
+
+        let avgSeries;
+        if (movingAverage.length === dailyData.length) {
+            avgSeries = movingAverage.map(item => item.average_packets || 0);
+        } else {
+            let running = 0;
+            avgSeries = totals.map((value, index) => {
+                running += value;
+                return running / (index + 1);
+            });
+        }
+
+        options.plugins.legend.display = true;
+        options.scales.x.ticks.maxRotation = 0;
+        options.scales.x.ticks.autoSkip = true;
+
+        chartInstances.timeSeriesChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        type: 'bar',
+                        label: 'Total Messages',
+                        data: totals,
+                        backgroundColor: colors.infoBg,
+                        borderColor: colors.info,
+                        borderWidth: 1,
+                        maxBarThickness: 36
+                    },
+                    {
+                        type: 'line',
+                        label: 'Running Average',
+                        data: avgSeries,
+                        borderColor: colors.primary,
+                        backgroundColor: colors.primary,
+                        borderWidth: 2,
+                        tension: 0.25,
+                        fill: false,
+                        pointRadius: 3
+                    }
+                ]
+            },
+            options: options
+        });
+        return;
+    }
+
+    if (!temporalData.hourly_breakdown) return;
+
+    // Fallback to hourly line chart
     const labels = [];
     const data = [];
 
     temporalData.hourly_breakdown.forEach(item => {
-        labels.push(`${item.hour}:00`);
+        const label = item.label || item.bucket || `${item.hour}:00`;
+        labels.push(label);
         data.push(item.total_packets);
     });
 
-    const colors = getChartColors();
-    const options = getDefaultChartOptions();
+    options.plugins.legend.display = true;
 
     chartInstances.timeSeriesChart = new Chart(ctx, {
         type: 'line',
@@ -732,7 +791,7 @@ function createPacketTypesChart(packetTypes) {
     const ctx = document.getElementById('packetTypesChart');
     if (!ctx) return;
 
-    const labels = packetTypes.map(pt => pt.portnum_name || 'Unknown');
+    const labels = packetTypes.map(pt => pt.label || pt.portnum_name || 'Unknown');
     const data = packetTypes.map(pt => pt.count);
     const colors = getChartColors();
 

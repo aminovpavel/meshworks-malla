@@ -11,7 +11,7 @@ from flask import Blueprint, render_template, request
 from ..database.connection import get_db_connection
 
 # Import from the new modular architecture
-from ..database.repositories import LocationRepository
+from ..database.repositories import LocationRepository, PacketRepository
 from ..models.traceroute import TraceroutePacket
 from ..utils.node_utils import (
     get_bulk_node_names,
@@ -65,6 +65,15 @@ def get_packet_details(packet_id: int) -> dict[str, Any] | None:
         )
         packet["has_payload"] = packet["payload_length"] > 0
         packet["success"] = packet["processed_successfully"]
+
+        label, is_encrypted = PacketRepository._port_display_info(
+            packet.get("portnum_name"),
+            packet.get("processed_successfully"),
+            packet.get("raw_payload"),
+            packet.get("pki_encrypted"),
+        )
+        packet["port_display"] = label
+        packet["is_encrypted"] = is_encrypted
 
         # Ensure mesh_packet_id is an integer for template formatting
         if packet["mesh_packet_id"] is not None:
@@ -149,6 +158,14 @@ def get_packet_details(packet_id: int) -> dict[str, Any] | None:
                 else None
             )
             reception["time_diff"] = reception["timestamp"] - packet["timestamp"]
+
+            r_label, r_encrypted = PacketRepository._port_display_info(
+                reception.get("portnum_name"),
+                reception.get("processed_successfully"),
+                reception.get("raw_payload"),
+            )
+            reception["port_display"] = r_label
+            reception["is_encrypted"] = r_encrypted
             receptions.append(reception)
 
             # Collect gateway IDs for name resolution
@@ -1061,6 +1078,15 @@ def get_raw_packet_analysis(packet: dict[str, Any]) -> dict[str, Any] | None:
         if hop_start is not None and hop_limit is not None:
             mesh_packet_data["hops_taken"] = hop_start - hop_limit
             mesh_packet_data["remaining_hops"] = hop_limit
+
+        display_label, is_encrypted = PacketRepository._port_display_info(
+            mesh_packet_data.get("portnum_name"),
+            packet.get("processed_successfully"),
+            packet.get("raw_payload"),
+            packet.get("pki_encrypted"),
+        )
+        mesh_packet_data["port_display"] = display_label
+        mesh_packet_data["is_encrypted"] = is_encrypted
 
         analysis["mesh_packet"] = mesh_packet_data
 

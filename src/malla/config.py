@@ -44,7 +44,7 @@ class AppConfig:
     mqtt_topic_suffix: str = "/+/+/+/#"
 
     # Meshtastic channel default key (for optional packet decryption)
-    default_channel_key: str = "1PG7OiApB1nwvP+rz05pAQ=="
+    default_channel_key: str = ""
 
     # Logging
     log_level: str = "INFO"
@@ -56,6 +56,15 @@ class AppConfig:
 
     # Map rendering toggles
     map_show_leaflet_branding: bool = False
+
+    # Meshpipe gRPC integration scaffolding (will be consumed when the backend
+    # exposes richer RPCs and the UI switches away from direct SQLite access).
+    meshpipe_use_grpc: bool = False
+    meshpipe_grpc_endpoint: str = "127.0.0.1:7443"
+    meshpipe_grpc_use_proxy: bool = False
+    meshpipe_grpc_proxy_endpoint: str = "127.0.0.1:8443"
+    meshpipe_grpc_token: str | None = None
+    meshpipe_grpc_timeout_seconds: float = 5.0
 
     # Internal attribute to remember the source file used
     _config_path: Path | None = field(default=None, repr=False, compare=False)

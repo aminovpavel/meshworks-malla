@@ -39,7 +39,13 @@ def test_env_override(monkeypatch):
 
     monkeypatch.setenv("MALLA_NAME", "EnvName")
     monkeypatch.setenv("MALLA_DEBUG", "true")
+    monkeypatch.setenv("MALLA_MESHPIPE_USE_GRPC", "1")
+    monkeypatch.setenv("MALLA_MESHPIPE_GRPC_ENDPOINT", "meshpipe-proxy:8443")
+    monkeypatch.setenv("MALLA_MESHPIPE_GRPC_TIMEOUT_SECONDS", "12.5")
     cfg = load_config(config_path=None)
 
     assert cfg.name == "EnvName"
     assert cfg.debug is True
+    assert cfg.meshpipe_use_grpc is True
+    assert cfg.meshpipe_grpc_endpoint == "meshpipe-proxy:8443"
+    assert cfg.meshpipe_grpc_timeout_seconds == 12.5

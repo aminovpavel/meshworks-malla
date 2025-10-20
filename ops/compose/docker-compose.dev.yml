@@ -1,29 +1,25 @@
 services:
-  malla-capture:
-    build:
-      context: ../..
-      dockerfile: Dockerfile
-    image: meshworks/malla-dev:local
-    container_name: malla-capture-dev
+  meshpipe-dev:
+    image: ${MESHPIPE_IMAGE:-ghcr.io/aminovpavel/meshpipe-go:latest}
+    container_name: meshpipe-dev
     restart: unless-stopped
     environment:
-      # Core app config
-      - MALLA_NAME=Malla (Dev)
-      - MALLA_HOST=0.0.0.0
-      - MALLA_PORT=5008
-      # MQTT – set your local or remote broker creds via env or override file
-      - MALLA_MQTT_BROKER_ADDRESS=${MALLA_MQTT_BROKER_ADDRESS:-meshtastic.taubetele.com}
-      - MALLA_MQTT_PORT=${MALLA_MQTT_PORT:-1883}
-      - MALLA_MQTT_USERNAME=${MALLA_MQTT_USERNAME:-meshdev}
-      - MALLA_MQTT_PASSWORD=${MALLA_MQTT_PASSWORD:-large4cats}
-      - MALLA_MQTT_TOPIC_PREFIX=${MALLA_MQTT_TOPIC_PREFIX:-msh/msk}
-      - MALLA_MQTT_TOPIC_SUFFIX=${MALLA_MQTT_TOPIC_SUFFIX:-/+/+/+/#}
-      # DB path shared between capture and web
-      - MALLA_DATABASE_FILE=/data/meshtastic_history.db
+      - MESHPIPE_NAME=${MESHPIPE_NAME:-Meshpipe (Dev)}
+      - MESHPIPE_DATABASE_FILE=/data/meshtastic_history.db
+      - MESHPIPE_MQTT_BROKER_ADDRESS=${MESHPIPE_MQTT_BROKER_ADDRESS:-meshtastic.taubetele.com}
+      - MESHPIPE_MQTT_PORT=${MESHPIPE_MQTT_PORT:-1883}
+      - MESHPIPE_MQTT_USERNAME=${MESHPIPE_MQTT_USERNAME:-meshdev}
+      - MESHPIPE_MQTT_PASSWORD=${MESHPIPE_MQTT_PASSWORD:-large4cats}
+      - MESHPIPE_MQTT_TOPIC_PREFIX=${MESHPIPE_MQTT_TOPIC_PREFIX:-msh/msk}
+      - MESHPIPE_MQTT_TOPIC_SUFFIX=${MESHPIPE_MQTT_TOPIC_SUFFIX:-/+/+/+/#}
+      - MESHPIPE_CAPTURE_STORE_RAW=${MESHPIPE_CAPTURE_STORE_RAW:-true}
+      - MESHPIPE_OBSERVABILITY_ADDRESS=${MESHPIPE_OBSERVABILITY_ADDRESS:-:2112}
       - TZ=Europe/Moscow
-    command: ["/app/.venv/bin/malla-capture"]
+    command: ["meshpipe"]
     volumes:
       - ../../devdata:/data
+    ports:
+      - "2112:2112"
 
   malla-web:
     build:
@@ -33,13 +29,14 @@ services:
     container_name: malla-web-dev
     restart: unless-stopped
     depends_on:
-      - malla-capture
+      - meshpipe-dev
     environment:
       - MALLA_NAME=Malla (Dev)
       - MALLA_HOST=0.0.0.0
       - MALLA_PORT=5008
       - MALLA_DATABASE_FILE=/data/meshtastic_history.db
       - MALLA_TRUST_PROXY_HEADERS=1
+      - MALLA_STATIC_VERSION=${MALLA_STATIC_VERSION:-dev}
       # - MALLA_ALLOWED_HOSTS=localhost,127.0.0.1
       # Enable browser debug UI (prod-like; keep DB read-only)
       - MALLA_ENABLE_BROWSER_DEBUG=1

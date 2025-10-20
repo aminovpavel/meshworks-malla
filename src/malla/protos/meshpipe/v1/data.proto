@@ -1,0 +1,612 @@
+syntax = "proto3";
+
+package meshpipe.v1;
+
+option go_package = "github.com/aminovpavel/meshpipe-go/internal/api/grpc/gen/v1;grpcv1";
+
+import "google/protobuf/timestamp.proto";
+
+message DashboardRequest {
+  string gateway_id = 1;
+}
+
+message PacketTypeCount {
+  string portnum_name = 1;
+  uint64 count = 2;
+}
+
+message DashboardResponse {
+  uint64 total_nodes = 1;
+  uint64 total_packets = 2;
+  uint64 active_nodes_24h = 3;
+  uint64 recent_packets = 4;
+  double avg_rssi = 5;
+  double avg_snr = 6;
+  double success_rate = 7;
+  repeated PacketTypeCount packet_types = 8;
+}
+
+message Pagination {
+  uint32 page_size = 1;
+  string cursor = 2;
+}
+
+message PacketFilter {
+  google.protobuf.Timestamp start_time = 1;
+  google.protobuf.Timestamp end_time = 2;
+  string gateway_id = 3;
+  uint32 from_node_id = 4;
+  uint32 to_node_id = 5;
+  repeated string portnum_names = 6;
+  string channel_id = 7;
+  int32 hop_count = 8;
+  string search = 9;
+}
+
+message Packet {
+  uint64 id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  uint32 from_node_id = 3;
+  uint32 to_node_id = 4;
+  string portnum_name = 5;
+  string gateway_id = 6;
+  string channel_id = 7;
+  int32 hop_start = 8;
+  int32 hop_limit = 9;
+  int32 hop_count = 10;
+  sint32 rssi = 11;
+  double snr = 12;
+  uint32 mesh_packet_id = 13;
+  bool processed_successfully = 14;
+  uint32 payload_length = 15;
+  bytes raw_payload = 16;
+}
+
+message MeshPacketAggregationOptions {
+  bool enabled = 1;
+}
+
+message MeshPacketAggregate {
+  uint32 mesh_packet_id = 1;
+  uint64 reception_count = 2;
+  uint32 gateway_count = 3;
+  sint32 min_rssi = 4;
+  sint32 max_rssi = 5;
+  double min_snr = 6;
+  double max_snr = 7;
+  int32 min_hop_count = 8;
+  int32 max_hop_count = 9;
+  google.protobuf.Timestamp first_received_at = 10;
+  google.protobuf.Timestamp last_received_at = 11;
+}
+
+message ListPacketsRequest {
+  PacketFilter filter = 1;
+  Pagination pagination = 2;
+  bool include_payload = 3;
+  MeshPacketAggregationOptions aggregation = 4;
+}
+
+message ListPacketsResponse {
+  repeated Packet packets = 1;
+  string next_cursor = 2;
+  repeated MeshPacketAggregate mesh_packet_aggregates = 3;
+}
+
+message NodeFilter {
+  string search = 1;
+  string role = 2;
+  string hardware_model = 3;
+  string primary_channel = 4;
+  bool named_only = 5;
+}
+
+message Node {
+  uint32 node_id = 1;
+  string hex_id = 2;
+  string display_name = 3;
+  string long_name = 4;
+  string short_name = 5;
+  string hardware_model = 6;
+  string hardware_model_name = 7;
+  string role = 8;
+  string role_name = 9;
+  string region = 10;
+  string region_name = 11;
+  string modem_preset = 12;
+  string modem_preset_name = 13;
+  google.protobuf.Timestamp first_seen = 14;
+  google.protobuf.Timestamp last_seen = 15;
+  double avg_rssi = 16;
+  double avg_snr = 17;
+  double avg_hops = 18;
+  uint64 total_packets = 19;
+  uint32 unique_gateways = 20;
+  uint32 unique_destinations = 21;
+  uint64 packets_24h = 22;
+  google.protobuf.Timestamp last_packet_time = 23;
+  uint64 gateway_packet_count_24h = 24;
+}
+
+message NodeGatewayMetric {
+  string gateway_id = 1;
+  uint64 packets = 2;
+  double avg_rssi = 3;
+  double avg_snr = 4;
+  google.protobuf.Timestamp last_seen = 5;
+}
+
+message NodeNeighbor {
+  uint32 neighbor_node_id = 1;
+  double avg_snr = 2;
+  uint64 observations = 3;
+  google.protobuf.Timestamp last_seen = 4;
+}
+
+message NodeRoleSummary {
+  string role_name = 1;
+  uint64 count = 2;
+}
+
+message ListNodesRequest {
+  NodeFilter filter = 1;
+  Pagination pagination = 2;
+}
+
+message ListNodesResponse {
+  repeated Node nodes = 1;
+  string next_cursor = 2;
+  uint64 total = 3;
+}
+
+message GetNodeRequest {
+  uint32 node_id = 1;
+}
+
+message GetNodeResponse {
+  Node node = 1;
+}
+
+message GatewayFilter {
+  string gateway_id = 1;
+}
+
+message GatewayStat {
+  string gateway_id = 1;
+  uint64 packets_total = 2;
+  uint32 distinct_nodes = 3;
+  google.protobuf.Timestamp first_seen = 4;
+  google.protobuf.Timestamp last_seen = 5;
+  double avg_rssi = 6;
+  double avg_snr = 7;
+}
+
+message GatewayStatsResponse {
+  repeated GatewayStat stats = 1;
+}
+
+message LinkFilter {
+  string gateway_id = 1;
+  string channel_id = 2;
+  uint32 from_node_id = 3;
+  uint32 to_node_id = 4;
+}
+
+message LinkAggregate {
+  string gateway_id = 1;
+  string channel_id = 2;
+  uint32 from_node_id = 3;
+  uint32 to_node_id = 4;
+  uint64 packets_total = 5;
+  google.protobuf.Timestamp first_seen = 6;
+  google.protobuf.Timestamp last_seen = 7;
+  double avg_rssi = 8;
+  double avg_snr = 9;
+  uint32 max_hop_index = 10;
+  uint32 max_hop_limit = 11;
+}
+
+message ListLinksRequest {
+  LinkFilter filter = 1;
+  Pagination pagination = 2;
+}
+
+message ListLinksResponse {
+  repeated LinkAggregate links = 1;
+  string next_cursor = 2;
+}
+
+message TracerouteFilter {
+  uint32 origin_node_id = 1;
+  uint32 destination_node_id = 2;
+  string gateway_id = 3;
+}
+
+message TraceroutePath {
+  uint32 origin_node_id = 1;
+  uint32 destination_node_id = 2;
+  string gateway_id = 3;
+  uint32 max_hops = 4;
+  uint64 observations = 5;
+  google.protobuf.Timestamp first_seen = 6;
+  google.protobuf.Timestamp last_seen = 7;
+}
+
+message ListTraceroutesRequest {
+  TracerouteFilter filter = 1;
+  Pagination pagination = 2;
+}
+
+message ListTraceroutesResponse {
+  repeated TraceroutePath paths = 1;
+  string next_cursor = 2;
+}
+
+message RangeTestFilter {
+  uint32 from_node_id = 1;
+  uint32 to_node_id = 2;
+  string gateway_id = 3;
+}
+
+message RangeTestResult {
+  uint64 packet_id = 1;
+  uint32 from_node_id = 2;
+  uint32 to_node_id = 3;
+  string gateway_id = 4;
+  google.protobuf.Timestamp received_at = 5;
+  sint32 rssi = 6;
+  double snr = 7;
+  uint32 hop_limit = 8;
+  uint32 hop_start = 9;
+  bytes payload = 10;
+}
+
+message ListRangeTestsRequest {
+  RangeTestFilter filter = 1;
+  Pagination pagination = 2;
+}
+
+message ListRangeTestsResponse {
+  repeated RangeTestResult results = 1;
+  string next_cursor = 2;
+}
+
+message StoreForwardEvent {
+  uint64 packet_id = 1;
+  google.protobuf.Timestamp received_at = 2;
+  string gateway_id = 3;
+  string variant = 4;
+  bytes payload = 5;
+}
+
+message ListStoreForwardRequest {
+  string gateway_id = 1;
+  Pagination pagination = 2;
+}
+
+message ListStoreForwardResponse {
+  repeated StoreForwardEvent events = 1;
+  string next_cursor = 2;
+}
+
+message PaxcounterSample {
+  uint64 packet_id = 1;
+  google.protobuf.Timestamp received_at = 2;
+  string gateway_id = 3;
+  uint32 wifi = 4;
+  uint32 ble = 5;
+  uint32 uptime_seconds = 6;
+}
+
+message ListPaxcounterRequest {
+  string gateway_id = 1;
+  Pagination pagination = 2;
+}
+
+message ListPaxcounterResponse {
+  repeated PaxcounterSample samples = 1;
+  string next_cursor = 2;
+}
+
+message NodeLocationFilter {
+  repeated uint32 node_ids = 1;
+  google.protobuf.Timestamp start_time = 2;
+  string gateway_id = 3;
+}
+
+message NodeLocation {
+  uint32 node_id = 1;
+  double latitude = 2;
+  double longitude = 3;
+  int32 altitude = 4;
+  double age_hours = 5;
+  string display_name = 6;
+  string primary_channel = 7;
+  uint32 sats_in_view = 8;
+  double precision_meters = 9;
+  google.protobuf.Timestamp timestamp = 10;
+  string gateway_id = 11;
+}
+
+message ListNodeLocationsRequest {
+  NodeLocationFilter filter = 1;
+  Pagination pagination = 2;
+}
+
+message ListNodeLocationsResponse {
+  repeated NodeLocation locations = 1;
+  string next_cursor = 2;
+}
+
+message ChatWindowFilter {
+  string channel_id = 1;
+  string audience = 2;
+  uint32 sender_node_id = 3;
+  string search = 4;
+  uint32 node_id = 5;
+}
+
+message ChatMessageGateway {
+  string gateway_id = 1;
+  sint32 rssi = 2;
+  double snr = 3;
+}
+
+message ChatMessage {
+  uint64 packet_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  uint32 from_node_id = 3;
+  uint32 to_node_id = 4;
+  string channel_id = 5;
+  string audience = 6;
+  string text = 7;
+  repeated ChatMessageGateway gateways = 8;
+  bool processed_successfully = 9;
+  uint64 group_id = 10;
+  uint32 mesh_packet_id = 11;
+  string message_type = 12;
+  string portnum_name = 13;
+}
+
+message ChatWindowCounters {
+  uint64 messages_1h = 1;
+  uint64 messages_6h = 2;
+  uint64 messages_24h = 3;
+}
+
+message ChatChannelInfo {
+  string channel_id = 1;
+  string label = 2;
+  uint64 count = 3;
+}
+
+message ChatSenderInfo {
+  uint32 node_id = 1;
+  string display_name = 2;
+  uint64 count = 3;
+}
+
+message GetChatWindowRequest {
+  ChatWindowFilter filter = 1;
+  google.protobuf.Timestamp window_start = 2;
+  uint32 window_hours = 3;
+  google.protobuf.Timestamp before = 4;
+  Pagination pagination = 5;
+}
+
+message GetChatWindowResponse {
+  repeated ChatMessage messages = 1;
+  ChatWindowCounters counters = 2;
+  google.protobuf.Timestamp window_start = 3;
+  uint32 window_hours = 4;
+  string next_cursor = 5;
+  repeated ChatChannelInfo channels = 6;
+  repeated ChatSenderInfo senders = 7;
+}
+
+message NodeAnalytics {
+  uint64 packets_24h = 1;
+  uint64 packets_7d = 2;
+  google.protobuf.Timestamp last_packet_time = 3;
+  repeated NodeGatewayMetric gateways = 4;
+  repeated NodeNeighbor neighbors = 5;
+  repeated NodeRoleSummary roles = 6;
+}
+
+message GetNodeAnalyticsRequest {
+  uint32 node_id = 1;
+}
+
+message GetNodeAnalyticsResponse {
+  Node node = 1;
+  NodeAnalytics analytics = 2;
+}
+
+message GetGatewayOverviewRequest {
+  uint32 limit = 1;
+  string gateway_id = 2;
+}
+
+message GatewayOverview {
+  string gateway_id = 1;
+  uint64 packet_count = 2;
+  uint32 unique_sources = 3;
+  double avg_rssi = 4;
+  double avg_snr = 5;
+  google.protobuf.Timestamp last_seen = 6;
+  double diversity_score = 7;
+  uint32 nodes_with_multiple_gateways = 8;
+}
+
+message GetGatewayOverviewResponse {
+  repeated GatewayOverview gateways = 1;
+}
+
+message PacketSuccessStats {
+  uint64 total_packets = 1;
+  uint64 successful_packets = 2;
+  double average_payload_bytes = 3;
+}
+
+message NodeActivityBucket {
+  string label = 1;
+  uint64 node_count = 2;
+}
+
+message SignalQualitySummary {
+  double avg_rssi = 1;
+  double avg_snr = 2;
+}
+
+message TemporalBucket {
+  google.protobuf.Timestamp bucket_start = 1;
+  uint64 packets = 2;
+}
+
+message TopNode {
+  uint32 node_id = 1;
+  string display_name = 2;
+  uint64 packets = 3;
+}
+
+message DistributionEntry {
+  string key = 1;
+  uint64 count = 2;
+}
+
+message GetAnalyticsSummaryRequest {
+  string gateway_id = 1;
+  uint32 from_node_id = 2;
+  int32 hop_count = 3;
+}
+
+message GetAnalyticsSummaryResponse {
+  PacketSuccessStats packet_success = 1;
+  repeated NodeActivityBucket node_activity = 2;
+  SignalQualitySummary signal_quality = 3;
+  repeated TemporalBucket hourly_packets = 4;
+  repeated TopNode top_nodes = 5;
+  repeated DistributionEntry packet_type_distribution = 6;
+  repeated DistributionEntry gateway_distribution = 7;
+}
+
+message ListGatewayIdsRequest {}
+
+message ListGatewayIdsResponse {
+  repeated string gateway_ids = 1;
+}
+
+message SignalSample {
+  google.protobuf.Timestamp timestamp = 1;
+  uint32 from_node_id = 2;
+  uint32 to_node_id = 3;
+  string gateway_id = 4;
+  double snr = 5;
+  sint32 rssi = 6;
+  string portnum_name = 7;
+}
+
+message ListSignalSamplesRequest {
+  PacketFilter filter = 1;
+  uint32 limit = 2;
+}
+
+message ListSignalSamplesResponse {
+  repeated SignalSample samples = 1;
+}
+
+message TracerouteHopFilter {
+  uint64 packet_id = 1;
+  uint32 origin_node_id = 2;
+  uint32 destination_node_id = 3;
+  string gateway_id = 4;
+  uint32 request_id = 5;
+  string direction = 6;
+}
+
+message TracerouteHop {
+  uint64 id = 1;
+  uint64 packet_id = 2;
+  uint32 origin_node_id = 3;
+  uint32 destination_node_id = 4;
+  string gateway_id = 5;
+  string direction = 6;
+  uint32 hop_index = 7;
+  uint32 hop_node_id = 8;
+  double snr = 9;
+  google.protobuf.Timestamp received_at = 10;
+}
+
+message ListTracerouteHopsRequest {
+  TracerouteHopFilter filter = 1;
+  Pagination pagination = 2;
+}
+
+message ListTracerouteHopsResponse {
+  repeated TracerouteHop hops = 1;
+  string next_cursor = 2;
+}
+
+message TracerouteGraphRequest {
+  string gateway_id = 1;
+  google.protobuf.Timestamp start_time = 2;
+  google.protobuf.Timestamp end_time = 3;
+}
+
+message TracerouteGraphNode {
+  uint32 node_id = 1;
+  uint64 packet_count = 2;
+}
+
+message TracerouteGraphEdge {
+  uint32 from_node_id = 1;
+  uint32 to_node_id = 2;
+  double avg_snr = 3;
+  uint64 packet_count = 4;
+  uint32 max_hops = 5;
+}
+
+message TracerouteGraphResponse {
+  repeated TracerouteGraphNode nodes = 1;
+  repeated TracerouteGraphEdge edges = 2;
+}
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  bool ready = 1;
+  string message = 2;
+}
+
+message GetVersionRequest {}
+
+message VersionResponse {
+  string version = 1;
+  string git_sha = 2;
+  string build_date = 3;
+}
+
+service MeshpipeData {
+  rpc GetDashboardStats(DashboardRequest) returns (DashboardResponse);
+  rpc ListPackets(ListPacketsRequest) returns (ListPacketsResponse);
+  rpc StreamPackets(ListPacketsRequest) returns (stream Packet);
+  rpc ListNodes(ListNodesRequest) returns (ListNodesResponse);
+  rpc GetNode(GetNodeRequest) returns (GetNodeResponse);
+  rpc GetGatewayStats(GatewayFilter) returns (GatewayStatsResponse);
+  rpc ListLinks(ListLinksRequest) returns (ListLinksResponse);
+  rpc ListTraceroutes(ListTraceroutesRequest) returns (ListTraceroutesResponse);
+  rpc ListRangeTests(ListRangeTestsRequest) returns (ListRangeTestsResponse);
+  rpc ListStoreForward(ListStoreForwardRequest) returns (ListStoreForwardResponse);
+  rpc ListPaxcounter(ListPaxcounterRequest) returns (ListPaxcounterResponse);
+  rpc ListNodeLocations(ListNodeLocationsRequest) returns (ListNodeLocationsResponse);
+  rpc GetChatWindow(GetChatWindowRequest) returns (GetChatWindowResponse);
+  rpc GetNodeAnalytics(GetNodeAnalyticsRequest) returns (GetNodeAnalyticsResponse);
+  rpc GetGatewayOverview(GetGatewayOverviewRequest) returns (GetGatewayOverviewResponse);
+  rpc GetAnalyticsSummary(GetAnalyticsSummaryRequest) returns (GetAnalyticsSummaryResponse);
+  rpc ListGatewayIds(ListGatewayIdsRequest) returns (ListGatewayIdsResponse);
+  rpc ListSignalSamples(ListSignalSamplesRequest) returns (ListSignalSamplesResponse);
+  rpc ListTracerouteHops(ListTracerouteHopsRequest) returns (ListTracerouteHopsResponse);
+  rpc GetTracerouteGraph(TracerouteGraphRequest) returns (TracerouteGraphResponse);
+  rpc Healthz(HealthCheckRequest) returns (HealthCheckResponse);
+  rpc GetVersion(GetVersionRequest) returns (VersionResponse);
+}

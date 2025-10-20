@@ -133,20 +133,24 @@
     {# 
     Macro for displaying protocol badges with consistent styling
     #}
+    {% set normalized_protocol = (protocol_name or 'Unknown') %}
+
     {% set protocol_colors = {
         'TEXT_MESSAGE_APP': 'bg-primary',
-        'POSITION_APP': 'bg-success', 
+        'POSITION_APP': 'bg-success',
         'NODEINFO_APP': 'bg-info',
         'TELEMETRY_APP': 'bg-warning',
         'TRACEROUTE_APP': 'bg-danger',
         'ROUTING_APP': 'bg-secondary',
-        'ADMIN_APP': 'bg-dark'
+        'ADMIN_APP': 'bg-dark',
+        'Encrypted': 'bg-dark',
+        'Unknown (failed)': 'bg-secondary'
     } %}
-    
-    {% set badge_color = protocol_colors.get(protocol_name, 'bg-secondary') %}
-    
+
+    {% set badge_color = protocol_colors.get(normalized_protocol, 'bg-secondary') %}
+
     <span class="badge {{ badge_color }} {{ additional_classes }}">
-        {{ protocol_name or "Unknown" }}
+        {{ normalized_protocol }}
     </span>
 {% endmacro %}
 

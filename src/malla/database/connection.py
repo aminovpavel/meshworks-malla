@@ -10,6 +10,26 @@ from urllib.parse import quote
 # Prefer configuration loader over environment variables
 from malla.config import get_config
 
+
+def _normalize_epoch_sqlite(value):
+    """Normalize epoch values for SQLite (seconds/milliseconds/microseconds)."""
+
+    if value is None:
+        return None
+
+    try:
+        epoch = float(value)
+    except (TypeError, ValueError):
+        return None
+
+    abs_epoch = abs(epoch)
+    if abs_epoch >= 1_000_000_000_000_000:
+        epoch /= 1_000_000.0
+    elif abs_epoch >= 1_000_000_000_000:
+        epoch /= 1_000.0
+
+    return epoch
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,6 +77,7 @@ def get_db_connection() -> sqlite3.Connection:
                 db_path, timeout=30.0
             )  # 30 second timeout for busy database
         conn.row_factory = sqlite3.Row  # Enable column access by name
+        conn.create_function("normalize_epoch", 1, _normalize_epoch_sqlite)
 
         # Configure SQLite for better concurrency
         cursor = conn.cursor()

@@ -8,7 +8,8 @@ import time
 from datetime import UTC, datetime
 from typing import Any
 
-from ..database.repositories import LocationRepository
+from ..data_provider import get_data_provider
+from ..utils.time_utils import datetime_from_epoch
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,8 @@ class LocationService:
 
         # Get basic location data with filters
         repo_start = time.time()
-        locations = LocationRepository.get_node_locations(filters)
+        provider = get_data_provider()
+        locations = provider.locations.get_node_locations(filters)
         timing_breakdown["repository_call"] = time.time() - repo_start
         timing_breakdown["network_topology"] = 0.0
         timing_breakdown["neighbor_processing"] = 0.0
@@ -255,11 +257,19 @@ class LocationService:
             node_id = location["node_id"]
 
             # Calculate age in hours
-            age_hours = (current_time - location["timestamp"]) / 3600
+            timestamp_value = location.get("timestamp")
+            if timestamp_value is None:
+                continue
+
+            age_hours = (current_time - timestamp_value) / 3600
 
             # Format timestamp string
-            timestamp_dt = datetime.fromtimestamp(location["timestamp"])
-            timestamp_str = timestamp_dt.strftime("%Y-%m-%d %H:%M:%S")
+            timestamp_dt = datetime_from_epoch(timestamp_value)
+            timestamp_str = (
+                timestamp_dt.strftime("%Y-%m-%d %H:%M:%S")
+                if timestamp_dt is not None
+                else None
+            )
 
             # Get network data for this node
             network_node = network_nodes.get(node_id, {})
@@ -445,7 +455,8 @@ class LocationService:
             List of location history records with formatted timestamps
         """
         logger.info(f"Getting location history for node {node_id}, limit={limit}")
-        return LocationRepository.get_node_location_history(node_id, limit)
+        provider = get_data_provider()
+        return provider.locations.get_node_location_history(node_id, limit)
 
     @staticmethod
     def get_location_statistics(
@@ -462,7 +473,8 @@ class LocationService:
         try:
             # Use provided locations list if available to avoid duplicate heavy queries
             if locations is None:
-                locations = LocationRepository.get_node_locations()
+                provider = get_data_provider()
+                locations = provider.locations.get_node_locations()
 
             if not locations:
                 return {
@@ -1054,7 +1066,8 @@ class LocationService:
             location_map: dict[int, dict[str, Any]] = {}
             if node_ids_for_locations:
                 try:
-                    location_records = LocationRepository.get_node_locations(
+                    provider = get_data_provider()
+                    location_records = provider.locations.get_node_locations(
                         {"node_ids": list(node_ids_for_locations)}
                     )
                     location_map = {loc["node_id"]: loc for loc in location_records}

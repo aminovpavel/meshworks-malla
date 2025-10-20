@@ -5,6 +5,7 @@ Tests the business logic and service methods for traceroute analysis.
 """
 
 from datetime import datetime
+from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
 from src.malla.services.traceroute_service import TracerouteService
@@ -13,9 +14,15 @@ from src.malla.services.traceroute_service import TracerouteService
 class TestTracerouteServiceLongestLinks:
     """Test TracerouteService longest links analysis functionality."""
 
-    @patch("src.malla.services.traceroute_service.TracerouteRepository")
     @patch("src.malla.services.traceroute_service.TraceroutePacket")
-    def test_longest_links_analysis_basic(self, mock_traceroute_packet, mock_repo):
+    @patch("src.malla.services.traceroute_service.parse_traceroute_payload")
+    @patch("src.malla.services.traceroute_service.get_data_provider")
+    def test_longest_links_analysis_basic(
+        self,
+        mock_get_provider,
+        mock_parse_traceroute_payload,
+        mock_traceroute_packet,
+    ):
         """Test basic longest links analysis functionality."""
         # Mock repository response
         mock_packet_data = {
@@ -28,7 +35,24 @@ class TestTracerouteServiceLongestLinks:
             "processed_successfully": True,
         }
 
-        mock_repo.get_traceroute_packets.return_value = {"packets": [mock_packet_data]}
+        provider = SimpleNamespace()
+        provider.traceroutes = SimpleNamespace(
+            get_traceroute_packets=Mock(return_value={"packets": [mock_packet_data]})
+        )
+        provider.locations = SimpleNamespace(
+            get_node_location_history=Mock(
+                return_value=[
+                    {
+                        "latitude": 37.0,
+                        "longitude": -122.0,
+                        "altitude": 10,
+                        "timestamp": datetime.now().timestamp(),
+                    }
+                ]
+            )
+        )
+        mock_get_provider.return_value = provider
+        mock_parse_traceroute_payload.return_value = {"route_nodes": []}
 
         # Mock TraceroutePacket
         mock_packet = Mock()
@@ -81,11 +105,97 @@ class TestTracerouteServiceLongestLinks:
         assert direct_link["avg_snr"] == -5.0
         assert direct_link["traceroute_count"] == 1
 
-    @patch("src.malla.services.traceroute_service.TracerouteRepository")
-    def test_longest_links_analysis_empty_data(self, mock_repo):
+    @patch("src.malla.services.traceroute_service.TraceroutePacket")
+    @patch("src.malla.services.traceroute_service.parse_traceroute_payload")
+    @patch("src.malla.services.traceroute_service.get_data_provider")
+    def test_longest_links_analysis_multi_hop_path(
+        self,
+        mock_get_provider,
+        mock_parse_traceroute_payload,
+        mock_traceroute_packet,
+    ):
+        """Multi-hop traceroutes should contribute to indirect link analysis."""
+        now_ts = datetime.now().timestamp()
+        mock_packet_data = {
+            "id": 42,
+            "from_node_id": 111,
+            "to_node_id": 333,
+            "timestamp": now_ts,
+            "gateway_id": "!abcdef01",
+            "raw_payload": b"mock_payload",
+            "processed_successfully": True,
+        }
+
+        provider = SimpleNamespace()
+        provider.traceroutes = SimpleNamespace(
+            get_traceroute_packets=Mock(return_value={"packets": [mock_packet_data]})
+        )
+        provider.locations = SimpleNamespace(
+            get_node_location_history=Mock(
+                return_value=[
+                    {
+                        "latitude": 37.0,
+                        "longitude": -122.0,
+                        "altitude": 10,
+                        "timestamp": now_ts,
+                    }
+                ]
+            )
+        )
+        mock_get_provider.return_value = provider
+
+        mock_parse_traceroute_payload.return_value = {
+            "route_nodes": [222],
+            "route_back": [],
+        }
+
+        hop_a = Mock()
+        hop_a.from_node_id = 111
+        hop_a.to_node_id = 222
+        hop_a.from_node_name = "Node111"
+        hop_a.to_node_name = "Node222"
+        hop_a.distance_km = 5.5
+        hop_a.snr = -3.0
+
+        hop_b = Mock()
+        hop_b.from_node_id = 222
+        hop_b.to_node_id = 333
+        hop_b.from_node_name = "Node222"
+        hop_b.to_node_name = "Node333"
+        hop_b.distance_km = 6.5
+        hop_b.snr = -2.0
+
+        mock_packet = Mock()
+        mock_packet.get_rf_hops.return_value = [hop_a, hop_b]
+        mock_packet.calculate_hop_distances = Mock()
+
+        mock_traceroute_packet.return_value = mock_packet
+
+        result = TracerouteService.get_longest_links_analysis(
+            min_distance_km=1.0, min_snr=-10.0, max_results=10
+        )
+
+        assert result["summary"]["total_links"] >= 1
+        assert result["summary"]["longest_path"] == "12.00 km"
+        assert len(result["indirect_links"]) == 1
+        path_entry = result["indirect_links"][0]
+        assert path_entry["from_node_id"] == 111
+        assert path_entry["to_node_id"] == 333
+        assert path_entry["total_distance_km"] == 12.0
+        assert path_entry["hop_count"] == 2
+
+    @patch("src.malla.services.traceroute_service.get_data_provider")
+    def test_longest_links_analysis_empty_data(self, mock_get_provider):
         """Test analysis with no traceroute data."""
         # Mock empty repository response
-        mock_repo.get_traceroute_packets.return_value = {"packets": []}
+        provider = SimpleNamespace()
+        provider.traceroutes = SimpleNamespace(
+            get_traceroute_packets=Mock(return_value={"packets": []})
+        )
+        provider.locations = SimpleNamespace(
+            get_node_location_history=Mock(return_value=[])
+        )
+        mock_get_provider.return_value = provider
 
         # Call the method
         result = TracerouteService.get_longest_links_analysis()

@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from typing import Any
 
 from ..database.connection import get_db_connection
-from ..database.repositories import PacketRepository
+from ..data_provider import get_data_provider
 from ..utils.node_utils import get_bulk_node_names
 
 logger = logging.getLogger(__name__)
@@ -250,7 +250,8 @@ class GatewayService:
             List of gateway dictionaries with id and display_name
         """
         try:
-            gateway_ids = PacketRepository.get_unique_gateway_ids()
+            provider = get_data_provider()
+            gateway_ids = provider.packets.get_unique_gateway_ids()
 
             # Convert gateway IDs to node IDs for name lookup where possible
             gateway_node_ids = []
@@ -307,7 +308,8 @@ class GatewayService:
         """
         try:
             # Get comparison data from repository
-            comparison_data = PacketRepository.get_gateway_comparison_data(
+            provider = get_data_provider()
+            comparison_data = provider.packets.get_gateway_comparison_data(
                 gateway1_id, gateway2_id, filters
             )
 

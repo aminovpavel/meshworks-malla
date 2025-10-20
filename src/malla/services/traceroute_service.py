@@ -14,18 +14,27 @@ import time
 from datetime import datetime, timedelta
 from typing import Any, cast
 
-from ..database.repositories import (
-    LocationRepository,
-    TracerouteRepository,
+from ..data_provider import (
+    LocationRepository as _LegacyLocationRepository,
+    TracerouteRepository as _LegacyTracerouteRepository,
+    get_data_provider,
 )
 from ..models.traceroute import (
     RouteData,
+    TracerouteHop,
     TraceroutePacket,  # Use the correct TraceroutePacket class
 )
 from ..utils.node_utils import get_bulk_node_names
 from ..utils.traceroute_utils import parse_traceroute_payload
+from .location_service import MAX_LINK_DISTANCE_KM
 
 logger = logging.getLogger(__name__)
+
+# Backwards compatibility: unit tests patch repository attributes directly on
+# this module; keep aliases pointing to the legacy SQLite repositories until the
+# test suite migrates to the data provider abstraction.
+TracerouteRepository = _LegacyTracerouteRepository
+LocationRepository = _LegacyLocationRepository
 
 
 class TracerouteService:
@@ -72,8 +81,10 @@ class TracerouteService:
             # Convert page to offset
             offset = (page - 1) * per_page
 
+            provider = get_data_provider()
+
             # Get data from repository
-            result = TracerouteRepository.get_traceroute_packets(
+            result = provider.traceroutes.get_traceroute_packets(
                 limit=per_page, offset=offset, filters=filters, search=search
             )
 
@@ -131,8 +142,10 @@ class TracerouteService:
                 "end_time": end_time.timestamp(),
             }
 
+            provider = get_data_provider()
+
             # Get raw traceroute data
-            result = TracerouteRepository.get_traceroute_packets(
+            result = provider.traceroutes.get_traceroute_packets(
                 limit=1000,  # Large limit for analysis
                 filters=filters,
             )
@@ -241,7 +254,8 @@ class TracerouteService:
         try:
             # Get recent successful traceroutes
             filters = {"processed_successfully_only": True}
-            result = TracerouteRepository.get_traceroute_packets(
+            provider = get_data_provider()
+            result = provider.traceroutes.get_traceroute_packets(
                 limit=1000,  # Analyze more data
                 filters=filters,
             )
@@ -345,10 +359,12 @@ class TracerouteService:
             source_filters = {"from_node": node_id}
             dest_filters = {"to_node": node_id}
 
-            source_result = TracerouteRepository.get_traceroute_packets(
+            provider = get_data_provider()
+
+            source_result = provider.traceroutes.get_traceroute_packets(
                 limit=1000, filters=source_filters
             )
-            dest_result = TracerouteRepository.get_traceroute_packets(
+            dest_result = provider.traceroutes.get_traceroute_packets(
                 limit=1000, filters=dest_filters
             )
 
@@ -371,7 +387,7 @@ class TracerouteService:
             # Analyze route participation (as intermediate hop)
             # This requires checking all traceroutes for this node in route_nodes
             participation_count = 0
-            all_traceroutes = TracerouteRepository.get_traceroute_packets(
+            all_traceroutes = provider.traceroutes.get_traceroute_packets(
                 limit=1000, filters={"processed_successfully_only": True}
             )
 
@@ -443,7 +459,8 @@ class TracerouteService:
                 "processed_successfully_only": True,
             }
 
-            result = TracerouteRepository.get_traceroute_packets(
+            provider = get_data_provider()
+            result = provider.traceroutes.get_traceroute_packets(
                 # Fetch a larger sample of packets to cover busy networks
                 # 25k packets ≈ several hours of traffic on busy meshes but still manageable
                 limit=25000,
@@ -484,10 +501,11 @@ class TracerouteService:
             from ..utils import traceroute_utils as _tru  # Local import to avoid cycles
 
             # Build a dict: node_id -> list[location_dict] (DESC by timestamp)
+            provider = get_data_provider()
             location_history_cache: dict[int, list[dict[str, Any]]] = {}
             for node_id in unique_node_ids:
                 try:
-                    locations = LocationRepository.get_node_location_history(
+                    locations = provider.locations.get_node_location_history(
                         node_id, limit=50
                     )
                     if locations:
@@ -627,10 +645,11 @@ class TracerouteService:
                         else:
                             cache_hits += 1
 
-                        rf_hops = tr_packet.get_rf_hops()
-                        hops_processed += len(rf_hops)
+                        rf_hops_raw = tr_packet.get_rf_hops()
+                        hops_processed += len(rf_hops_raw)
 
-                        for hop in rf_hops:
+                        filtered_hops = []
+                        for hop in rf_hops_raw:
                             # Early filtering: skip hops that won't meet criteria
                             if (
                                 hop.snr is None
@@ -638,9 +657,12 @@ class TracerouteService:
                                 or hop.snr < min_snr
                                 or not hop.distance_km
                                 or hop.distance_km < min_distance_km
+                                or hop.distance_km > MAX_LINK_DISTANCE_KM
                                 or 4294967295 in [hop.from_node_id, hop.to_node_id]
                             ):
                                 continue
+
+                            filtered_hops.append(hop)
 
                             # Use a bidirectional key so A<->B == B<->A
                             key = tuple(sorted([hop.from_node_id, hop.to_node_id]))
@@ -696,14 +718,20 @@ class TracerouteService:
                                 f"TIMING: Processed {packets_processed} packets, last packet took {packet_duration:.3f}s"
                             )
 
+                        if not filtered_hops:
+                            continue
+
                         # --------------------------------------------------
                         # Indirect path processing (entire traceroute path)
                         # --------------------------------------------------
-                        if len(rf_hops) > 1:
+                        if len(filtered_hops) > 1:
                             # Calculate total distance of the full path
                             path_distance_km = sum(
-                                h.distance_km or 0.0 for h in rf_hops
+                                h.distance_km or 0.0 for h in filtered_hops
                             )
+
+                            if path_distance_km > MAX_LINK_DISTANCE_KM:
+                                continue
 
                             # Skip if it doesn't meet distance threshold
                             if path_distance_km < min_distance_km:
@@ -711,7 +739,7 @@ class TracerouteService:
                             else:
                                 # Average SNR across hops (ignore None values)
                                 valid_snrs = [
-                                    h.snr for h in rf_hops if h.snr is not None
+                                    h.snr for h in filtered_hops if h.snr is not None
                                 ]
                                 avg_path_snr = (
                                     (sum(valid_snrs) / len(valid_snrs))
@@ -723,24 +751,24 @@ class TracerouteService:
                                 if avg_path_snr is None or avg_path_snr < min_snr:
                                     pass  # SNR below threshold – ignore
                                 else:
-                                    from_node_id_path = rf_hops[0].from_node_id
-                                    to_node_id_path = rf_hops[-1].to_node_id
+                                    from_node_id_path = filtered_hops[0].from_node_id
+                                    to_node_id_path = filtered_hops[-1].to_node_id
 
                                     path_key = (from_node_id_path, to_node_id_path)
 
                                     if path_key not in path_stats:
                                         path_stats[path_key] = {
-                                            "from_node_name": rf_hops[0].from_node_name,
-                                            "to_node_name": rf_hops[-1].to_node_name,
+                                            "from_node_name": filtered_hops[0].from_node_name,
+                                            "to_node_name": filtered_hops[-1].to_node_name,
                                             "total_distance": 0.0,
                                             "total_snr": 0.0,
                                             "traceroute_count": 0,
                                             "hop_count_total": 0,
                                             "recent_packets": [],
                                             "route_preview": [
-                                                h.from_node_name for h in rf_hops
+                                                h.from_node_name for h in filtered_hops
                                             ]
-                                            + [rf_hops[-1].to_node_name],
+                                            + [filtered_hops[-1].to_node_name],
                                             "max_distance": 0.0,
                                         }
 
@@ -749,7 +777,7 @@ class TracerouteService:
                                     # Update aggregates
                                     pstats["traceroute_count"] += 1
                                     pstats["total_distance"] += path_distance_km
-                                    pstats["hop_count_total"] += len(rf_hops)
+                                    pstats["hop_count_total"] += len(filtered_hops)
                                     pstats["total_snr"] += avg_path_snr
                                     pstats["max_distance"] = max(
                                         pstats["max_distance"], path_distance_km
@@ -997,7 +1025,8 @@ class TracerouteService:
             filters["processed_successfully_only"] = True
 
             # Get traceroute data
-            result = TracerouteRepository.get_traceroute_packets(
+            provider = get_data_provider()
+            result = provider.traceroutes.get_traceroute_packets(
                 limit=limit_packets,
                 filters=filters,
                 group_packets=False,  # Disable grouping to avoid payload corruption
@@ -1029,8 +1058,31 @@ class TracerouteService:
                         packet_data=tr_data, resolve_names=True
                     )
 
+                    # Populate hop distance metadata so we can enforce distance limits
+                    try:
+                        tr_packet.calculate_hop_distances()
+                    except Exception as hop_err:
+                        logger.debug(
+                            "Failed to calculate hop distances for packet %s: %s",
+                            tr_packet.packet_id,
+                            hop_err,
+                        )
+
                     # Get RF hops (actual radio transmissions)
-                    rf_hops = tr_packet.get_rf_hops()
+                    rf_hops_raw = tr_packet.get_rf_hops()
+                    if not rf_hops_raw:
+                        continue
+
+                    # Enforce realistic RF-distance limits
+                    rf_hops: list[TracerouteHop] = []
+                    for hop in rf_hops_raw:
+                        if (
+                            hop.distance_km is not None
+                            and hop.distance_km > MAX_LINK_DISTANCE_KM
+                        ):
+                            continue
+                        rf_hops.append(hop)
+
                     if not rf_hops:
                         continue
 
@@ -1137,17 +1189,12 @@ class TracerouteService:
                     )
                     continue
 
-            # Get location data for all nodes in the graph
-            # Import here to avoid circular dependencies
-            from ..database.repositories import LocationRepository
-
             node_ids = list(nodes.keys())
             logger.info(f"Fetching location data for {len(node_ids)} nodes")
 
             try:
-                locations = LocationRepository.get_node_locations(
-                    {"node_ids": node_ids}
-                )
+                provider = get_data_provider()
+                locations = provider.locations.get_node_locations({"node_ids": node_ids})
                 location_map = {loc["node_id"]: loc for loc in locations}
                 logger.info(f"Found location data for {len(location_map)} nodes")
             except Exception as e:

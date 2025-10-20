@@ -3,7 +3,6 @@ include LICENSE
 include pyproject.toml
 include bin/malla-web
 include bin/malla-web-gunicorn
-include bin/malla-capture
 include uv.lock
 include .python-version
 include .envrc

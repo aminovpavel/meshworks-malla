@@ -17,7 +17,7 @@ from meshtastic import mesh_pb2, portnums_pb2
 logger = logging.getLogger(__name__)
 
 # Default Meshtastic channel key
-DEFAULT_CHANNEL_KEY = os.getenv("MESHTASTIC_KEY", "1PG7OiApB1nwvP+rz05pAQ==")
+DEFAULT_CHANNEL_KEY = os.getenv("MESHTASTIC_KEY", "")
 
 
 def derive_key_from_channel_name(channel_name: str, key_base64: str) -> bytes:
@@ -128,6 +128,10 @@ def try_decrypt_mesh_packet(
         # Check if packet has encrypted data
         if not hasattr(mesh_packet, "encrypted") or not mesh_packet.encrypted:
             logger.debug("No encrypted payload found in packet")
+            return False
+
+        if not key_base64 or not key_base64.strip():
+            logger.debug("Decryption skipped: default channel key is not configured")
             return False
 
         encrypted_payload = mesh_packet.encrypted

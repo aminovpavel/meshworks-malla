@@ -21,35 +21,37 @@ services:
       - MALLA_NAME=${MALLA_NAME:-Malla}
       - MALLA_SECRET_KEY=${MALLA_SECRET_KEY:-dev-secret-key-change-in-production}
       - MALLA_DEBUG=${MALLA_DEBUG:-false}
+      - MALLA_STATIC_VERSION=${MALLA_STATIC_VERSION:-dev}
     volumes:
       - malla_data:/app/data
       # Optional: mount your own config file (uncomment if you have one)
       # - ./config.yaml:/app/config.yaml:ro
     restart: unless-stopped
     depends_on:
-      - malla-capture
+      - meshpipe
 
-  malla-capture:
-    # Use pre-built image by default, override with 'build: .' for development
-    image: ${MALLA_IMAGE:-ghcr.io/zenitram/malla:latest}
-    # Uncomment the following line for local development:
-    # build: .
-    command: ["/app/.venv/bin/malla-capture"]
-    environment:
-      - MALLA_DATABASE_FILE=/app/data/meshtastic_history.db
-      # MQTT Configuration - set these in your .env file
-      - MALLA_MQTT_BROKER_ADDRESS=${MALLA_MQTT_BROKER_ADDRESS}
-      - MALLA_MQTT_PORT=${MALLA_MQTT_PORT:-1883}
-      - MALLA_MQTT_USERNAME=${MALLA_MQTT_USERNAME:-}
-      - MALLA_MQTT_PASSWORD=${MALLA_MQTT_PASSWORD:-}
-      - MALLA_MQTT_TOPIC_PREFIX=${MALLA_MQTT_TOPIC_PREFIX:-msh}
-      - MALLA_MQTT_TOPIC_SUFFIX=${MALLA_MQTT_TOPIC_SUFFIX:-/+/+/+/#}
-      - MALLA_DEFAULT_CHANNEL_KEY=${MALLA_DEFAULT_CHANNEL_KEY:-}
-    volumes:
-      - malla_data:/app/data
-      # Optional: mount your own config file (uncomment if you have one)
-      # - ./config.yaml:/app/config.yaml:ro
+  meshpipe:
+    image: ${MESHPIPE_IMAGE:-ghcr.io/aminovpavel/meshpipe-go:latest}
+    container_name: ${MESHPIPE_CONTAINER_NAME:-meshpipe}
     restart: unless-stopped
+    environment:
+      - MESHPIPE_DATABASE_FILE=${MESHPIPE_DATABASE_FILE:-/data/meshtastic_history.db}
+      - MESHPIPE_MQTT_BROKER_ADDRESS=${MESHPIPE_MQTT_BROKER_ADDRESS}
+      - MESHPIPE_MQTT_PORT=${MESHPIPE_MQTT_PORT:-1883}
+      - MESHPIPE_MQTT_USERNAME=${MESHPIPE_MQTT_USERNAME:-}
+      - MESHPIPE_MQTT_PASSWORD=${MESHPIPE_MQTT_PASSWORD:-}
+      - MESHPIPE_MQTT_TOPIC_PREFIX=${MESHPIPE_MQTT_TOPIC_PREFIX:-msh}
+      - MESHPIPE_MQTT_TOPIC_SUFFIX=${MESHPIPE_MQTT_TOPIC_SUFFIX:-/+/+/+/#}
+      - MESHPIPE_DEFAULT_CHANNEL_KEY=${MESHPIPE_DEFAULT_CHANNEL_KEY:-}
+      - MESHPIPE_CAPTURE_STORE_RAW=${MESHPIPE_CAPTURE_STORE_RAW:-true}
+      - MESHPIPE_OBSERVABILITY_ADDRESS=${MESHPIPE_OBSERVABILITY_ADDRESS:-:2112}
+    command: ["meshpipe"]
+    volumes:
+      - malla_data:/data
+      # Optional: mount your own config (uncomment if you have one)
+      # - ./meshpipe.yaml:/config/config.yaml:ro
+    ports:
+      - "${MESHPIPE_METRICS_PORT:-2112}:2112"
 
 volumes:
   malla_data:

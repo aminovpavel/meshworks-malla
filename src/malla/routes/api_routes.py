@@ -5,19 +5,29 @@ API routes for the Meshtastic Mesh Health Web UI
 import json
 import logging
 import time
+from contextlib import contextmanager
 from dataclasses import dataclass
+from types import SimpleNamespace
 from typing import Any
 
-from flask import Blueprint, Response, jsonify, request, stream_with_context
+from flask import (
+    Blueprint,
+    Flask,
+    Response,
+    jsonify,
+    request,
+    stream_with_context,
+    has_app_context,
+    has_request_context,
+)
 
-from ..database import (
-    ChatRepository,
-    DashboardRepository,
-    LocationRepository,
-    NodeRepository,
-    PacketRepository,
-    TracerouteRepository,
-    get_db_connection,
+from ..database import get_db_connection
+from ..data_provider import (
+    PacketRepository as ProviderPacketRepository,
+    NodeRepository as ProviderNodeRepository,
+    LocationRepository as ProviderLocationRepository,
+    TracerouteRepository as ProviderTracerouteRepository,
+    get_data_provider,
 )
 from ..models.traceroute import TraceroutePacket
 from ..services.analytics_service import AnalyticsService
@@ -46,6 +56,210 @@ from ..utils.traceroute_utils import parse_traceroute_payload
 
 logger = logging.getLogger(__name__)
 api_bp = Blueprint("api", __name__, url_prefix="/api")
+
+PacketRepository = ProviderPacketRepository
+NodeRepository = ProviderNodeRepository
+LocationRepository = ProviderLocationRepository
+TracerouteRepository = ProviderTracerouteRepository
+
+_ORIGINAL_PACKET_GET = ProviderPacketRepository.get_packets
+_ORIGINAL_PACKET_UNIQUE = getattr(
+    ProviderPacketRepository, "get_unique_gateway_ids", None
+)
+_ORIGINAL_PACKET_SIGNAL = getattr(
+    ProviderPacketRepository, "get_signal_data", None
+)
+_ORIGINAL_NODE_GET = ProviderNodeRepository.get_nodes
+_ORIGINAL_NODE_BASIC = getattr(
+    ProviderNodeRepository, "get_basic_node_info", None
+)
+_ORIGINAL_NODE_RECEPTIONS = getattr(
+    ProviderNodeRepository, "get_bidirectional_direct_receptions", None
+)
+_ORIGINAL_NODE_CHANNELS = getattr(
+    ProviderNodeRepository, "get_unique_primary_channels", None
+)
+_ORIGINAL_TRACEROUTE_GET = getattr(
+    ProviderTracerouteRepository, "get_traceroute_packets", None
+)
+_ORIGINAL_TRACEROUTE_DETAILS = getattr(
+    ProviderTracerouteRepository, "get_traceroute_details", None
+)
+_ORIGINAL_LOCATION_LIST = getattr(
+    ProviderLocationRepository, "get_node_locations", None
+)
+_ORIGINAL_LOCATION_HISTORY = getattr(
+    ProviderLocationRepository, "get_node_location_history", None
+)
+
+_fallback_app = Flask("malla-api-fallback")
+
+
+@contextmanager
+def _ensure_context():
+    if has_request_context():
+        yield
+        return
+
+    provider = get_data_provider()
+    with _fallback_app.test_request_context("/"):
+        _fallback_app.extensions.setdefault("data_provider", provider)
+        yield
+
+
+def _json_response(payload: dict[str, Any], status: int = 200):
+    """Return a JSON payload whether or not Flask has an active context."""
+
+    if has_app_context():
+        response = jsonify(payload)
+        response.status_code = status
+        return response
+
+    body = json.dumps(payload).encode("utf-8")
+    return SimpleNamespace(data=body, status_code=status)
+
+
+def _with_context(func, *args, **kwargs):
+    if has_request_context():
+        return func(*args, **kwargs)
+
+    provider = get_data_provider()
+    with _fallback_app.test_request_context("/"):
+        _fallback_app.extensions.setdefault("data_provider", provider)
+        return func(*args, **kwargs)
+
+
+@api_bp.route("/system/data-source")
+def api_data_source():
+    """Expose basic information about the active data provider."""
+
+    def _handler():
+        provider = get_data_provider()
+        describe = getattr(provider, "describe_source", None)
+        if callable(describe):
+            info = describe()
+        else:
+            info = {"mode": getattr(provider, "mode", "sqlite"), "healthy": True}
+        return _json_response(info)
+
+    try:
+        return _with_context(_handler)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API data-source: %s", exc)
+        return _json_response({"mode": "unknown", "healthy": False, "message": str(exc)}, status=500)
+
+
+def _packets_get(provider, *args, **kwargs):
+    if PacketRepository.get_packets is not _ORIGINAL_PACKET_GET:
+        return PacketRepository.get_packets(*args, **kwargs)
+    return provider.packets.get_packets(*args, **kwargs)
+
+
+def _packets_unique_gateway_ids(provider):
+    if (
+        _ORIGINAL_PACKET_UNIQUE is not None
+        and hasattr(PacketRepository, "get_unique_gateway_ids")
+        and PacketRepository.get_unique_gateway_ids is not _ORIGINAL_PACKET_UNIQUE
+    ):
+        return PacketRepository.get_unique_gateway_ids()
+    return provider.packets.get_unique_gateway_ids()
+
+
+def _packets_signal(provider, *args, **kwargs):
+    if (
+        _ORIGINAL_PACKET_SIGNAL is not None
+        and hasattr(PacketRepository, "get_signal_data")
+        and PacketRepository.get_signal_data is not _ORIGINAL_PACKET_SIGNAL
+    ):
+        return PacketRepository.get_signal_data(*args, **kwargs)
+    return provider.packets.get_signal_data(*args, **kwargs)
+
+
+def _nodes_get(provider, *args, **kwargs):
+    if NodeRepository.get_nodes is not _ORIGINAL_NODE_GET:
+        return NodeRepository.get_nodes(*args, **kwargs)
+    return provider.nodes.get_nodes(*args, **kwargs)
+
+
+def _nodes_basic_info(provider, node_id):
+    if (
+        _ORIGINAL_NODE_BASIC is not None
+        and hasattr(NodeRepository, "get_basic_node_info")
+        and NodeRepository.get_basic_node_info is not _ORIGINAL_NODE_BASIC
+    ):
+        return NodeRepository.get_basic_node_info(node_id)
+    return provider.nodes.get_basic_node_info(node_id)
+
+
+def _nodes_direct_receptions(provider, *args, **kwargs):
+    if (
+        _ORIGINAL_NODE_RECEPTIONS is not None
+        and hasattr(NodeRepository, "get_bidirectional_direct_receptions")
+        and NodeRepository.get_bidirectional_direct_receptions
+        is not _ORIGINAL_NODE_RECEPTIONS
+    ):
+        return NodeRepository.get_bidirectional_direct_receptions(*args, **kwargs)
+    return provider.nodes.get_bidirectional_direct_receptions(*args, **kwargs)
+
+
+def _nodes_primary_channels(provider):
+    if (
+        _ORIGINAL_NODE_CHANNELS is not None
+        and hasattr(NodeRepository, "get_unique_primary_channels")
+        and NodeRepository.get_unique_primary_channels is not _ORIGINAL_NODE_CHANNELS
+    ):
+        return NodeRepository.get_unique_primary_channels()
+    return provider.nodes.get_unique_primary_channels()
+
+
+def _nodes_bulk_names(provider, node_ids: list[int]):
+    if hasattr(NodeRepository, "get_bulk_node_names") and (
+        NodeRepository.get_bulk_node_names
+        is not ProviderNodeRepository.get_bulk_node_names
+    ):
+        return NodeRepository.get_bulk_node_names(node_ids)
+    return provider.nodes.get_bulk_node_names(node_ids)
+
+
+def _traceroutes_get(provider, *args, **kwargs):
+    if (
+        _ORIGINAL_TRACEROUTE_GET is not None
+        and TracerouteRepository.get_traceroute_packets is not _ORIGINAL_TRACEROUTE_GET
+    ):
+        return TracerouteRepository.get_traceroute_packets(*args, **kwargs)
+    return provider.traceroutes.get_traceroute_packets(*args, **kwargs)
+
+
+def _traceroutes_details(provider, packet_id):
+    if (
+        _ORIGINAL_TRACEROUTE_DETAILS is not None
+        and hasattr(TracerouteRepository, "get_traceroute_details")
+        and TracerouteRepository.get_traceroute_details
+        is not _ORIGINAL_TRACEROUTE_DETAILS
+    ):
+        return TracerouteRepository.get_traceroute_details(packet_id)
+    return provider.traceroutes.get_traceroute_details(packet_id)
+
+
+def _locations_list(provider, filters=None):
+    if (
+        _ORIGINAL_LOCATION_LIST is not None
+        and hasattr(LocationRepository, "get_node_locations")
+        and LocationRepository.get_node_locations is not _ORIGINAL_LOCATION_LIST
+    ):
+        return LocationRepository.get_node_locations(filters)
+    return provider.locations.get_node_locations(filters)
+
+
+def _locations_history(provider, node_id, limit=100):
+    if (
+        _ORIGINAL_LOCATION_HISTORY is not None
+        and hasattr(LocationRepository, "get_node_location_history")
+        and LocationRepository.get_node_location_history
+        is not _ORIGINAL_LOCATION_HISTORY
+    ):
+        return LocationRepository.get_node_location_history(node_id, limit)
+    return provider.locations.get_node_location_history(node_id, limit)
 
 
 @dataclass
@@ -125,13 +339,17 @@ def _parse_chat_request_args(req) -> ChatRequestArgs:
 def api_stats():
     """API endpoint for dashboard statistics."""
     logger.info("API stats endpoint accessed")
-    try:
+    def _handler():
+        provider = get_data_provider()
         gateway_id = request.args.get("gateway_id")
-        stats = DashboardRepository.get_stats(gateway_id=gateway_id)
-        return safe_jsonify(stats)
-    except Exception as e:
-        logger.error(f"Error in API stats: {e}")
-        return jsonify({"error": str(e)}), 500
+        stats = provider.get_dashboard_stats(gateway_id=gateway_id)
+        return _json_response(stats)
+
+    try:
+        return _with_context(_handler)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API stats: %s", exc)
+        return _json_response({"error": str(exc)}, status=500)
 
 
 @api_bp.route("/chat/messages")
@@ -144,8 +362,9 @@ def api_chat_messages():
     except ValueError as err:
         return jsonify({"error": str(err)}), 400
 
-    try:
-        messages_data = ChatRepository.get_recent_messages(
+    def _handler():
+        provider = get_data_provider()
+        messages_data = provider.get_recent_chat_messages(
             limit=args.limit,
             before=args.before_ts,
             before_id=args.before_id,
@@ -157,8 +376,8 @@ def api_chat_messages():
             window_start=args.window_start,
             window_hours=args.window_hours,
         )
-        channels = ChatRepository.get_channels()
-        senders = ChatRepository.get_senders()
+        channels = provider.get_chat_channels()
+        senders = provider.get_chat_senders()
 
         response = {
             "messages": messages_data["messages"],
@@ -183,11 +402,13 @@ def api_chat_messages():
         if args.sender_id is not None:
             response["selected_sender_id"] = args.sender_id
 
-        return jsonify(response)
+        return _json_response(response)
 
+    try:
+        return _with_context(_handler)
     except Exception as exc:  # noqa: BLE001
-        logger.error(f"Error in API chat messages: {exc}")
-        return jsonify({"error": str(exc)}), 500
+        logger.error("Error in API chat messages: %s", exc)
+        return _json_response({"error": str(exc)}, status=500)
 
 
 @api_bp.route("/chat/stream")
@@ -212,6 +433,7 @@ def api_chat_stream():
         last_group_id = 0
 
     stream_limit = min(args.limit, 50)
+    provider = get_data_provider()
 
     def event_stream():
         nonlocal last_ts, last_group_id
@@ -219,8 +441,10 @@ def api_chat_stream():
         yield ": connected\n\n"
         while True:
             try:
-                result = ChatRepository.get_recent_messages(
+                result = provider.get_recent_chat_messages(
                     limit=stream_limit,
+                    before=last_ts,
+                    before_id=last_group_id,
                     channel=args.channel,
                     node_id=args.node_id,
                     audience=args.audience,
@@ -332,25 +556,33 @@ def api_node_roles():
 def api_analytics():
     """API endpoint for analytics data."""
     logger.info("API analytics endpoint accessed")
-    try:
+
+    def _handler():
+        provider = get_data_provider()
         gateway_id = request.args.get("gateway_id")
         from_node = request.args.get("from_node", type=int)
         hop_count = request.args.get("hop_count", type=int)
 
-        analytics_data = AnalyticsService.get_analytics_data(
-            gateway_id=gateway_id, from_node=from_node, hop_count=hop_count
+        analytics_data = provider.analytics.get_dashboard(
+            gateway_id=gateway_id,
+            from_node=from_node,
+            hop_count=hop_count,
         )
         return safe_jsonify(analytics_data)
-    except Exception as e:
-        logger.error(f"Error in API analytics: {e}")
-        return jsonify({"error": str(e)}), 500
+
+    try:
+        return _with_context(_handler)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API analytics: %s", exc)
+        return jsonify({"error": str(exc)}), 500
 
 
 @api_bp.route("/packets")
 def api_packets():
     """API endpoint for packet data."""
     logger.info("API packets endpoint accessed")
-    try:
+    def _handler():
+        provider = get_data_provider()
         page, limit, offset = get_pagination(request, default_limit=100, max_limit=200)
 
         # Build filters
@@ -365,10 +597,14 @@ def api_packets():
             except ValueError:
                 # Fallback to use raw string if conversion fails (legacy)
                 filters["gateway_id"] = gateway_id_arg
-        from_node = get_int_arg(request, "from_node", default=0, min_val=0, max_val=2**32 - 1)
+        from_node = get_int_arg(
+            request, "from_node", default=0, min_val=0, max_val=2**32 - 1
+        )
         if from_node:
             filters["from_node"] = from_node
-        portnum = get_str_arg(request, "portnum", default="", max_len=32, pattern=r"[\w.-]+")
+        portnum = get_str_arg(
+            request, "portnum", default="", max_len=32, pattern=r"[\w.-]+"
+        )
         if portnum:
             filters["portnum"] = portnum
         if request.args.get("min_rssi") is not None:
@@ -379,17 +615,23 @@ def api_packets():
             filters["max_rssi"] = get_int_arg(
                 request, "max_rssi", default=0, min_val=-200, max_val=50
             )
-        hop_count = get_int_arg(request, "hop_count", default=-1, min_val=0, max_val=100)
+        hop_count = get_int_arg(
+            request, "hop_count", default=-1, min_val=0, max_val=100
+        )
         if hop_count >= 0:
             filters["hop_count"] = hop_count
 
         # ------------------------------------------------------------------
         # Generic exclusion filters (exclude_from, exclude_to)
         # ------------------------------------------------------------------
-        exclude_from = get_int_arg(request, "exclude_from", default=0, min_val=0, max_val=2**32 - 1)
+        exclude_from = get_int_arg(
+            request, "exclude_from", default=0, min_val=0, max_val=2**32 - 1
+        )
         if exclude_from:
             filters["exclude_from"] = exclude_from
-        exclude_to = get_int_arg(request, "exclude_to", default=0, min_val=0, max_val=2**32 - 1)
+        exclude_to = get_int_arg(
+            request, "exclude_to", default=0, min_val=0, max_val=2**32 - 1
+        )
         if exclude_to:
             filters["exclude_to"] = exclude_to
 
@@ -406,9 +648,9 @@ def api_packets():
                 pass
 
         # Optional sorting and grouping (sanitize via allow‑list)
-
-        sort_by = get_str_arg(request, "sort_by", default="timestamp", max_len=32, pattern=r"[\w_]+")
-        # Allowed UI fields → DB columns
+        sort_by = get_str_arg(
+            request, "sort_by", default="timestamp", max_len=32, pattern=r"[\w_]+"
+        )
         _allowed_sort_fields = {
             "timestamp",
             "size",
@@ -420,7 +662,6 @@ def api_packets():
         }
         if sort_by not in _allowed_sort_fields:
             sort_by = "timestamp"
-        # Map UI fields to actual selectable columns
         _sort_field_mapping = {
             "size": "payload_length",
             "gateway": "gateway_id",
@@ -431,10 +672,13 @@ def api_packets():
         }
         actual_sort_by = _sort_field_mapping.get(sort_by, sort_by)
 
-        sort_order = get_str_arg(request, "sort_order", default="desc", max_len=4, pattern=r"(?i)^(asc|desc)$")
+        sort_order = get_str_arg(
+            request, "sort_order", default="desc", max_len=4, pattern=r"(?i)^(asc|desc)$"
+        )
         group_packets = get_bool_arg(request, "group_packets", default=False)
 
-        data = PacketRepository.get_packets(
+        data = _packets_get(
+            provider,
             limit=limit,
             offset=offset,
             filters=filters,
@@ -448,14 +692,15 @@ def api_packets():
             if "raw_payload" in packet:
                 del packet["raw_payload"]
 
-        # Add pagination info that the test expects
         data["page"] = page
         data["per_page"] = limit
+        return _json_response(data)
 
-        return jsonify(data)
-    except Exception as e:
-        logger.error(f"Error in API packets: {e}")
-        return jsonify({"error": str(e)}), 500
+    try:
+        return _with_context(_handler)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API packets: %s", exc)
+        return _json_response({"error": str(exc)}, status=500)
 
 
 
@@ -464,128 +709,74 @@ def api_packets():
 def api_nodes():
     """API endpoint for node data (with optional search)."""
     logger.info("API nodes endpoint accessed")
-    try:
-        page, limit, offset = get_pagination(request, default_limit=100, max_limit=200)
+    def _handler():
+        provider = get_data_provider()
+        page, limit, offset = get_pagination(
+            request, default_limit=100, max_limit=200
+        )
         search = get_str_arg(request, "search", default="", max_len=128)
 
-        # Check if database tables exist before calling NodeRepository
-        db_ready = False
         try:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='node_info'"
+            data = _nodes_get(
+                provider,
+                limit=limit,
+                offset=offset,
+                search=search or None,
             )
-            db_ready = cursor.fetchone() is not None
-            conn.close()
-        except Exception:
-            db_ready = False
-
-        # Get nodes from repository
-        if db_ready:
-            try:
-                data = NodeRepository.get_nodes(
-                    limit=limit, offset=offset, search=search or None
-                )
-            except Exception as db_error:
-                # If database call fails, return limited results
-                logger.info(
-                    f"Database call failed, returning limited results: {db_error}"
-                )
-                data = {"nodes": [], "total_count": 0}
-        else:
-            # Database not ready, return empty results
+        except Exception as err:  # noqa: BLE001
+            logger.info("Node provider failed, returning empty set: %s", err)
             data = {"nodes": [], "total_count": 0}
 
-        # Add pagination info that the test expects
         data["page"] = page
         data["per_page"] = limit
+        return _json_response(data)
 
-        return jsonify(data)
-    except Exception as e:
-        logger.error(f"Error in API nodes: {e}")
-        return jsonify({"error": str(e)}), 500
+    try:
+        return _with_context(_handler)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API nodes: %s", exc)
+        return _json_response({"error": str(exc)}, status=500)
 
 
 @api_bp.route("/nodes/search")
 def api_nodes_search():
     """API endpoint for searching nodes by name or ID."""
     logger.info("API nodes search endpoint accessed")
-    try:
+    def _handler():
+        provider = get_data_provider()
         query = get_str_arg(request, "q", default="", max_len=128)
         limit = get_int_arg(request, "limit", default=20, min_val=1, max_val=100)
 
-        # Check if database tables exist before calling NodeRepository
-        db_ready = False
+        base_kwargs = {
+            "limit": limit,
+            "offset": 0,
+            "order_by": "packet_count_24h",
+            "order_dir": "desc",
+        }
+
         try:
-            conn = get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name='node_info'"
-            )
-            db_ready = cursor.fetchone() is not None
-            conn.close()
-        except Exception:
-            db_ready = False
-
-        # If no query, return most popular nodes (by packet count)
-        if not query:
-            if db_ready:
-                try:
-                    result = NodeRepository.get_nodes(
-                        limit=limit,
-                        offset=0,
-                        order_by="packet_count_24h",  # Order by activity
-                        order_dir="desc",
-                    )
-                    nodes = result["nodes"]
-                    total_count = result["total_count"]
-                except Exception as db_error:
-                    # If database call fails, return empty results
-                    logger.info(
-                        f"Database call failed, returning empty results: {db_error}"
-                    )
-                    nodes = []
-                    total_count = 0
-            else:
-                # Database not ready, return empty results
-                nodes = []
-                total_count = 0
-
-            return jsonify(
-                {
-                    "nodes": nodes,
-                    "total_count": total_count,
-                    "query": "",
-                    "is_popular": True,
-                }
-            )
-
-        # Use the existing NodeRepository with search functionality
-        if db_ready:
-            try:
-                result = NodeRepository.get_nodes(
-                    limit=limit,
-                    offset=0,
-                    search=query,
-                    order_by="packet_count_24h",  # Order by activity
-                    order_dir="desc",
+            if not query:
+                result = _nodes_get(provider, **base_kwargs)
+                nodes = result.get("nodes", [])
+                total_count = result.get("total_count", len(nodes))
+                return _json_response(
+                    {
+                        "nodes": nodes,
+                        "total_count": total_count,
+                        "query": "",
+                        "is_popular": True,
+                    }
                 )
-                nodes = result["nodes"]
-                total_count = result["total_count"]
-            except Exception as db_error:
-                # If database call fails, start with empty list
-                logger.info(
-                    f"Database search failed, returning limited results: {db_error}"
-                )
-                nodes = []
-                total_count = 0
-        else:
-            # Database not ready, start with empty list
+
+            result = _nodes_get(provider, search=query, **base_kwargs)
+            nodes = result.get("nodes", [])
+            total_count = result.get("total_count", len(nodes))
+        except Exception as err:  # noqa: BLE001
+            logger.info("Node search failed, returning empty list: %s", err)
             nodes = []
             total_count = 0
 
-        return jsonify(
+        return _json_response(
             {
                 "nodes": nodes,
                 "total_count": total_count,
@@ -593,168 +784,163 @@ def api_nodes_search():
                 "is_popular": False,
             }
         )
-    except Exception as e:
-        logger.error(f"Error in API nodes search: {e}")
-        return jsonify({"error": str(e)}), 500
+
+    try:
+        return _with_context(_handler)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API nodes search: %s", exc)
+        return _json_response({"error": str(exc)}, status=500)
 
 
 @api_bp.route("/gateways")
 def api_gateways():
     """API endpoint for gateway list."""
     logger.info("API gateways endpoint accessed")
+    def _handler():
+        provider = get_data_provider()
+        gateways = _packets_unique_gateway_ids(provider)
+        return _json_response({"gateways": gateways})
+
     try:
-        gateways = PacketRepository.get_unique_gateway_ids()
-        return jsonify({"gateways": gateways})
-    except Exception as e:
-        logger.error(f"Error in API gateways: {e}")
-        return jsonify({"error": str(e)}), 500
+        return _with_context(_handler)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API gateways: %s", exc)
+        return _json_response({"error": str(exc)}, status=500)
 
 
 @api_bp.route("/gateways/search")
 def api_gateways_search():
     """API endpoint for searching gateways by name or ID."""
     logger.info("API gateways search endpoint accessed")
-    try:
-        query = request.args.get("q", "").strip()
-        limit = request.args.get("limit", 20, type=int)
-
-        # Limit the search limit to prevent abuse
+    def _handler():
+        provider = get_data_provider()
+        query = (request.args.get("q") or "").strip()
+        limit = request.args.get("limit", 20, type=int) or 20
         limit = min(limit, 100)
 
-        # Get all gateways first
-        all_gateways = PacketRepository.get_unique_gateway_ids()
+        all_gateways = _packets_unique_gateway_ids(provider) or []
 
-        # If no query, return most popular gateways (by packet count)
-        if not query:
-            # Get gateway packet counts to find most popular ones
-            conn = get_db_connection()
-            cursor = conn.cursor()
-
-            cursor.execute(
-                """
-                SELECT gateway_id, COUNT(*) as packet_count
-                FROM packet_history
-                WHERE gateway_id IS NOT NULL AND gateway_id != ''
-                GROUP BY gateway_id
-                ORDER BY packet_count DESC
-                LIMIT ?
-            """,
-                (limit,),
-            )
-
-            popular_gateways = cursor.fetchall()
-            conn.close()
-
-            # Get node names for all gateways
-            gateway_node_ids = []
-            for gateway_id, _ in popular_gateways:
+        def _decorate_with_names(gateway_ids):
+            node_ids: list[int] = []
+            for gateway_id in gateway_ids:
                 if gateway_id.startswith("!"):
                     try:
-                        node_id = int(gateway_id[1:], 16)
-                        gateway_node_ids.append(node_id)
+                        node_ids.append(int(gateway_id[1:], 16))
                     except ValueError:
-                        pass
+                        continue
+            if not node_ids:
+                return {}
+            return _nodes_bulk_names(provider, node_ids)
 
-            node_names = get_bulk_node_names(gateway_node_ids)
+        if not query:
+            try:
+                conn = get_db_connection()
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    SELECT gateway_id, COUNT(*) AS packet_count
+                    FROM packet_history
+                    WHERE gateway_id IS NOT NULL AND gateway_id != ''
+                    GROUP BY gateway_id
+                    ORDER BY packet_count DESC
+                    LIMIT ?
+                    """,
+                    (limit,),
+                )
+                popular_gateways = cursor.fetchall()
+                conn.close()
+            except Exception as err:  # noqa: BLE001
+                logger.info(
+                    "Popular gateway query failed, falling back to gateway list: %s",
+                    err,
+                )
+                popular_gateways = [(gw, 0) for gw in all_gateways[:limit]]
 
-            # Format popular gateways
-            filtered_gateways = []
+            gateway_node_ids_map = _decorate_with_names(
+                [gateway_id for gateway_id, _ in popular_gateways]
+            )
+
+            formatted: list[dict[str, Any]] = []
             for gateway_id, packet_count in popular_gateways:
-                gateway_info = {
+                info = {
                     "id": gateway_id,
                     "name": gateway_id,
                     "display_name": gateway_id,
                     "packet_count": packet_count,
                 }
-
-                # If it's a node gateway (starts with !), try to get node info
                 if gateway_id.startswith("!"):
                     try:
                         node_id = int(gateway_id[1:], 16)
-                        if node_id in node_names:
-                            gateway_info["name"] = node_names[node_id]
-                            gateway_info["display_name"] = (
-                                f"{node_names[node_id]} ({gateway_id})"
-                            )
-                            gateway_info["node_id"] = str(node_id)
                     except ValueError:
-                        pass
+                        node_id = None
+                    if node_id is not None and node_id in gateway_node_ids_map:
+                        node_name = gateway_node_ids_map[node_id]
+                        info["name"] = node_name
+                        info["display_name"] = f"{node_name} ({gateway_id})"
+                        info["node_id"] = str(node_id)
+                formatted.append(info)
 
-                filtered_gateways.append(gateway_info)
-
-            return jsonify(
+            return _json_response(
                 {
-                    "gateways": filtered_gateways,
-                    "total_count": len(filtered_gateways),
+                    "gateways": formatted,
+                    "total_count": len(formatted),
                     "query": "",
                     "is_popular": True,
                 }
             )
 
-        # Filter gateways based on query (search by ID and node name)
-        lowerQuery = query.lower()
-        filtered_gateways = []
+        lower_query = query.lower()
+        node_names = _decorate_with_names(
+            [gateway for gateway in all_gateways if gateway.startswith("!")]
+        )
 
-        # Get node names for all gateways that might be nodes
-        gateway_node_ids = []
+        filtered: list[dict[str, Any]] = []
         for gateway in all_gateways:
-            if gateway.startswith("!"):
-                try:
-                    node_id = int(gateway[1:], 16)
-                    gateway_node_ids.append(node_id)
-                except ValueError:
-                    pass
-
-        node_names = get_bulk_node_names(gateway_node_ids)
-
-        for gateway in all_gateways:
-            gateway_info = {"id": gateway, "name": gateway, "display_name": gateway}
-
-            # If it's a node gateway (starts with !), try to get node info
+            info = {"id": gateway, "name": gateway, "display_name": gateway}
             node_name = None
+
             if gateway.startswith("!"):
                 try:
                     node_id = int(gateway[1:], 16)
-                    if node_id in node_names:
-                        node_name = node_names[node_id]
-                        gateway_info["name"] = node_name
-                        gateway_info["display_name"] = f"{node_name} ({gateway})"
-                        gateway_info["node_id"] = str(node_id)
                 except ValueError:
-                    pass
+                    node_id = None
 
-            # Check if gateway matches query (search both ID and node name)
-            matches = False
-            if lowerQuery in gateway.lower():
-                matches = True
-            elif node_name and lowerQuery in node_name.lower():
-                matches = True
+                if node_id is not None and node_id in node_names:
+                    node_name = node_names[node_id]
+                    info["name"] = node_name
+                    info["display_name"] = f"{node_name} ({gateway})"
+                    info["node_id"] = str(node_id)
+
+            matches = lower_query in gateway.lower()
+            if not matches and node_name:
+                matches = lower_query in node_name.lower()
 
             if matches:
-                filtered_gateways.append(gateway_info)
+                filtered.append(info)
 
-        # Limit results
-        filtered_gateways = filtered_gateways[:limit]
-
-        return jsonify(
+        filtered = filtered[:limit]
+        return _json_response(
             {
-                "gateways": filtered_gateways,
-                "total_count": len(filtered_gateways),
+                "gateways": filtered,
+                "total_count": len(filtered),
                 "query": query,
                 "is_popular": False,
             }
         )
-    except Exception as e:
-        logger.error(f"Error in API gateways search: {e}")
-        return jsonify({"error": str(e)}), 500
+
+    try:
+        return _with_context(_handler)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API gateways search: %s", exc)
+        return _json_response({"error": str(exc)}, status=500)
 
 
 @api_bp.route("/packets/signal")
 def api_packets_signal():
     """API endpoint for packet signal quality data."""
     logger.info("API packets signal endpoint accessed")
-    try:
-        # Build filters
+    def _handler():
+        provider = get_data_provider()
         filters: dict[str, Any] = {}
         gateway_id_arg = request.args.get("gateway_id")
         if gateway_id_arg:
@@ -765,6 +951,7 @@ def api_packets_signal():
                 filters["from_node"] = int(from_node_str)
             except ValueError:
                 pass
+
         start_time_str = request.args.get("start_time")
         if start_time_str:
             try:
@@ -784,16 +971,15 @@ def api_packets_signal():
             except Exception:
                 pass
 
-        data = PacketRepository.get_signal_data(filters=filters)
-        return jsonify(
-            {
-                "signal_data": data,
-                "total_count": len(data) if isinstance(data, list) else 0,
-            }
-        )
-    except Exception as e:
-        logger.error(f"Error in API packets signal: {e}")
-        return jsonify({"error": str(e)}), 500
+        data = _packets_signal(provider, filters=filters)
+        total = len(data) if isinstance(data, list) else 0
+        return _json_response({"signal_data": data, "total_count": total})
+
+    try:
+        return _with_context(_handler)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API packets signal: %s", exc)
+        return _json_response({"error": str(exc)}, status=500)
 
 
 @api_bp.route("/traceroute")
@@ -845,20 +1031,20 @@ def api_traceroute_analytics():
 def api_traceroute_details(packet_id):
     """API endpoint for specific traceroute details."""
     logger.info(f"API traceroute details endpoint accessed for packet {packet_id}")
-    try:
-        # Get specific traceroute packet
-        traceroute = TracerouteRepository.get_traceroute_details(packet_id)
-
+    def _handler():
+        provider = get_data_provider()
+        traceroute = _traceroutes_details(provider, packet_id)
         if not traceroute:
-            return jsonify({"error": "Traceroute packet not found"}), 404
+            return _json_response({"error": "Traceroute packet not found"}, status=404)
 
-        # Convert bytes objects to base64 for JSON serialization
         traceroute = convert_bytes_to_base64(traceroute)
+        return _json_response(traceroute)
 
-        return jsonify(traceroute)
-    except Exception as e:
-        logger.error(f"Error in API traceroute details: {e}")
-        return jsonify({"error": str(e)}), 500
+    try:
+        return _with_context(_handler)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API traceroute details: %s", exc)
+        return _json_response({"error": str(exc)}, status=500)
 
 
 @api_bp.route("/locations")
@@ -954,16 +1140,13 @@ def api_traceroute_patterns():
 def api_node_info(node_id):
     """API endpoint for basic node information (optimized for tooltips and pickers)."""
     logger.info(f"API node info endpoint accessed for node {node_id}")
-    try:
-        # Convert node_id to int
-        from ..utils.node_utils import convert_node_id
-
+    def _handler():
+        provider = get_data_provider()
         node_id_int = convert_node_id(node_id)
 
-        # Handle broadcast node specially
-        if node_id_int == 4294967295:
+        if node_id_int == 0xFFFFFFFF:
             broadcast_node_info = {
-                "node_id": 4294967295,
+                "node_id": 0xFFFFFFFF,
                 "hex_id": "!ffffffff",
                 "long_name": "Broadcast",
                 "short_name": "Broadcast",
@@ -979,24 +1162,21 @@ def api_node_info(node_id):
                 "gateway_count_24h": 0,
                 "last_packet_str": None,
             }
-            return jsonify({"node": broadcast_node_info})
+            return _json_response({"node": broadcast_node_info})
 
-        # Get basic node info using repository pattern
-        from ..database.repositories import NodeRepository
-
-        node_info = NodeRepository.get_basic_node_info(node_id_int)
-
+        node_info = _nodes_basic_info(provider, node_id_int)
         if not node_info:
-            return jsonify({"error": "Node not found"}), 404
+            return _json_response({"error": "Node not found"}, status=404)
 
-        # Format the response to match what the frontend expects
-        return jsonify({"node": node_info})
+        return _json_response({"node": node_info})
 
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        logger.error(f"Error in API node info: {e}")
-        return jsonify({"error": str(e)}), 500
+    try:
+        return _with_context(_handler)
+    except ValueError as err:
+        return _json_response({"error": str(err)}, status=400)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API node info: %s", exc)
+        return _json_response({"error": str(exc)}, status=500)
 
 
 @api_bp.route("/node/<node_id>/location-history")
@@ -1018,36 +1198,40 @@ def api_node_location_history(node_id):
 def api_node_direct_receptions(node_id):
     """API endpoint for bidirectional direct receptions (0-hop packets)."""
     logger.info(f"API direct receptions endpoint accessed for node {node_id}")
-    try:
+    def _handler():
+        provider = get_data_provider()
         limit = request.args.get("limit", 1000, type=int)
         direction = request.args.get("direction", "received", type=str)
 
-        # Validate direction parameter
-        if direction not in ["received", "transmitted"]:
-            return jsonify(
-                {"error": "Invalid direction. Must be 'received' or 'transmitted'."}
-            ), 400
+        if direction not in {"received", "transmitted"}:
+            return _json_response(
+                {
+                    "error": "Invalid direction. Must be 'received' or 'transmitted'."
+                },
+                status=400,
+            )
 
-        # Convert node_id using helper to support hex strings or int
         node_id_int = convert_node_id(node_id)
-
-        data = NodeRepository.get_bidirectional_direct_receptions(
-            node_id_int, direction=direction, limit=limit
+        data = _nodes_direct_receptions(
+            provider, node_id_int, direction=direction, limit=limit
         )
-
-        return jsonify(
+        total_packets = sum(item.get("packet_count", 0) for item in data)
+        return _json_response(
             {
                 "direct_receptions": data,
                 "total_count": len(data),
-                "total_packets": sum(node["packet_count"] for node in data),
+                "total_packets": total_packets,
                 "direction": direction,
             }
         )
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        logger.error(f"Error in API direct receptions: {e}")
-        return jsonify({"error": str(e)}), 500
+
+    try:
+        return _with_context(_handler)
+    except ValueError as err:
+        return _json_response({"error": str(err)}, status=400)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API direct receptions: %s", exc)
+        return _json_response({"error": str(exc)}, status=500)
 
 
 @api_bp.route("/location/statistics")
@@ -1116,6 +1300,7 @@ def api_traceroute_hops_nodes():
     start_time = time.time()
     logger.info("API traceroute-hops/nodes endpoint accessed")
     try:
+        provider = get_data_provider()
         # Time the database query
         db_start = time.time()
         conn = get_db_connection()
@@ -1148,9 +1333,7 @@ def api_traceroute_hops_nodes():
         # Get location data for these nodes only (avoid decoding positions for the whole network)
         location_start = time.time()
         node_id_list = [n["node_id"] for n in nodes_data]
-        locations_list = LocationRepository.get_node_locations(
-            {"node_ids": node_id_list}
-        )
+        locations_list = _locations_list(provider, {"node_ids": node_id_list})
         location_map = {loc["node_id"]: loc for loc in locations_list}
         location_time = time.time() - location_start
 
@@ -1216,15 +1399,15 @@ def api_traceroute_link(node1_id, node2_id):
     logger.info(
         f"API traceroute/link endpoint accessed for nodes {node1_id} and {node2_id}"
     )
-    try:
+    def _handler():
+        provider = get_data_provider()
         node1_id_int = convert_node_id(node1_id)
         node2_id_int = convert_node_id(node2_id)
 
-        # Get ALL recent traceroute packets to search for RF hops between these nodes
         from datetime import datetime, timedelta
 
         end_time = datetime.now()
-        start_time = end_time - timedelta(days=7)  # Look at last 7 days
+        start_time = end_time - timedelta(days=7)
 
         filters = {
             "start_time": start_time.timestamp(),
@@ -1232,27 +1415,20 @@ def api_traceroute_link(node1_id, node2_id):
             "processed_successfully_only": True,
         }
 
-        all_packets = TracerouteRepository.get_traceroute_packets(
-            limit=15000, filters=filters
+        traceroute_result = _traceroutes_get(
+            provider, limit=15000, filters=filters
         )
+        all_packets = traceroute_result.get("packets", [])
 
-        # Don't convert bytes to base64 yet - TraceroutePacket needs raw bytes
-        # We'll convert only at the end for JSON serialization
+        node_names = _nodes_bulk_names(provider, [node1_id_int, node2_id_int])
 
-        # Get node names
-        node_names = NodeRepository.get_bulk_node_names([node1_id_int, node2_id_int])
-
-        # Process each packet to find RF hops between our target nodes
         processed_traceroutes: list[dict[str, Any]] = []
         direction_counts: dict[str, int] = {}
         snr_values: list[float] = []
 
-        for packet in all_packets["packets"]:
+        for packet in all_packets:
             try:
-                # Create TraceroutePacket for analysis
                 tr_packet = TraceroutePacket(packet, resolve_names=True)
-
-                # Get RF hops (no need to calculate distances for this analysis)
                 rf_hops = tr_packet.get_rf_hops()
 
                 # Find any RF hop between our two target nodes
@@ -1319,8 +1495,8 @@ def api_traceroute_link(node1_id, node2_id):
                             else:
                                 gateway_id_int = int(tr_packet.gateway_id)
 
-                            gateway_names = NodeRepository.get_bulk_node_names(
-                                [gateway_id_int]
+                            gateway_names = _nodes_bulk_names(
+                                provider, [gateway_id_int]
                             )
                             gateway_node_name = gateway_names.get(gateway_id_int)
                         except (ValueError, TypeError):
@@ -1381,12 +1557,15 @@ def api_traceroute_link(node1_id, node2_id):
         # Convert any remaining bytes to base64 for JSON serialization
         response_data = convert_bytes_to_base64(response_data)
 
-        return jsonify(response_data)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        logger.error(f"Error in API traceroute graph: {e}")
-        return jsonify({"error": str(e)}), 500
+        return _json_response(response_data)
+
+    try:
+        return _with_context(_handler)
+    except ValueError as err:
+        return _json_response({"error": str(err)}, status=400)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API traceroute graph: %s", exc)
+        return _json_response({"error": str(exc)}, status=500)
 
 
 @api_bp.route("/traceroute/graph")
@@ -1433,14 +1612,29 @@ def api_traceroute_graph():
 def api_packets_data():
     """Modern table endpoint for packets with structured JSON response."""
     logger.info("API packets modern endpoint accessed")
-    try:
+
+    def _handler():
+        provider = get_data_provider()
+
         # Get parameters (with safe defaults and clamping)
         page, limit, offset = get_pagination(request, default_limit=25, max_limit=200)
         search = get_str_arg(request, "search", default="", max_len=128)
-        sort_by = get_str_arg(request, "sort_by", default="timestamp", max_len=32, pattern=r"[\w_]+")
-        if sort_by not in {"timestamp", "size", "gateway", "gateway_count", "from_node", "to_node", "hops"}:
+        sort_by = get_str_arg(
+            request, "sort_by", default="timestamp", max_len=32, pattern=r"[\w_]+"
+        )
+        if sort_by not in {
+            "timestamp",
+            "size",
+            "gateway",
+            "gateway_count",
+            "from_node",
+            "to_node",
+            "hops",
+        }:
             sort_by = "timestamp"
-        sort_order = get_str_arg(request, "sort_order", default="desc", max_len=4, pattern=r"asc|desc")
+        sort_order = get_str_arg(
+            request, "sort_order", default="desc", max_len=4, pattern=r"asc|desc"
+        )
         group_packets = get_bool_arg(request, "group_packets", default=False)
 
         # Build filters from query parameters
@@ -1455,33 +1649,49 @@ def api_packets_data():
             except ValueError:
                 # Fallback to use raw string if conversion fails (legacy)
                 filters["gateway_id"] = gateway_id_arg
-        from_node = get_int_arg(request, "from_node", default=0, min_val=0, max_val=2**32 - 1)
+        from_node = get_int_arg(
+            request, "from_node", default=0, min_val=0, max_val=2**32 - 1
+        )
         if from_node:
             filters["from_node"] = from_node
-        to_node = get_int_arg(request, "to_node", default=0, min_val=0, max_val=2**32 - 1)
+        to_node = get_int_arg(
+            request, "to_node", default=0, min_val=0, max_val=2**32 - 1
+        )
         if to_node:
             filters["to_node"] = to_node
-        portnum = get_str_arg(request, "portnum", default="", max_len=32, pattern=r"[\w.-]+")
+        portnum = get_str_arg(
+            request, "portnum", default="", max_len=32, pattern=r"[\w.-]+"
+        )
         if portnum:
             filters["portnum"] = portnum
         if request.args.get("min_rssi") is not None:
-            filters["min_rssi"] = get_int_arg(request, "min_rssi", default=0, min_val=-200, max_val=0)
-        hop_count = get_int_arg(request, "hop_count", default=-1, min_val=0, max_val=100)
+            filters["min_rssi"] = get_int_arg(
+                request, "min_rssi", default=0, min_val=-200, max_val=0
+            )
+        hop_count = get_int_arg(
+            request, "hop_count", default=-1, min_val=0, max_val=100
+        )
         if hop_count >= 0:
             filters["hop_count"] = hop_count
 
         # New: primary_channel filter (packet channel_id)
-        primary_channel = get_str_arg(request, "primary_channel", default="", max_len=64)
+        primary_channel = get_str_arg(
+            request, "primary_channel", default="", max_len=64
+        )
         if primary_channel:
             filters["primary_channel"] = primary_channel
 
         # ------------------------------------------------------------------
         # Generic exclusion filters (exclude_from, exclude_to)
         # ------------------------------------------------------------------
-        exclude_from = get_int_arg(request, "exclude_from", default=0, min_val=0, max_val=2**32 - 1)
+        exclude_from = get_int_arg(
+            request, "exclude_from", default=0, min_val=0, max_val=2**32 - 1
+        )
         if exclude_from:
             filters["exclude_from"] = exclude_from
-        exclude_to = get_int_arg(request, "exclude_to", default=0, min_val=0, max_val=2**32 - 1)
+        exclude_to = get_int_arg(
+            request, "exclude_to", default=0, min_val=0, max_val=2**32 - 1
+        )
         if exclude_to:
             filters["exclude_to"] = exclude_to
 
@@ -1516,8 +1726,9 @@ def api_packets_data():
         }
         actual_sort_by = sort_field_mapping.get(sort_by, sort_by)
 
-        # Get packet data using repository (now optimized for grouped queries)
-        result = PacketRepository.get_packets(
+        # Get packet data using the active provider
+        result = _packets_get(
+            provider,
             limit=limit,
             offset=offset,
             filters=filters,
@@ -1550,7 +1761,7 @@ def api_packets_data():
         node_short_names = get_bulk_node_short_names(list(node_ids | gateway_node_ids))
 
         # Format data for modern table
-        data = []
+        data: list[dict[str, Any]] = []
         for packet in result["packets"]:
             from_node_name = "Unknown"
             from_node_short = ""
@@ -1572,7 +1783,7 @@ def api_packets_data():
                     packet["to_node_id"], f"{packet['to_node_id']:08x}"[-4:]
                 )
 
-            # Get text content if available (decoded in repository)
+            # Get text content if available (decoded in repository/provider)
             text_content = packet.get("text_content")
 
             # Handle gateway display for both grouped and individual packets
@@ -1681,20 +1892,26 @@ def api_packets_data():
             "total_pages": (result["total_count"] + limit - 1) // limit,
         }
 
-        return jsonify(response)
-    except Exception as e:
-        logger.error(f"Error in API packets modern: {e}")
-        return jsonify({"error": str(e), "data": [], "total_count": 0}), 500
+        return _json_response(response)
+
+    try:
+        return _with_context(_handler)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API packets modern: %s", exc)
+        return _json_response(
+            {"error": str(exc), "data": [], "total_count": 0},
+            status=500,
+        )
 
 
 @api_bp.route("/nodes/data", methods=["GET"])
 def api_nodes_data():
     """Modern table endpoint for nodes with structured JSON response."""
     logger.info("API nodes modern endpoint accessed")
-    try:
-        # Get parameters with safe pagination clamps
-        page = request.args.get("page", type=int, default=1)
-        # Clamp limit to avoid heavy queries/DoS
+    def _handler():
+        provider = get_data_provider()
+
+        page = request.args.get("page", type=int, default=1) or 1
         try:
             limit_raw = int(request.args.get("limit", 25))
         except Exception:
@@ -1704,7 +1921,6 @@ def api_nodes_data():
         sort_by = request.args.get("sort_by", default="last_packet_time")
         sort_order = request.args.get("sort_order", default="desc")
 
-        # Build filters from query parameters
         filters: dict[str, Any] = {}
         hw_model = request.args.get("hw_model", "").strip()
         if hw_model:
@@ -1712,36 +1928,31 @@ def api_nodes_data():
         role = request.args.get("role", "").strip()
         if role:
             filters["role"] = role
-
         primary_channel = request.args.get("primary_channel", "").strip()
         if primary_channel:
             filters["primary_channel"] = primary_channel
 
-        # Calculate offset (keeping page >= 1)
-        page = max(1, page or 1)
+        page = max(1, page)
         offset = (page - 1) * limit
 
-        # Get node data using repository
-        result = NodeRepository.get_nodes(
+        result = _nodes_get(
+            provider,
             limit=limit,
             offset=offset,
             search=search,
             order_by=sort_by,
             order_dir=sort_order,
-            filters=filters,
+            filters=filters or None,
         )
 
-        # Format data for modern table
         data = []
-        for node in result["nodes"]:
-            # Determine status
+        for node in result.get("nodes", []):
             status = "Unknown"
             if node.get("packet_count_24h", 0) > 0:
                 status = "Active"
             elif node.get("last_packet_time"):
-                # Check if last packet was within 7 days
                 time_diff = time.time() - node["last_packet_time"]
-                if time_diff < (7 * 24 * 3600):
+                if time_diff < 7 * 24 * 3600:
                     status = "Inactive"
 
             data.append(
@@ -1765,26 +1976,35 @@ def api_nodes_data():
 
         response = {
             "data": data,
-            "total_count": result["total_count"],
+            "total_count": result.get("total_count", len(data)),
             "page": page,
             "limit": limit,
-            "total_pages": (result["total_count"] + limit - 1) // limit,
+            "total_pages": ((result.get("total_count", len(data)) + limit - 1) // limit)
+            if limit
+            else 0,
         }
+        return _json_response(response)
 
-        return jsonify(response)
-    except Exception as e:
-        logger.error(f"Error in API nodes modern: {e}")
-        return jsonify({"error": str(e), "data": [], "total_count": 0}), 500
+    try:
+        return _with_context(_handler)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API nodes modern: %s", exc)
+        return _json_response(
+            {"error": str(exc), "data": [], "total_count": 0},
+            status=500,
+        )
 
 
 @api_bp.route("/traceroute/data", methods=["GET"])
 def api_traceroute_data():
     """Modern table endpoint for traceroutes with structured JSON response."""
     logger.info("API traceroute modern endpoint accessed")
-    try:
+    def _handler():
+        provider = get_data_provider()
         # Get parameters
-        page = request.args.get("page", type=int, default=1)
+        page = request.args.get("page", type=int, default=1) or 1
         limit = request.args.get("limit", type=int, default=25)
+        page = max(1, page)
         search = request.args.get("search", default="")
         sort_by = request.args.get("sort_by", default="timestamp")
         sort_order = request.args.get("sort_order", default="desc")
@@ -1862,7 +2082,8 @@ def api_traceroute_data():
         actual_sort_by = sort_field_mapping.get(sort_by, sort_by)
 
         # Get traceroute data using repository
-        result = TracerouteRepository.get_traceroute_packets(
+        result = _traceroutes_get(
+            provider,
             limit=limit,
             offset=offset,
             filters=filters,
@@ -1872,10 +2093,12 @@ def api_traceroute_data():
             group_packets=group_packets,
         )
 
+        packets = result.get("packets", [])
+
         # Get node names for all traceroutes
         node_ids = set()
         gateway_node_ids = set()
-        for tr in result["packets"]:
+        for tr in packets:
             if tr.get("from_node_id"):
                 node_ids.add(tr["from_node_id"])
             if tr.get("to_node_id"):
@@ -1905,7 +2128,7 @@ def api_traceroute_data():
 
         # Format data for modern table
         data = []
-        for tr in result["packets"]:
+        for tr in packets:
             # Get node names
             from_node_id = tr.get("from_node_id")
             to_node_id = tr.get("to_node_id")
@@ -2065,22 +2288,32 @@ def api_traceroute_data():
             "total_pages": (result["total_count"] + limit - 1) // limit,
         }
 
-        return jsonify(response)
-    except Exception as e:
-        logger.error(f"Error in API traceroute modern: {e}")
-        return jsonify({"error": str(e), "data": [], "total_count": 0}), 500
+        return _json_response(response)
+
+    try:
+        return _with_context(_handler)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API traceroute modern: %s", exc)
+        return _json_response(
+            {"error": str(exc), "data": [], "total_count": 0},
+            status=500,
+        )
 
 
 @api_bp.route("/meshtastic/channels")
 def api_channels():
     """API endpoint for available primary channels (from node_info)."""
     logger.info("API channels endpoint accessed")
+    def _handler():
+        provider = get_data_provider()
+        channels = _nodes_primary_channels(provider)
+        return _json_response({"channels": channels})
+
     try:
-        channels = NodeRepository.get_unique_primary_channels()
-        return jsonify({"channels": channels})
-    except Exception as e:
-        logger.error(f"Error in API channels: {e}")
-        return jsonify({"error": str(e), "channels": []}), 500
+        return _with_context(_handler)
+    except Exception as exc:  # noqa: BLE001
+        logger.error("Error in API channels: %s", exc)
+        return _json_response({"error": str(exc), "channels": []}, status=500)
 
 
 def safe_jsonify(data, *args, **kwargs):
@@ -2090,12 +2323,13 @@ def safe_jsonify(data, *args, **kwargs):
     This prevents JSON parsing errors in browsers by converting special IEEE-754
     float values to null before Flask processes the response.
     """
+    status = kwargs.pop("status", 200)
     try:
         sanitized_data = sanitize_floats(data)
-        return jsonify(sanitized_data, *args, **kwargs)
     except Exception as err:
-        logger.debug(f"JSON sanitation failed, using original data: {err}")
-        return jsonify(data, *args, **kwargs)
+        logger.debug("JSON sanitation failed, using original data: %s", err)
+        sanitized_data = data
+    return _json_response(sanitized_data, status=status)
 
 
 def register_api_routes(app):

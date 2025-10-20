@@ -17,10 +17,17 @@ Pick whichever workflow fits you best:
   curl -LsSf https://astral.sh/uv/install.sh | sh        # install uv (once)
   uv sync --dev                                         # install deps incl. Playwright tooling
   playwright install chromium --with-deps              # e2e/browser support (once per host)
-  cp ops/samples/config.sample.yaml config.yaml        # adjust broker settings
-  uv run malla-capture                                  # terminal 1 – capture
-  uv run malla-web                                      # terminal 2 – web UI
+  mkdir -p devdata
+  docker run -d --name meshpipe-dev \\
+    -e MESHPIPE_MQTT_BROKER_ADDRESS=meshtastic.taubetele.com \\
+    -e MESHPIPE_MQTT_USERNAME=meshdev \\
+    -e MESHPIPE_MQTT_PASSWORD=large4cats \\
+    -e MESHPIPE_DATABASE_FILE=/data/meshtastic_history.db \\
+    -v $(pwd)/devdata:/data \\
+    ghcr.io/aminovpavel/meshpipe-go:latest meshpipe      # terminal 1 – capture (Go)
+  uv run malla-web                                       # terminal 2 – web UI
   ```
+  Prefer building the capture service yourself? Clone [aminovpavel/meshpipe-go](https://github.com/aminovpavel/meshpipe-go) and run `go run ./cmd/meshpipe` with the same `MESHPIPE_*` environment overrides.
 
 - **Docker compose (deployment-style)**  
   ```bash
@@ -28,10 +35,12 @@ Pick whichever workflow fits you best:
   cd meshworks-malla
   cp ops/samples/env.example .env                      # fill in MQTT credentials
   docker pull ghcr.io/aminovpavel/meshworks-malla:latest
+  docker pull ghcr.io/aminovpavel/meshpipe-go:latest
   export MALLA_IMAGE=ghcr.io/aminovpavel/meshworks-malla:latest
+  export MESHPIPE_IMAGE=ghcr.io/aminovpavel/meshpipe-go:latest
   docker compose -f ops/compose/docker-compose.yml up -d
   ```
-  `malla-capture` and `malla-web` share the volume `malla_data`, so captured history persists across restarts.
+  `meshpipe` and `malla-web` share the volume `malla_data`, so captured history persists across restarts.
 
 Need demo data, screenshots, maintainer workflows or release notes on the image pipeline? See [docs/development.md](docs/development.md).
 
@@ -49,6 +58,12 @@ Most settings live in `config.yaml`, but every option can be overridden with `MA
 | Token required when debug UI is enabled | `MALLA_DEBUG_TOKEN` | _(unset)_ |
 | Keep the default Leaflet attribution banner | `MALLA_MAP_SHOW_LEAFLET_BRANDING` | `0` |
 | Persist raw MQTT payloads for later inspection | `MALLA_CAPTURE_STORE_RAW` | `1` |
+| Enable Meshpipe gRPC backend (feature flag) | `MALLA_MESHPIPE_USE_GRPC` | `0` |
+| Direct Meshpipe gRPC endpoint (`host:port`) | `MALLA_MESHPIPE_GRPC_ENDPOINT` | `127.0.0.1:7443` |
+| Use the Envoy proxy instead of direct endpoint | `MALLA_MESHPIPE_GRPC_USE_PROXY` | `0` |
+| Envoy proxy endpoint for gRPC/gRPC-Web | `MALLA_MESHPIPE_GRPC_PROXY_ENDPOINT` | `127.0.0.1:8443` |
+| Bearer token sent with gRPC calls (optional) | `MALLA_MESHPIPE_GRPC_TOKEN` | _(unset)_ |
+| Per-request gRPC timeout in seconds | `MALLA_MESHPIPE_GRPC_TIMEOUT_SECONDS` | `5.0` |
 
 The [Development guide](docs/development.md#configuration-reference) has a full table, defaults, and additional context.
 
@@ -77,7 +92,7 @@ Community instances may run different versions; feature parity is not guaranteed
 - **Toolbox** – hop analysis, gateway comparison, longest links and more.
 - **Analytics** – 7‑day trends, RSSI distribution, top talkers and hop stats.
 - **Single config** – `config.yaml` (or `MALLA_*` env vars) drives both services.
-- **One-command launch** – `malla-capture` + `malla-web` wrappers for quick starts.
+- **One-command launch** – Meshpipe (Go capture) + Malla web via the bundled compose files.
 
 <!-- screenshots:start -->
 ![dashboard](.screenshots/dashboard.jpg)
@@ -123,17 +138,17 @@ docker pull ghcr.io/aminovpavel/meshworks-malla:latest
 # or pin a specific build
 docker pull ghcr.io/aminovpavel/meshworks-malla:sha-be66ef8
 
-# Run capture (MQTT -> SQLite)
+# Run capture (MQTT -> SQLite) with Meshpipe
 docker volume create malla_data
-docker run -d --name malla-capture \"
-  -e MALLA_MQTT_BROKER_ADDRESS=your.mqtt.broker.address \"
-  -e MALLA_MQTT_PORT=1883 \"
-  -e MALLA_MQTT_USERNAME=your_user \"
-  -e MALLA_MQTT_PASSWORD=your_pass \"
-  -e MALLA_DATABASE_FILE=/app/data/meshtastic_history.db \"
-  -v malla_data:/app/data \"
-  ghcr.io/aminovpavel/meshworks-malla:sha-be66ef8 \"
-  /app/.venv/bin/malla-capture
+docker run -d --name meshpipe \"
+  -e MESHPIPE_MQTT_BROKER_ADDRESS=your.mqtt.broker.address \"
+  -e MESHPIPE_MQTT_PORT=1883 \"
+  -e MESHPIPE_MQTT_USERNAME=your_user \"
+  -e MESHPIPE_MQTT_PASSWORD=your_pass \"
+  -e MESHPIPE_DATABASE_FILE=/data/meshtastic_history.db \"
+  -v malla_data:/data \"
+  ghcr.io/aminovpavel/meshpipe-go:latest \"
+  meshpipe
 
 # Run Web UI only (binds 5008)
 docker run -d --name malla-web \
@@ -187,13 +202,13 @@ The compose file ships with a capture + web pair already wired to share `malla_d
 # Shared volume for the SQLite database
 docker volume create malla_data
 
-# Capture worker
-docker run -d --name malla-capture \
-  -e MALLA_MQTT_BROKER_ADDRESS=your.mqtt.broker.address \
-  -e MALLA_DATABASE_FILE=/app/data/meshtastic_history.db \
-  -v malla_data:/app/data \
-  meshworks/malla:local \
-  /app/.venv/bin/malla-capture
+# Capture worker (Meshpipe Go)
+docker run -d --name meshpipe \
+  -e MESHPIPE_MQTT_BROKER_ADDRESS=your.mqtt.broker.address \
+  -e MESHPIPE_DATABASE_FILE=/data/meshtastic_history.db \
+  -v malla_data:/data \
+  ghcr.io/aminovpavel/meshpipe-go:latest \
+  meshpipe
 
 # Web UI
 docker run -d --name malla-web \
@@ -232,42 +247,55 @@ You can also install and run this fork directly using [uv](https://docs.astral.s
    playwright install chromium --with-deps
    ```
 
-5. **Start it** with `uv run` in the project directory, which pulls the required dependencies automatically.
+5. **Run capture + web.** Meshpipe (the Go capture service) writes the SQLite database; Malla serves the UI on port 5008.
    ```bash
-   # Start the web UI
+   docker run -d --name meshpipe-dev \
+     -e MESHPIPE_MQTT_BROKER_ADDRESS=meshtastic.taubetele.com \
+     -e MESHPIPE_MQTT_USERNAME=meshdev \
+     -e MESHPIPE_MQTT_PASSWORD=large4cats \
+     -e MESHPIPE_DATABASE_FILE=/data/meshtastic_history.db \
+     -v $(pwd)/devdata:/data \
+     ghcr.io/aminovpavel/meshpipe-go:latest meshpipe
+
    uv run malla-web
-
-   # Start the MQTT capture tool
-   uv run malla-capture
    ```
+   Prefer building the capture binary locally? Clone [aminovpavel/meshpipe-go](https://github.com/aminovpavel/meshpipe-go) and run `go run ./cmd/meshpipe` with the same `MESHPIPE_*` environment overrides.
 
+### Using Nix
 ### Using Nix
 The project also comes with a Nix flake and a devshell - if you have Nix installed or run NixOS it will set up
 `uv` for you together with the exact system dependencies that run on CI (Playwright, etc.):
 
 ```bash
 nix develop --command uv run malla-web
-nix develop --command uv run malla-capture
+# Start Meshpipe separately (container or go run ./cmd/meshpipe)
 ```
 
 ## Core components overview
 
 The system consists of two components that work together:
 
-### 1. MQTT Data Capture
+### 1. Meshpipe (Go capture)
 
-This tool connects to your Meshtastic MQTT broker and captures all mesh packets to a SQLite database. You will need to configure the MQTT broker address in the `config.yaml` file (or set the `MALLA_MQTT_BROKER_ADDRESS` environment variable) before starting it. See [Configuration Options](#configuration-options) for the entire set of settings.
+Meshpipe replaces the legacy Python capture. It listens to your Meshtastic MQTT broker, decrypts payloads, and persists packets + node metadata to SQLite. Configure it via `MESHPIPE_*` env vars (or a YAML file – see the [Meshpipe README](https://github.com/aminovpavel/meshpipe-go)).
 
 ```yaml
-mqtt_broker_address: "your.mqtt.broker.address"
+MESHPIPE_MQTT_BROKER_ADDRESS: "your.mqtt.broker.address"
+MESHPIPE_MQTT_TOPIC_PREFIX: "msh"
+MESHPIPE_MQTT_TOPIC_SUFFIX: "/+/+/+/#"
 ```
 
-You can use this tool with your own MQTT broker that you've got your own nodes connected to, or with a public broker if you've got permission to do so.
+Run it using the published container:
 
-**Start the capture tool:**
 ```bash
-uv run malla-capture
+docker run -d --name meshpipe \
+  -e MESHPIPE_MQTT_BROKER_ADDRESS=your.mqtt.broker.address \
+  -e MESHPIPE_DATABASE_FILE=/data/meshtastic_history.db \
+  -v malla_data:/data \
+  ghcr.io/aminovpavel/meshpipe-go:latest meshpipe
 ```
+
+> Meshpipe still honours the old `MALLA_*` variables for backwards compatibility, but new deployments should prefer the `MESHPIPE_*` names.
 
 ### 2. Web UI
 
@@ -288,13 +316,17 @@ uv run malla-web
 
 ## Running Both Tools Together
 
-For a complete monitoring setup, run both tools simultaneously:
+For a complete deployment you need Meshpipe (capture) and Malla (web). They share the same SQLite volume.
 
-**Terminal 1 – capture:**
+**Terminal / container 1 – Meshpipe (capture):**
 ```bash
-uv run malla-capture
-# or, after `uv sync`, use the helper script:
-./bin/malla-capture
+# container-based quick start
+docker run -d --name meshpipe \
+  -e MESHPIPE_MQTT_BROKER_ADDRESS=your.mqtt.broker.address \
+  -e MESHPIPE_DATABASE_FILE=/data/meshtastic_history.db \
+  -v malla_data:/data \
+  ghcr.io/aminovpavel/meshpipe-go:latest meshpipe
+# or build from source: go run ./cmd/meshpipe (see meshpipe-go repo)
 ```
 
 **Terminal 2 – web UI:**
@@ -304,7 +336,7 @@ uv run malla-web
 ./bin/malla-web
 ```
 
-Both commands read the same SQLite database and cooperate safely thanks to the repository connection pool.
+Both services read/write the same SQLite database. Meshpipe uses WAL-friendly writes; the Flask app opens the database in read-only mode by default to avoid lock contention.
 
 ## Static assets & favicon
 

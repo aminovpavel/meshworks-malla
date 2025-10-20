@@ -53,9 +53,6 @@ serve-docs: ## Serve documentation locally
 run-web: ## Run the web UI
 	./bin/malla-web
 
-run-capture: ## Run the MQTT capture tool
-	./bin/malla-capture
-
 dev-setup: install-dev ## Set up development environment
 	uv run pre-commit install
 
