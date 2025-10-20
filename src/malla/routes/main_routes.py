@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from flask import (
     Blueprint,
     current_app,
+    redirect,
     render_template,
     request,
     send_from_directory,
@@ -59,6 +60,12 @@ def dashboard():
             gateway_count=0,
             error_message="Some dashboard features may be unavailable",
         )
+
+
+@main_bp.route("/dashboard")
+def dashboard_alias():
+    """Maintain backwards compatibility for legacy SPA deep-links."""
+    return redirect(url_for("main.dashboard"), code=302)
 
 
 @main_bp.route("/chat")

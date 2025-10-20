@@ -38,6 +38,13 @@ SECONDS_PER_DAY = 24 * 3600
 
 logger = logging.getLogger(__name__)
 
+_HAS_LIST_TRACEROUTE_PACKETS = hasattr(data_pb2, "ListTraceroutePacketsRequest")
+_missing_traceroute_packets_warning_emitted = False
+
+
+class MissingMeshpipeCapabilityError(RuntimeError):
+    """Raised when required Meshpipe RPCs are not available."""
+
 # ---------------------------------------------------------------------------
 # Helper utilities
 # ---------------------------------------------------------------------------
@@ -1585,6 +1592,18 @@ class GrpcTracerouteDataAccess(TracerouteDataAccess):
         group_packets: bool = False,
     ) -> dict[str, Any]:
         filters = filters or {}
+        if not _HAS_LIST_TRACEROUTE_PACKETS:
+            global _missing_traceroute_packets_warning_emitted
+            if not _missing_traceroute_packets_warning_emitted:
+                logger.warning(
+                    "Meshpipe gRPC протокол не содержит ListTraceroutePacketsRequest; "
+                    "обновите meshpipe-go и сгенерированные protobuf-файлы."
+                )
+                _missing_traceroute_packets_warning_emitted = True
+            raise MissingMeshpipeCapabilityError(
+                "Meshpipe gRPC не поддерживает ListTraceroutePacketsRequest. "
+                "Для работы разделов Traceroute обновите meshpipe-go и malla gRPC stubs."
+            )
         request = data_pb2.ListTraceroutePacketsRequest(
             limit=max(1, min(limit, 500)),
             offset=max(offset, 0),
@@ -1596,11 +1615,11 @@ class GrpcTracerouteDataAccess(TracerouteDataAccess):
 
         try:
             response = self._client.list_traceroute_packets(request)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Falling back to SQLite for traceroute packets",
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "Meshpipe gRPC вызов ListTraceroutePackets завершился ошибкой",
+                exc_info=True,
                 extra={
-                    "fallback": "sqlite",
                     "context": {
                         "limit": limit,
                         "offset": offset,
@@ -1608,18 +1627,13 @@ class GrpcTracerouteDataAccess(TracerouteDataAccess):
                         "order_by": order_by,
                         "order_dir": order_dir,
                         "filter": _message_summary(request.filter),
-                    },
+                    }
                 },
             )
-            return self._fallback.get_traceroute_packets(
-                limit,
-                offset,
-                filters,
-                order_by,
-                order_dir,
-                search,
-                group_packets,
-            )
+            raise RuntimeError(
+                "Meshpipe gRPC недоступен для traceroute-пакетов. "
+                "Проверьте meshpipe или envoy-прокси."
+            ) from exc
 
         packets = [self._convert_packet(pkt) for pkt in response.packets]
 
@@ -1653,12 +1667,16 @@ class GrpcTracerouteDataAccess(TracerouteDataAccess):
         request = data_pb2.GetTracerouteDetailsRequest(packet_id=packet_id)
         try:
             response = self._client.get_traceroute_details(request)
-        except Exception:  # noqa: BLE001
-            logger.warning(
-                "Falling back to SQLite for traceroute details",
-                extra={"fallback": "sqlite", "context": {"packet_id": packet_id}},
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                "Meshpipe gRPC вызов GetTracerouteDetails завершился ошибкой",
+                exc_info=True,
+                extra={"context": {"packet_id": packet_id}},
             )
-            return self._fallback.get_traceroute_details(packet_id)
+            raise RuntimeError(
+                "Meshpipe gRPC недоступен для деталей traceroute. "
+                "Проверьте meshpipe или envoy-прокси."
+            ) from exc
 
         if not response.packet.packet_id:
             return None

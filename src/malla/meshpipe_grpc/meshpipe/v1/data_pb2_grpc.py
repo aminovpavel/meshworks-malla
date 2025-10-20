@@ -114,15 +114,15 @@ class MeshpipeDataStub(object):
                 request_serializer=meshpipe_dot_v1_dot_data__pb2.GetAnalyticsSummaryRequest.SerializeToString,
                 response_deserializer=meshpipe_dot_v1_dot_data__pb2.GetAnalyticsSummaryResponse.FromString,
                 _registered_method=True)
-        self.ListGatewayIds = channel.unary_unary(
-                '/meshpipe.v1.MeshpipeData/ListGatewayIds',
-                request_serializer=meshpipe_dot_v1_dot_data__pb2.ListGatewayIdsRequest.SerializeToString,
-                response_deserializer=meshpipe_dot_v1_dot_data__pb2.ListGatewayIdsResponse.FromString,
+        self.ListTraceroutePackets = channel.unary_unary(
+                '/meshpipe.v1.MeshpipeData/ListTraceroutePackets',
+                request_serializer=meshpipe_dot_v1_dot_data__pb2.ListTraceroutePacketsRequest.SerializeToString,
+                response_deserializer=meshpipe_dot_v1_dot_data__pb2.ListTraceroutePacketsResponse.FromString,
                 _registered_method=True)
-        self.ListSignalSamples = channel.unary_unary(
-                '/meshpipe.v1.MeshpipeData/ListSignalSamples',
-                request_serializer=meshpipe_dot_v1_dot_data__pb2.ListSignalSamplesRequest.SerializeToString,
-                response_deserializer=meshpipe_dot_v1_dot_data__pb2.ListSignalSamplesResponse.FromString,
+        self.GetTracerouteDetails = channel.unary_unary(
+                '/meshpipe.v1.MeshpipeData/GetTracerouteDetails',
+                request_serializer=meshpipe_dot_v1_dot_data__pb2.GetTracerouteDetailsRequest.SerializeToString,
+                response_deserializer=meshpipe_dot_v1_dot_data__pb2.GetTracerouteDetailsResponse.FromString,
                 _registered_method=True)
         self.ListTracerouteHops = channel.unary_unary(
                 '/meshpipe.v1.MeshpipeData/ListTracerouteHops',
@@ -133,6 +133,21 @@ class MeshpipeDataStub(object):
                 '/meshpipe.v1.MeshpipeData/GetTracerouteGraph',
                 request_serializer=meshpipe_dot_v1_dot_data__pb2.TracerouteGraphRequest.SerializeToString,
                 response_deserializer=meshpipe_dot_v1_dot_data__pb2.TracerouteGraphResponse.FromString,
+                _registered_method=True)
+        self.ListNodeDirectReceptions = channel.unary_unary(
+                '/meshpipe.v1.MeshpipeData/ListNodeDirectReceptions',
+                request_serializer=meshpipe_dot_v1_dot_data__pb2.ListNodeDirectReceptionsRequest.SerializeToString,
+                response_deserializer=meshpipe_dot_v1_dot_data__pb2.ListNodeDirectReceptionsResponse.FromString,
+                _registered_method=True)
+        self.ListNodeNames = channel.unary_unary(
+                '/meshpipe.v1.MeshpipeData/ListNodeNames',
+                request_serializer=meshpipe_dot_v1_dot_data__pb2.ListNodeNamesRequest.SerializeToString,
+                response_deserializer=meshpipe_dot_v1_dot_data__pb2.ListNodeNamesResponse.FromString,
+                _registered_method=True)
+        self.ListPrimaryChannels = channel.unary_unary(
+                '/meshpipe.v1.MeshpipeData/ListPrimaryChannels',
+                request_serializer=meshpipe_dot_v1_dot_data__pb2.ListPrimaryChannelsRequest.SerializeToString,
+                response_deserializer=meshpipe_dot_v1_dot_data__pb2.ListPrimaryChannelsResponse.FromString,
                 _registered_method=True)
         self.Healthz = channel.unary_unary(
                 '/meshpipe.v1.MeshpipeData/Healthz',
@@ -245,13 +260,13 @@ class MeshpipeDataServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def ListGatewayIds(self, request, context):
+    def ListTraceroutePackets(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def ListSignalSamples(self, request, context):
+    def GetTracerouteDetails(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -264,6 +279,24 @@ class MeshpipeDataServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def GetTracerouteGraph(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListNodeDirectReceptions(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListNodeNames(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ListPrimaryChannels(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -364,15 +397,15 @@ def add_MeshpipeDataServicer_to_server(servicer, server):
                     request_deserializer=meshpipe_dot_v1_dot_data__pb2.GetAnalyticsSummaryRequest.FromString,
                     response_serializer=meshpipe_dot_v1_dot_data__pb2.GetAnalyticsSummaryResponse.SerializeToString,
             ),
-            'ListGatewayIds': grpc.unary_unary_rpc_method_handler(
-                    servicer.ListGatewayIds,
-                    request_deserializer=meshpipe_dot_v1_dot_data__pb2.ListGatewayIdsRequest.FromString,
-                    response_serializer=meshpipe_dot_v1_dot_data__pb2.ListGatewayIdsResponse.SerializeToString,
+            'ListTraceroutePackets': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListTraceroutePackets,
+                    request_deserializer=meshpipe_dot_v1_dot_data__pb2.ListTraceroutePacketsRequest.FromString,
+                    response_serializer=meshpipe_dot_v1_dot_data__pb2.ListTraceroutePacketsResponse.SerializeToString,
             ),
-            'ListSignalSamples': grpc.unary_unary_rpc_method_handler(
-                    servicer.ListSignalSamples,
-                    request_deserializer=meshpipe_dot_v1_dot_data__pb2.ListSignalSamplesRequest.FromString,
-                    response_serializer=meshpipe_dot_v1_dot_data__pb2.ListSignalSamplesResponse.SerializeToString,
+            'GetTracerouteDetails': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetTracerouteDetails,
+                    request_deserializer=meshpipe_dot_v1_dot_data__pb2.GetTracerouteDetailsRequest.FromString,
+                    response_serializer=meshpipe_dot_v1_dot_data__pb2.GetTracerouteDetailsResponse.SerializeToString,
             ),
             'ListTracerouteHops': grpc.unary_unary_rpc_method_handler(
                     servicer.ListTracerouteHops,
@@ -383,6 +416,21 @@ def add_MeshpipeDataServicer_to_server(servicer, server):
                     servicer.GetTracerouteGraph,
                     request_deserializer=meshpipe_dot_v1_dot_data__pb2.TracerouteGraphRequest.FromString,
                     response_serializer=meshpipe_dot_v1_dot_data__pb2.TracerouteGraphResponse.SerializeToString,
+            ),
+            'ListNodeDirectReceptions': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListNodeDirectReceptions,
+                    request_deserializer=meshpipe_dot_v1_dot_data__pb2.ListNodeDirectReceptionsRequest.FromString,
+                    response_serializer=meshpipe_dot_v1_dot_data__pb2.ListNodeDirectReceptionsResponse.SerializeToString,
+            ),
+            'ListNodeNames': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListNodeNames,
+                    request_deserializer=meshpipe_dot_v1_dot_data__pb2.ListNodeNamesRequest.FromString,
+                    response_serializer=meshpipe_dot_v1_dot_data__pb2.ListNodeNamesResponse.SerializeToString,
+            ),
+            'ListPrimaryChannels': grpc.unary_unary_rpc_method_handler(
+                    servicer.ListPrimaryChannels,
+                    request_deserializer=meshpipe_dot_v1_dot_data__pb2.ListPrimaryChannelsRequest.FromString,
+                    response_serializer=meshpipe_dot_v1_dot_data__pb2.ListPrimaryChannelsResponse.SerializeToString,
             ),
             'Healthz': grpc.unary_unary_rpc_method_handler(
                     servicer.Healthz,
@@ -838,7 +886,7 @@ class MeshpipeData(object):
             _registered_method=True)
 
     @staticmethod
-    def ListGatewayIds(request,
+    def ListTraceroutePackets(request,
             target,
             options=(),
             channel_credentials=None,
@@ -851,9 +899,9 @@ class MeshpipeData(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/meshpipe.v1.MeshpipeData/ListGatewayIds',
-            meshpipe_dot_v1_dot_data__pb2.ListGatewayIdsRequest.SerializeToString,
-            meshpipe_dot_v1_dot_data__pb2.ListGatewayIdsResponse.FromString,
+            '/meshpipe.v1.MeshpipeData/ListTraceroutePackets',
+            meshpipe_dot_v1_dot_data__pb2.ListTraceroutePacketsRequest.SerializeToString,
+            meshpipe_dot_v1_dot_data__pb2.ListTraceroutePacketsResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -865,7 +913,7 @@ class MeshpipeData(object):
             _registered_method=True)
 
     @staticmethod
-    def ListSignalSamples(request,
+    def GetTracerouteDetails(request,
             target,
             options=(),
             channel_credentials=None,
@@ -878,9 +926,9 @@ class MeshpipeData(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/meshpipe.v1.MeshpipeData/ListSignalSamples',
-            meshpipe_dot_v1_dot_data__pb2.ListSignalSamplesRequest.SerializeToString,
-            meshpipe_dot_v1_dot_data__pb2.ListSignalSamplesResponse.FromString,
+            '/meshpipe.v1.MeshpipeData/GetTracerouteDetails',
+            meshpipe_dot_v1_dot_data__pb2.GetTracerouteDetailsRequest.SerializeToString,
+            meshpipe_dot_v1_dot_data__pb2.GetTracerouteDetailsResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -935,6 +983,87 @@ class MeshpipeData(object):
             '/meshpipe.v1.MeshpipeData/GetTracerouteGraph',
             meshpipe_dot_v1_dot_data__pb2.TracerouteGraphRequest.SerializeToString,
             meshpipe_dot_v1_dot_data__pb2.TracerouteGraphResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListNodeDirectReceptions(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/meshpipe.v1.MeshpipeData/ListNodeDirectReceptions',
+            meshpipe_dot_v1_dot_data__pb2.ListNodeDirectReceptionsRequest.SerializeToString,
+            meshpipe_dot_v1_dot_data__pb2.ListNodeDirectReceptionsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListNodeNames(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/meshpipe.v1.MeshpipeData/ListNodeNames',
+            meshpipe_dot_v1_dot_data__pb2.ListNodeNamesRequest.SerializeToString,
+            meshpipe_dot_v1_dot_data__pb2.ListNodeNamesResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ListPrimaryChannels(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/meshpipe.v1.MeshpipeData/ListPrimaryChannels',
+            meshpipe_dot_v1_dot_data__pb2.ListPrimaryChannelsRequest.SerializeToString,
+            meshpipe_dot_v1_dot_data__pb2.ListPrimaryChannelsResponse.FromString,
             options,
             channel_credentials,
             insecure,
