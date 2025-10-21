@@ -78,7 +78,7 @@ services:
       - "${MESHPIPE_REDIS_PORT:-6379}:6379"
 
   meshpipe-envoy:
-    image: envoyproxy/envoy:v1.31-latest
+    image: envoyproxy/envoy-contrib:v1.31-latest
     container_name: ${MESHPIPE_ENVOY_CONTAINER_NAME:-meshpipe-envoy}
     restart: unless-stopped
     depends_on:
