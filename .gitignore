@@ -190,6 +190,9 @@ backfill_mesh_packet_ids.log
 *.temp
 .DS_Store
 Thumbs.db
+node_modules/
+frontend/node_modules/
+frontend/dist/
 
 # Editor backup files
 *~

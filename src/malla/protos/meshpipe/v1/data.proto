@@ -362,28 +362,12 @@ message ChatMessage {
   string text = 7;
   repeated ChatMessageGateway gateways = 8;
   bool processed_successfully = 9;
-  uint64 group_id = 10;
-  uint32 mesh_packet_id = 11;
-  string message_type = 12;
-  string portnum_name = 13;
 }
 
 message ChatWindowCounters {
   uint64 messages_1h = 1;
   uint64 messages_6h = 2;
   uint64 messages_24h = 3;
-}
-
-message ChatChannelInfo {
-  string channel_id = 1;
-  string label = 2;
-  uint64 count = 3;
-}
-
-message ChatSenderInfo {
-  uint32 node_id = 1;
-  string display_name = 2;
-  uint64 count = 3;
 }
 
 message GetChatWindowRequest {
@@ -400,8 +384,6 @@ message GetChatWindowResponse {
   google.protobuf.Timestamp window_start = 3;
   uint32 window_hours = 4;
   string next_cursor = 5;
-  repeated ChatChannelInfo channels = 6;
-  repeated ChatSenderInfo senders = 7;
 }
 
 message NodeAnalytics {
@@ -425,6 +407,8 @@ message GetNodeAnalyticsResponse {
 message GetGatewayOverviewRequest {
   uint32 limit = 1;
   string gateway_id = 2;
+  google.protobuf.Timestamp start_time = 3;
+  google.protobuf.Timestamp end_time = 4;
 }
 
 message GatewayOverview {
@@ -440,6 +424,153 @@ message GatewayOverview {
 
 message GetGatewayOverviewResponse {
   repeated GatewayOverview gateways = 1;
+}
+
+message NetworkTopologyRequest {
+  google.protobuf.Timestamp start_time = 1;
+  google.protobuf.Timestamp end_time = 2;
+  uint32 max_hours = 3;
+  double min_snr = 4;
+  bool include_packet_links = 5;
+  uint32 packet_limit = 6;
+  string gateway_id = 7;
+}
+
+message NetworkTopologyStats {
+  uint64 packets_analyzed = 1;
+  uint64 packets_with_rf_hops = 2;
+  uint64 total_rf_hops = 3;
+  uint64 links_filtered_by_snr = 4;
+  uint64 links_filtered_due_to_snr_zero = 5;
+}
+
+message NetworkNode {
+  uint32 node_id = 1;
+  string display_name = 2;
+  double latitude = 3;
+  double longitude = 4;
+  double avg_snr = 5;
+  double avg_rssi = 6;
+  uint32 neighbor_count = 7;
+  google.protobuf.Timestamp last_seen = 8;
+  string role = 9;
+  string region = 10;
+}
+
+message NetworkLink {
+  uint32 source_node_id = 1;
+  uint32 target_node_id = 2;
+  double avg_snr = 3;
+  uint64 packet_count = 4;
+  uint64 traceroute_count = 5;
+  google.protobuf.Timestamp last_seen = 6;
+  double distance_km = 7;
+  double strength = 8;
+  uint64 last_packet_id = 9;
+  bool bidirectional = 10;
+}
+
+message NetworkTopologyResponse {
+  repeated NetworkNode nodes = 1;
+  repeated NetworkLink links = 2;
+  NetworkTopologyStats stats = 3;
+}
+
+message LongestLinksRequest {
+  double min_distance_km = 1;
+  double min_snr = 2;
+  uint32 max_results = 3;
+  uint32 lookback_hours = 4;
+}
+
+message LongestLinkPacket {
+  uint64 packet_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  double snr = 3;
+  sint32 rssi = 4;
+}
+
+message DirectLongestLink {
+  uint32 from_node_id = 1;
+  uint32 to_node_id = 2;
+  double distance_km = 3;
+  double avg_snr = 4;
+  google.protobuf.Timestamp last_seen = 5;
+  uint64 traceroute_count = 6;
+  repeated LongestLinkPacket recent_packets = 7;
+}
+
+message IndirectLongestPath {
+  uint32 start_node_id = 1;
+  uint32 end_node_id = 2;
+  uint32 hop_count = 3;
+  double total_distance_km = 4;
+  double avg_snr = 5;
+  google.protobuf.Timestamp last_seen = 6;
+  repeated uint64 traceroute_packet_ids = 7;
+}
+
+message LongestLinksStats {
+  uint64 packets_considered = 1;
+  uint64 hops_processed = 2;
+  uint64 cache_hits = 3;
+  uint64 cache_misses = 4;
+}
+
+message LongestLinksResponse {
+  repeated DirectLongestLink direct_links = 1;
+  repeated IndirectLongestPath indirect_paths = 2;
+  LongestLinksStats stats = 3;
+}
+
+message GatewayComparisonRequest {
+  string gateway_id_a = 1;
+  string gateway_id_b = 2;
+  google.protobuf.Timestamp start_time = 3;
+  google.protobuf.Timestamp end_time = 4;
+  double min_snr = 5;
+}
+
+message GatewayComparisonPacket {
+  uint64 packet_id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  uint32 from_node_id = 3;
+  double gateway_a_rssi = 4;
+  double gateway_b_rssi = 5;
+  double gateway_a_snr = 6;
+  double gateway_b_snr = 7;
+  double rssi_diff = 8;
+  double snr_diff = 9;
+  string portnum_name = 10;
+}
+
+message GatewayComparisonResponse {
+  GatewayOverview gateway_a = 1;
+  GatewayOverview gateway_b = 2;
+  repeated GatewayComparisonPacket packets = 3;
+  double avg_rssi_diff = 4;
+  double avg_snr_diff = 5;
+  google.protobuf.Timestamp first_seen = 6;
+  google.protobuf.Timestamp last_seen = 7;
+}
+
+message GatewayCandidatesRequest {
+  string query = 1;
+  uint32 limit = 2;
+  bool popular_only = 3;
+}
+
+message GatewayCandidate {
+  string gateway_id = 1;
+  string display_name = 2;
+  uint64 packet_count = 3;
+  uint32 node_id = 4;
+}
+
+message GatewayCandidatesResponse {
+  repeated GatewayCandidate gateways = 1;
+  uint64 total_count = 2;
+  bool is_popular = 3;
 }
 
 message PacketSuccessStats {
@@ -488,31 +619,6 @@ message GetAnalyticsSummaryResponse {
   repeated TopNode top_nodes = 5;
   repeated DistributionEntry packet_type_distribution = 6;
   repeated DistributionEntry gateway_distribution = 7;
-}
-
-message ListGatewayIdsRequest {}
-
-message ListGatewayIdsResponse {
-  repeated string gateway_ids = 1;
-}
-
-message SignalSample {
-  google.protobuf.Timestamp timestamp = 1;
-  uint32 from_node_id = 2;
-  uint32 to_node_id = 3;
-  string gateway_id = 4;
-  double snr = 5;
-  sint32 rssi = 6;
-  string portnum_name = 7;
-}
-
-message ListSignalSamplesRequest {
-  PacketFilter filter = 1;
-  uint32 limit = 2;
-}
-
-message ListSignalSamplesResponse {
-  repeated SignalSample samples = 1;
 }
 
 message TracerouteHopFilter {
@@ -586,6 +692,131 @@ message VersionResponse {
   string build_date = 3;
 }
 
+// ---------------------------------------------------------------------------
+// Traceroute packets
+// ---------------------------------------------------------------------------
+
+message TracerouteGatewayObservation {
+  string gateway_id = 1;
+  sint32 rssi = 2;
+  double snr = 3;
+  google.protobuf.Timestamp received_at = 4;
+}
+
+message TraceroutePacket {
+  uint64 id = 1;
+  google.protobuf.Timestamp timestamp = 2;
+  uint32 from_node_id = 3;
+  uint32 to_node_id = 4;
+  string gateway_id = 5;
+  string channel_id = 6;
+  int32 hop_start = 7;
+  int32 hop_limit = 8;
+  int32 hop_count = 9;
+  sint32 rssi = 10;
+  double snr = 11;
+  uint32 mesh_packet_id = 12;
+  bool processed_successfully = 13;
+  uint32 payload_length = 14;
+  uint64 reception_count = 15;
+  uint32 gateway_count = 16;
+  sint32 min_rssi = 17;
+  sint32 max_rssi = 18;
+  double min_snr = 19;
+  double max_snr = 20;
+  repeated uint32 route_nodes = 21;
+  string route_summary = 22;
+  bool is_grouped = 23;
+  bytes raw_payload = 24;
+  repeated TracerouteGatewayObservation gateways = 25;
+}
+
+message TraceroutePacketFilter {
+  google.protobuf.Timestamp start_time = 1;
+  google.protobuf.Timestamp end_time = 2;
+  uint32 from_node_id = 3;
+  uint32 to_node_id = 4;
+  string gateway_id = 5;
+  string primary_channel = 6;
+  int32 hop_count = 7;
+  uint32 route_node_id = 8;
+  bool processed_successfully_only = 9;
+  double min_snr = 10;
+  double max_snr = 11;
+  string search = 12;
+}
+
+message ListTraceroutePacketsRequest {
+  TraceroutePacketFilter filter = 1;
+  uint32 limit = 2;
+  uint32 offset = 3;
+  string order_by = 4;
+  string order_dir = 5;
+  bool group_packets = 6;
+}
+
+message ListTraceroutePacketsResponse {
+  repeated TraceroutePacket packets = 1;
+  uint64 total_count = 2;
+  uint32 limit = 3;
+  uint32 offset = 4;
+  bool is_grouped = 5;
+  bool has_more = 6;
+}
+
+message GetTracerouteDetailsRequest {
+  uint64 packet_id = 1;
+}
+
+message GetTracerouteDetailsResponse {
+  TraceroutePacket packet = 1;
+  repeated TracerouteHop hops = 2;
+}
+
+// ---------------------------------------------------------------------------
+// Node utilities
+// ---------------------------------------------------------------------------
+
+message NodeDirectReception {
+  uint64 packet_id = 1;
+  uint32 origin_node_id = 2;
+  uint32 destination_node_id = 3;
+  string gateway_id = 4;
+  double snr = 5;
+  sint32 rssi = 6;
+  google.protobuf.Timestamp timestamp = 7;
+}
+
+message ListNodeDirectReceptionsRequest {
+  uint32 node_id = 1;
+  string direction = 2;
+  uint32 limit = 3;
+}
+
+message ListNodeDirectReceptionsResponse {
+  repeated NodeDirectReception receptions = 1;
+}
+
+message ListNodeNamesRequest {
+  repeated uint32 node_ids = 1;
+}
+
+message NodeNameEntry {
+  uint32 node_id = 1;
+  string display_name = 2;
+  string short_name = 3;
+}
+
+message ListNodeNamesResponse {
+  repeated NodeNameEntry entries = 1;
+}
+
+message ListPrimaryChannelsRequest {}
+
+message ListPrimaryChannelsResponse {
+  repeated string channels = 1;
+}
+
 service MeshpipeData {
   rpc GetDashboardStats(DashboardRequest) returns (DashboardResponse);
   rpc ListPackets(ListPacketsRequest) returns (ListPacketsResponse);
@@ -602,11 +833,18 @@ service MeshpipeData {
   rpc GetChatWindow(GetChatWindowRequest) returns (GetChatWindowResponse);
   rpc GetNodeAnalytics(GetNodeAnalyticsRequest) returns (GetNodeAnalyticsResponse);
   rpc GetGatewayOverview(GetGatewayOverviewRequest) returns (GetGatewayOverviewResponse);
+  rpc GetNetworkTopology(NetworkTopologyRequest) returns (NetworkTopologyResponse);
+  rpc GetLongestLinksAnalysis(LongestLinksRequest) returns (LongestLinksResponse);
+  rpc GetGatewayComparison(GatewayComparisonRequest) returns (GatewayComparisonResponse);
+  rpc ListGatewayCandidates(GatewayCandidatesRequest) returns (GatewayCandidatesResponse);
   rpc GetAnalyticsSummary(GetAnalyticsSummaryRequest) returns (GetAnalyticsSummaryResponse);
-  rpc ListGatewayIds(ListGatewayIdsRequest) returns (ListGatewayIdsResponse);
-  rpc ListSignalSamples(ListSignalSamplesRequest) returns (ListSignalSamplesResponse);
+  rpc ListTraceroutePackets(ListTraceroutePacketsRequest) returns (ListTraceroutePacketsResponse);
+  rpc GetTracerouteDetails(GetTracerouteDetailsRequest) returns (GetTracerouteDetailsResponse);
   rpc ListTracerouteHops(ListTracerouteHopsRequest) returns (ListTracerouteHopsResponse);
   rpc GetTracerouteGraph(TracerouteGraphRequest) returns (TracerouteGraphResponse);
+  rpc ListNodeDirectReceptions(ListNodeDirectReceptionsRequest) returns (ListNodeDirectReceptionsResponse);
+  rpc ListNodeNames(ListNodeNamesRequest) returns (ListNodeNamesResponse);
+  rpc ListPrimaryChannels(ListPrimaryChannelsRequest) returns (ListPrimaryChannelsResponse);
   rpc Healthz(HealthCheckRequest) returns (HealthCheckResponse);
   rpc GetVersion(GetVersionRequest) returns (VersionResponse);
 }

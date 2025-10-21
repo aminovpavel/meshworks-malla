@@ -1,0 +1,128 @@
+.traceroute-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(0, 2fr);
+  gap: 1.5rem;
+}
+
+.traceroute-list {
+  display: grid;
+  gap: 0.6rem;
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+  padding: 1rem;
+  background: color-mix(in srgb, var(--surface) 6%, transparent);
+}
+
+.traceroute-list__item {
+  border: 1px solid transparent;
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  display: grid;
+  gap: 0.2rem;
+  text-align: left;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.traceroute-list__item:hover {
+  border-color: color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.traceroute-list__item--active {
+  border-color: color-mix(in srgb, var(--accent, #4e8cff) 40%, transparent);
+  background: color-mix(in srgb, var(--accent, #4e8cff) 12%, transparent);
+}
+
+.traceroute-list__nodes {
+  font-weight: 600;
+}
+
+.traceroute-list__meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.traceroute-list__time {
+  font-size: 0.78rem;
+  color: var(--text-dimmed);
+}
+
+.traceroute-list__empty {
+  margin: 0;
+  color: var(--text-dimmed);
+}
+
+.traceroute-details {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+  background: color-mix(in srgb, var(--surface) 6%, transparent);
+  padding: 1.25rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.traceroute-details__header {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.traceroute-details__header h2 {
+  margin: 0;
+}
+
+.traceroute-details__header p {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.traceroute-packets {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.traceroute-packet {
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  padding: 0.95rem 1.1rem;
+  background: color-mix(in srgb, var(--surface) 4%, transparent);
+  display: grid;
+  gap: 0.5rem;
+}
+
+.traceroute-packet__time {
+  font-family: "JetBrains Mono", ui-monospace;
+  font-size: 0.9rem;
+}
+
+.traceroute-packet__meta {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.traceroute-packet__summary {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.traceroute-packet__gateways {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.traceroute-packets__empty {
+  margin: 0;
+  color: var(--text-dimmed);
+}
+
+@media (max-width: 960px) {
+  .traceroute-layout {
+    grid-template-columns: 1fr;
+  }
+}

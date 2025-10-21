@@ -1,0 +1,71 @@
+.longest-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+  border-radius: 1rem;
+  padding: 1.2rem 1.4rem;
+  background: color-mix(in srgb, var(--surface) 6%, transparent);
+}
+
+.longest-filters label {
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+}
+
+.longest-filters span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.longest-filters input {
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  background: color-mix(in srgb, var(--surface) 4%, transparent);
+  color: inherit;
+}
+
+.longest-section {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.longest-table-wrapper {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  overflow-x: auto;
+  background: color-mix(in srgb, var(--surface) 6%, transparent);
+}
+
+.longest-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.longest-table th,
+.longest-table td {
+  padding: 0.65rem 0.85rem;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  text-align: left;
+}
+
+.longest-table th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.longest-table tbody tr:last-of-type td {
+  border-bottom: none;
+}
+
+.longest-table__empty {
+  text-align: center;
+  color: var(--text-dimmed);
+}

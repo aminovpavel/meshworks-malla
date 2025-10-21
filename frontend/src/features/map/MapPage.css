@@ -1,0 +1,105 @@
+.map-card {
+  border-radius: 1.1rem;
+  border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+  background: color-mix(in srgb, var(--surface) 6%, transparent);
+  padding: 1.5rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.map-card__svg {
+  width: 100%;
+  border-radius: 1rem;
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent, #4e8cff) 8%, transparent), transparent 60%);
+  border: 1px solid color-mix(in srgb, currentColor 8%, transparent);
+}
+
+.map-card__links line {
+  stroke: color-mix(in srgb, currentColor 25%, transparent);
+  opacity: 0.65;
+}
+
+.map-card__nodes circle {
+  transition: transform 0.15s ease;
+}
+
+.map-card__node {
+  fill: color-mix(in srgb, currentColor 22%, transparent);
+  stroke: transparent;
+}
+
+.map-card__node--role-gateway {
+  fill: #ffa94d;
+}
+
+.map-card__node--role-router {
+  fill: #69db7c;
+}
+
+.map-card__node--role-standard {
+  fill: #74c0fc;
+}
+
+.map-card__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.map-card__legend-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.map-card__legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.map-card__legend-dot--gateway {
+  background: #ffa94d;
+}
+
+.map-card__legend-dot--router {
+  background: #69db7c;
+}
+
+.map-card__legend-dot--standard {
+  background: #74c0fc;
+}
+
+.map-card__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.map-card__stats dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  margin: 0 0 0.25rem;
+}
+
+.map-card__stats dd {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .map-card {
+    padding: 1.1rem;
+  }
+
+  .map-card__svg {
+    height: auto;
+  }
+}

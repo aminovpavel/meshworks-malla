@@ -80,3 +80,40 @@ jobs:
 
       - name: Run tests (all markers)
         run: nix develop --command uv run pytest -n auto --tb=line --no-header --quiet
+
+  meshpipe-stack:
+    name: Meshpipe stack smoke
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Launch meshpipe stack (redis + envoy)
+        run: |
+          docker compose -f ops/compose/docker-compose.dev.yml up -d meshpipe-redis meshpipe-dev meshpipe-envoy
+          docker compose -f ops/compose/docker-compose.dev.yml ps
+
+      - name: Smoke check redis & envoy
+        run: |
+          docker compose -f ops/compose/docker-compose.dev.yml exec -T meshpipe-redis redis-cli ping
+          # wait for envoy port to open
+          STATUS=""
+          for attempt in $(seq 1 10); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:7444/ || true)
+            if [ -n "$STATUS" ]; then
+              echo "Envoy responded with HTTP $STATUS"
+              break
+            fi
+            sleep 2
+          done
+          if [ -z "$STATUS" ]; then
+            echo "Envoy did not respond on http://127.0.0.1:7444" >&2
+            exit 1
+          fi
+
+      - name: Teardown stack
+        if: always()
+        run: docker compose -f ops/compose/docker-compose.dev.yml down -v

@@ -1,0 +1,107 @@
+.packet-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  border: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem;
+  background: color-mix(in srgb, var(--surface) 6%, transparent);
+}
+
+.packet-filters__field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.packet-filters__field span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.packet-filters__field input {
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid color-mix(in srgb, currentColor 16%, transparent);
+  background: color-mix(in srgb, var(--surface) 4%, transparent);
+  color: inherit;
+}
+
+.packet-filters__field--wide {
+  grid-column: span 2;
+}
+
+.packet-table-wrapper {
+  border-radius: 1rem;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  overflow-x: auto;
+  background: color-mix(in srgb, var(--surface) 6%, transparent);
+}
+
+.packet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.packet-table thead {
+  background: color-mix(in srgb, currentColor 6%, transparent);
+}
+
+.packet-table th,
+.packet-table td {
+  padding: 0.65rem 0.85rem;
+  text-align: left;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 10%, transparent);
+  white-space: nowrap;
+}
+
+.packet-table th {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.packet-table tbody tr:last-of-type td {
+  border-bottom: none;
+}
+
+.packet-aggregates {
+  display: grid;
+  gap: 1rem;
+}
+
+.packet-aggregates__grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.packet-aggregate {
+  border-radius: 0.9rem;
+  border: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+  padding: 0.8rem 1rem;
+  background: color-mix(in srgb, var(--surface) 6%, transparent);
+  display: grid;
+  gap: 0.45rem;
+}
+
+.packet-aggregate__label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.packet-aggregate__value {
+  font-family: "JetBrains Mono", ui-monospace;
+  font-size: 1.1rem;
+}
+
+@media (max-width: 720px) {
+  .packet-filters__field--wide {
+    grid-column: auto;
+  }
+}

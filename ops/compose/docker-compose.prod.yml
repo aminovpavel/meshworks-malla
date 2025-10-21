@@ -9,3 +9,13 @@ services:
     environment:
       # Ensure debug is disabled in production
       - MALLA_DEBUG=false
+      - VITE_GRPC_WEB_ENDPOINT=${VITE_GRPC_WEB_ENDPOINT:-https://malla.example.com/grpc-web}
+
+  meshpipe:
+    environment:
+      - MESHPIPE_GRPC_AUTH_TOKEN=${MESHPIPE_GRPC_AUTH_TOKEN:?provide-meshpipe-grpc-token}
+      - MESHPIPE_GRPC_CACHE_KEY_PREFIX=${MESHPIPE_GRPC_CACHE_KEY_PREFIX:-meshpipe:grpc:prod}
+
+  meshpipe-envoy:
+    environment:
+      - ENVOY_UID=0
