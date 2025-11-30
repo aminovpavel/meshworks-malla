@@ -18,6 +18,7 @@ services:
       - MALLA_HOST=0.0.0.0
       - MALLA_PORT=5008
       - MALLA_DATABASE_FILE=/app/data/meshtastic_history.db
+      - MALLA_REDIS_URL=${MALLA_REDIS_URL:-redis://redis:6379/0}
       - MALLA_NAME=${MALLA_NAME:-Malla}
       - MALLA_SECRET_KEY=${MALLA_SECRET_KEY:-dev-secret-key-change-in-production}
       - MALLA_DEBUG=${MALLA_DEBUG:-false}
@@ -28,6 +29,13 @@ services:
     restart: unless-stopped
     depends_on:
       - malla-capture
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
 
   malla-capture:
     # Use pre-built image by default, override with 'build: .' for development
@@ -53,3 +61,4 @@ services:
 
 volumes:
   malla_data:
+  redis_data:
