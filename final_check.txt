@@ -1,0 +1,974 @@
+   Building malla @ file:///app
+      Built malla @ file:///app
+Uninstalled 1 package in 1ms
+Installed 1 package in 4ms
+[1m============================= test session starts ==============================[0m
+platform linux -- Python 3.13.9, pytest-8.4.2, pluggy-1.6.0 -- /app/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /app
+configfile: pyproject.toml
+testpaths: tests
+plugins: flask-1.3.0, xdist-3.8.0, asyncio-1.2.0, base-url-2.1.0, playwright-0.7.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+created: 4/4 workers
+4 workers [472 items]
+
+scheduling tests via LoadScheduling
+
+tests/e2e/test_graph.py::TestGraphResolutions::test_graph_centering_at_mobile_375x667[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_nodes_with_unknown_names_display_hex_id[chromium]
+tests/e2e/test_packets_url_filters.py::TestPacketsURLFilters::test_packets_url_filter_no_duplicate_requests[chromium]
+tests/e2e/test_chat_page.py::test_chat_page_refresh[chromium]
+[gw0][36m [  0%] [0m[32mPASSED[0m tests/e2e/test_chat_page.py::test_chat_page_refresh[chromium]
+tests/e2e/test_debug_node_picker.py::test_debug_node_picker_interaction[chromium]
+[gw3][36m [  0%] [0m[32mPASSED[0m tests/e2e/test_packets_url_filters.py::TestPacketsURLFilters::test_packets_url_filter_no_duplicate_requests[chromium]
+tests/e2e/test_packets_url_filters.py::TestPacketsURLFilters::test_packets_url_filter_applied_immediately[chromium]
+[gw1][36m [  0%] [0m[32mPASSED[0m tests/e2e/test_graph.py::TestGraphResolutions::test_graph_centering_at_mobile_375x667[chromium]
+tests/e2e/test_graph.py::TestGraphResolutions::test_center_graph_button_at_different_resolutions[chromium]
+[gw2][36m [  0%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_nodes_with_unknown_names_display_hex_id[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_unknown_role_nodes_display_red_color[chromium]
+[gw3][36m [  1%] [0m[32mPASSED[0m tests/e2e/test_packets_url_filters.py::TestPacketsURLFilters::test_packets_url_filter_applied_immediately[chromium]
+tests/e2e/test_packets_url_filters.py::TestPacketsURLFilters::test_packets_url_filter_multiple_parameters[chromium]
+[gw2][36m [  1%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_unknown_role_nodes_display_red_color[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_legend_includes_unknown_role[chromium]
+[gw3][36m [  1%] [0m[32mPASSED[0m tests/e2e/test_packets_url_filters.py::TestPacketsURLFilters::test_packets_url_filter_multiple_parameters[chromium]
+tests/e2e/test_packets_url_filters.py::TestPacketsURLFilters::test_packets_no_url_parameters_single_request[chromium]
+[gw2][36m [  1%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_legend_includes_unknown_role[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_node_popup_handles_unknown_roles[chromium]
+[gw0][36m [  1%] [0m[32mPASSED[0m tests/e2e/test_debug_node_picker.py::test_debug_node_picker_interaction[chromium]
+tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_exclude_from_filter_ui_workflow[chromium]
+[gw3][36m [  2%] [0m[32mPASSED[0m tests/e2e/test_packets_url_filters.py::TestPacketsURLFilters::test_packets_no_url_parameters_single_request[chromium]
+tests/e2e/test_packets_url_filters.py::TestPacketsURLFilters::test_packets_exclude_self_param_populates_checkbox[chromium]
+[gw2][36m [  2%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_node_popup_handles_unknown_roles[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_role_filter_functionality[chromium]
+[gw3][36m [  2%] [0m[32mPASSED[0m tests/e2e/test_packets_url_filters.py::TestPacketsURLFilters::test_packets_exclude_self_param_populates_checkbox[chromium]
+tests/e2e/test_packets_url_filters.py::TestPacketsURLFilters::test_packets_exclude_self_frontend_behavior[chromium]
+[gw1][36m [  2%] [0m[32mPASSED[0m tests/e2e/test_graph.py::TestGraphResolutions::test_center_graph_button_at_different_resolutions[chromium]
+tests/e2e/test_map_filters.py::TestMapFilters::test_role_filter_options_available[chromium]
+[gw0][36m [  2%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_exclude_from_filter_ui_workflow[chromium]
+tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_exclude_to_filter_ui_workflow[chromium]
+[gw2][36m [  3%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_role_filter_functionality[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_age_filter_functionality_client_side[chromium]
+[gw1][36m [  3%] [0m[32mPASSED[0m tests/e2e/test_map_filters.py::TestMapFilters::test_role_filter_options_available[chromium]
+tests/e2e/test_map_filters.py::TestMapFilters::test_age_filter_options_available[chromium]
+[gw3][36m [  3%] [0m[32mPASSED[0m tests/e2e/test_packets_url_filters.py::TestPacketsURLFilters::test_packets_exclude_self_frontend_behavior[chromium]
+tests/e2e/test_tables.py::TestTables::test_packets_page_loads[chromium]
+[gw3][36m [  3%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_packets_page_loads[chromium]
+tests/e2e/test_tables.py::TestTables::test_packets_table_loads_data[chromium]
+[gw1][36m [  4%] [0m[32mPASSED[0m tests/e2e/test_map_filters.py::TestMapFilters::test_age_filter_options_available[chromium]
+tests/e2e/test_map_filters.py::TestMapFilters::test_client_side_role_filtering[chromium]
+[gw3][36m [  4%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_packets_table_loads_data[chromium]
+tests/e2e/test_tables.py::TestTables::test_packets_grouping_default_state[chromium]
+[gw3][36m [  4%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_packets_grouping_default_state[chromium]
+tests/e2e/test_tables.py::TestTables::test_packets_grouping_toggle[chromium]
+[gw2][36m [  4%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_age_filter_functionality_client_side[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_combined_filters_functionality[chromium]
+[gw1][36m [  4%] [0m[32mPASSED[0m tests/e2e/test_map_filters.py::TestMapFilters::test_client_side_role_filtering[chromium]
+tests/e2e/test_map_filters.py::TestMapFilters::test_client_side_age_filtering[chromium]
+[gw0][36m [  5%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_exclude_to_filter_ui_workflow[chromium]
+tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_combined_exclude_filters_ui[chromium]
+[gw3][36m [  5%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_packets_grouping_toggle[chromium]
+tests/e2e/test_tables.py::TestTables::test_packets_sorting[chromium]
+[gw3][36m [  5%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_packets_sorting[chromium]
+tests/e2e/test_tables.py::TestTables::test_packets_gateway_sorting_grouped[chromium]
+[gw0][36m [  5%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_combined_exclude_filters_ui[chromium]
+tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_exclude_filters_url_parameter_restoration[chromium]
+[gw0][36m [  5%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_exclude_filters_url_parameter_restoration[chromium]
+tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_exclude_filters_clear_functionality[chromium]
+[gw2][36m [  6%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_combined_filters_functionality[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_traceroute_links_respect_filters[chromium]
+[gw1][36m [  6%] [0m[32mPASSED[0m tests/e2e/test_map_filters.py::TestMapFilters::test_client_side_age_filtering[chromium]
+tests/e2e/test_map_filters.py::TestMapFilters::test_filter_reset_functionality[chromium]
+[gw2][36m [  6%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_traceroute_links_respect_filters[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_unknown_role_filter[chromium]
+[gw0][36m [  6%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_exclude_filters_clear_functionality[chromium]
+tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_exclude_filters_with_broadcast_selection[chromium]
+[gw3][36m [  6%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_packets_gateway_sorting_grouped[chromium]
+tests/e2e/test_tables.py::TestTables::test_packets_pagination[chromium]
+[gw1][36m [  7%] [0m[32mPASSED[0m tests/e2e/test_map_filters.py::TestMapFilters::test_filter_reset_functionality[chromium]
+tests/e2e/test_map_filters.py::TestMapFilters::test_filter_affects_node_list[chromium]
+[gw2][36m [  7%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_unknown_role_filter[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_filter_persistence_during_search[chromium]
+[gw3][36m [  7%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_packets_pagination[chromium]
+tests/e2e/test_tables.py::TestTables::test_packets_filters[chromium]
+[gw1][36m [  7%] [0m[32mPASSED[0m tests/e2e/test_map_filters.py::TestMapFilters::test_filter_affects_node_list[chromium]
+tests/e2e/test_map_filters.py::TestMapFilters::test_filter_affects_map_markers[chromium]
+[gw3][36m [  8%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_packets_filters[chromium]
+tests/e2e/test_tables.py::TestTables::test_packets_to_node_filter[chromium]
+[gw3][36m [  8%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_packets_to_node_filter[chromium]
+tests/e2e/test_tables.py::TestTables::test_packets_packet_types_complete[chromium]
+[gw3][36m [  8%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_packets_packet_types_complete[chromium]
+tests/e2e/test_tables.py::TestTables::test_packets_grouping_behavior[chromium]
+[gw2][36m [  8%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_filter_persistence_during_search[chromium]
+tests/e2e/test_nodes_primary_channel_filter.py::TestNodesPrimaryChannelFilter::test_filter_by_primary_channel[chromium]
+[gw0][36m [  8%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_exclude_filters_with_broadcast_selection[chromium]
+tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_exclude_filters_api_consistency_e2e[chromium]
+[gw3][36m [  9%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_packets_grouping_behavior[chromium]
+tests/e2e/test_tables.py::TestTables::test_packets_grouping_reactive_behavior[chromium]
+[gw2][36m [  9%] [0m[32mPASSED[0m tests/e2e/test_nodes_primary_channel_filter.py::TestNodesPrimaryChannelFilter::test_filter_by_primary_channel[chromium]
+tests/e2e/test_nodes_search.py::TestNodesSearch::test_nodes_search_functionality[chromium]
+[gw2][36m [  9%] [0m[32mPASSED[0m tests/e2e/test_nodes_search.py::TestNodesSearch::test_nodes_search_functionality[chromium]
+tests/e2e/test_nodes_search.py::TestNodesSearch::test_nodes_search_with_hardware_filter[chromium]
+[gw3][36m [  9%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_packets_grouping_reactive_behavior[chromium]
+tests/e2e/test_tables.py::TestTables::test_traceroute_page_loads[chromium]
+[gw1][36m [  9%] [0m[32mPASSED[0m tests/e2e/test_map_filters.py::TestMapFilters::test_filter_affects_map_markers[chromium]
+tests/e2e/test_map_filters.py::TestMapFilters::test_search_respects_active_filters[chromium]
+[gw0][36m [ 10%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_exclude_filters_api_consistency_e2e[chromium]
+tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_exclude_filters_performance_e2e[chromium]
+[gw2][36m [ 10%] [0m[32mPASSED[0m tests/e2e/test_nodes_search.py::TestNodesSearch::test_nodes_search_with_hardware_filter[chromium]
+tests/e2e/test_nodes_search.py::TestNodesSearch::test_nodes_search_no_results[chromium]
+[gw3][36m [ 10%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_traceroute_page_loads[chromium]
+tests/e2e/test_tables.py::TestTables::test_traceroute_table_loads_data[chromium]
+[gw2][36m [ 10%] [0m[32mPASSED[0m tests/e2e/test_nodes_search.py::TestNodesSearch::test_nodes_search_no_results[chromium]
+tests/e2e/test_nodes_search.py::TestNodesSearch::test_nodes_search_case_insensitive[chromium]
+[gw3][36m [ 11%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_traceroute_table_loads_data[chromium]
+tests/e2e/test_tables.py::TestTables::test_traceroute_grouping_toggle[chromium]
+[gw0][36m [ 11%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_e2e.py::TestExcludeFiltersE2E::test_exclude_filters_performance_e2e[chromium]
+tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_exclude_from_url_parameter_restoration[chromium]
+[gw1][36m [ 11%] [0m[32mPASSED[0m tests/e2e/test_map_filters.py::TestMapFilters::test_search_respects_active_filters[chromium]
+tests/e2e/test_map_filters.py::TestMapFilters::test_unknown_role_filtering[chromium]
+[gw2][36m [ 11%] [0m[32mPASSED[0m tests/e2e/test_nodes_search.py::TestNodesSearch::test_nodes_search_case_insensitive[chromium]
+tests/e2e/test_nodes_search.py::TestNodesSearch::test_nodes_search_realtime_filtering[chromium]
+[gw3][36m [ 11%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_traceroute_grouping_toggle[chromium]
+tests/e2e/test_tables.py::TestTables::test_nodes_page_loads[chromium]
+[gw3][36m [ 12%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_nodes_page_loads[chromium]
+tests/e2e/test_tables.py::TestTables::test_nodes_table_loads_data[chromium]
+[gw2][36m [ 12%] [0m[32mPASSED[0m tests/e2e/test_nodes_search.py::TestNodesSearch::test_nodes_search_realtime_filtering[chromium]
+tests/e2e/test_packets_columns_race.py::TestPacketsColumnsRace::test_columns_update_immediately[chromium]
+[gw1][36m [ 12%] [0m[32mPASSED[0m tests/e2e/test_map_filters.py::TestMapFilters::test_unknown_role_filtering[chromium]
+tests/e2e/test_map_filters.py::TestMapFilters::test_multiple_filter_combinations[chromium]
+[gw0][36m [ 12%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_exclude_from_url_parameter_restoration[chromium]
+tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_exclude_to_url_parameter_restoration[chromium]
+[gw3][36m [ 12%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_nodes_table_loads_data[chromium]
+tests/e2e/test_tables.py::TestTables::test_nodes_hardware_filter_complete[chromium]
+[gw2][36m [ 13%] [0m[32mPASSED[0m tests/e2e/test_packets_columns_race.py::TestPacketsColumnsRace::test_columns_update_immediately[chromium]
+tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packets_filters_load_correctly[chromium]
+[gw3][36m [ 13%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_nodes_hardware_filter_complete[chromium]
+tests/e2e/test_tables.py::TestTables::test_nodes_role_filter_complete[chromium]
+[gw2][36m [ 13%] [0m[32mPASSED[0m tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packets_filters_load_correctly[chromium]
+tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_loads_options[chromium]
+[gw3][36m [ 13%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_nodes_role_filter_complete[chromium]
+tests/e2e/test_tables.py::TestTables::test_nodes_last_seen_not_never[chromium]
+[gw0][36m [ 13%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_exclude_to_url_parameter_restoration[chromium]
+tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_combined_exclude_url_parameters[chromium]
+[gw3][36m [ 14%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_nodes_last_seen_not_never[chromium]
+tests/e2e/test_tables.py::TestTables::test_nodes_filters_functional[chromium]
+[gw2][36m [ 14%] [0m[32mPASSED[0m tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_loads_options[chromium]
+tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_url_parameter_restoration[chromium]
+[gw3][36m [ 14%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_nodes_filters_functional[chromium]
+tests/e2e/test_tables.py::TestTables::test_table_responsive_design[chromium]
+[gw0][36m [ 14%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_combined_exclude_url_parameters[chromium]
+tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_exclude_filters_with_other_url_parameters[chromium]
+[gw2][36m [ 15%] [0m[32mPASSED[0m tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_url_parameter_restoration[chromium]
+tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_column_switching[chromium]
+[gw3][36m [ 15%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_table_responsive_design[chromium]
+tests/e2e/test_tables.py::TestTables::test_table_action_buttons[chromium]
+[gw1][36m [ 15%] [0m[32mPASSED[0m tests/e2e/test_map_filters.py::TestMapFilters::test_multiple_filter_combinations[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_map_page_loads_successfully[chromium]
+[gw3][36m [ 15%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_table_action_buttons[chromium]
+tests/e2e/test_tables.py::TestTables::test_table_performance[chromium]
+[gw1][36m [ 15%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_map_page_loads_successfully[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_map_loads_node_data[chromium]
+[gw3][36m [ 16%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_table_performance[chromium]
+tests/e2e/test_tables.py::TestTables::test_sidebar_toggle_functionality[chromium]
+[gw0][36m [ 16%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_exclude_filters_with_other_url_parameters[chromium]
+tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_exclude_filters_url_vs_api_consistency[chromium]
+[gw1][36m [ 16%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_map_loads_node_data[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_custom_node_markers_display[chromium]
+[gw3][36m [ 16%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_sidebar_toggle_functionality[chromium]
+tests/e2e/test_tables.py::TestTables::test_filter_controls_in_sidebar[chromium]
+[gw2][36m [ 16%] [0m[32mPASSED[0m tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_column_switching[chromium]
+tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_url_column_restoration[chromium]
+[gw3][36m [ 17%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_filter_controls_in_sidebar[chromium]
+tests/e2e/test_tables.py::TestTables::test_nodes_hardware_filter_clear_bug[chromium]
+[gw0][36m [ 17%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_exclude_filters_url_vs_api_consistency[chromium]
+tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_exclude_filters_clear_via_url[chromium]
+[gw1][36m [ 17%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_custom_node_markers_display[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_node_popup_displays_role_information[chromium]
+[gw2][36m [ 17%] [0m[32mPASSED[0m tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_url_column_restoration[chromium]
+tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_api_consistency[chromium]
+[gw3][36m [ 18%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_nodes_hardware_filter_clear_bug[chromium]
+tests/e2e/test_tables.py::TestTables::test_traceroute_route_data_present[chromium]
+[gw1][36m [ 18%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_node_popup_displays_role_information[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_precision_circle_functionality[chromium]
+[gw0][36m [ 18%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_exclude_filters_clear_via_url[chromium]
+tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_exclude_filters_invalid_url_parameters[chromium]
+[gw2][36m [ 18%] [0m[32mPASSED[0m tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_api_consistency[chromium]
+tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_data_vs_ui_consistency[chromium]
+[gw3][36m [ 18%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_traceroute_route_data_present[chromium]
+tests/e2e/test_tables.py::TestTables::test_traceroute_hops_display[chromium]
+[gw1][36m [ 19%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_precision_circle_functionality[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_legend_includes_role_information[chromium]
+[gw0][36m [ 19%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_exclude_filters_invalid_url_parameters[chromium]
+tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_exclude_filters_broadcast_url_parameter[chromium]
+[gw1][36m [ 19%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_legend_includes_role_information[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_node_search_includes_roles[chromium]
+[gw2][36m [ 19%] [0m[32mPASSED[0m tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_data_vs_ui_consistency[chromium]
+tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_duplicate_requests_check[chromium]
+[gw3][36m [ 19%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_traceroute_hops_display[chromium]
+tests/e2e/test_tables.py::TestTables::test_traceroute_gateway_display[chromium]
+[gw1][36m [ 20%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_node_search_includes_roles[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_node_list_displays_roles[chromium]
+[gw0][36m [ 20%] [0m[32mPASSED[0m tests/e2e/test_exclude_filters_url_e2e.py::TestExcludeFiltersURLHandling::test_exclude_filters_broadcast_url_parameter[chromium]
+tests/e2e/test_graph.py::TestGraphBasicFunctionality::test_graph_page_loads[chromium]
+[gw0][36m [ 20%] [0m[32mPASSED[0m tests/e2e/test_graph.py::TestGraphBasicFunctionality::test_graph_page_loads[chromium]
+tests/e2e/test_graph.py::TestGraphBasicFunctionality::test_search_functionality[chromium]
+[gw2][36m [ 20%] [0m[32mPASSED[0m tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_duplicate_requests_check[chromium]
+tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_timing_issue_debug[chromium]
+[gw0][36m [ 20%] [0m[32mPASSED[0m tests/e2e/test_graph.py::TestGraphBasicFunctionality::test_search_functionality[chromium]
+tests/e2e/test_graph.py::TestGraphBasicFunctionality::test_node_selection_and_centering[chromium]
+[gw3][36m [ 21%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_traceroute_gateway_display[chromium]
+tests/e2e/test_tables.py::TestTables::test_traceroute_gateway_count_validation[chromium]
+[gw1][36m [ 21%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_node_list_displays_roles[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_sidebar_toggle_functionality[chromium]
+[gw3][36m [ 21%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_traceroute_gateway_count_validation[chromium]
+tests/e2e/test_tables.py::TestTables::test_traceroute_named_node_links[chromium]
+[gw1][36m [ 21%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_sidebar_toggle_functionality[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_map_controls_functionality[chromium]
+[gw1][36m [ 22%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_map_controls_functionality[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_age_filter_functionality[chromium]
+[gw2][36m [ 22%] [0m[32mPASSED[0m tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_timing_issue_debug[chromium]
+tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_api_request_verification[chromium]
+[gw0][36m [ 22%] [0m[32mPASSED[0m tests/e2e/test_graph.py::TestGraphBasicFunctionality::test_node_selection_and_centering[chromium]
+tests/e2e/test_graph.py::TestGraphBasicFunctionality::test_sidebar_toggle_functionality[chromium]
+[gw3][36m [ 22%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_traceroute_named_node_links[chromium]
+tests/e2e/test_tables.py::TestTables::test_traceroute_grouping_functionality[chromium]
+[gw0][36m [ 22%] [0m[32mPASSED[0m tests/e2e/test_graph.py::TestGraphBasicFunctionality::test_sidebar_toggle_functionality[chromium]
+tests/e2e/test_graph.py::TestGraphInteractivity::test_drag_functionality[chromium]
+[gw1][36m [ 23%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_age_filter_functionality[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_node_selection_and_details[chromium]
+[gw2][36m [ 23%] [0m[32mPASSED[0m tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_api_request_verification[chromium]
+tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_hardcoded_types_suggestion[chromium]
+[gw3][36m [ 23%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_traceroute_grouping_functionality[chromium]
+tests/e2e/test_tables.py::TestTables::test_traceroute_route_node_filter_functionality[chromium]
+[gw2][36m [ 23%] [0m[32mPASSED[0m tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_hardcoded_types_suggestion[chromium]
+[gw0][36m [ 23%] [0m[32mPASSED[0m tests/e2e/test_graph.py::TestGraphInteractivity::test_drag_functionality[chromium]
+tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_manual_dropdown_change_applies_filter[chromium]
+tests/e2e/test_graph.py::TestGraphInteractivity::test_zoom_functionality[chromium]
+[gw1][36m [ 24%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_node_selection_and_details[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_clear_selection_functionality[chromium]
+[gw3][36m [ 24%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_traceroute_route_node_filter_functionality[chromium]
+tests/e2e/test_tables.py::TestTables::test_url_parameter_filter_population[chromium]
+[gw0][36m [ 24%] [0m[32mPASSED[0m tests/e2e/test_graph.py::TestGraphInteractivity::test_zoom_functionality[chromium]
+tests/e2e/test_graph.py::TestGraphInteractivity::test_center_graph_button_stability[chromium]
+[gw1][36m [ 24%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_clear_selection_functionality[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_search_functionality_with_roles[chromium]
+[gw2][36m [ 25%] [0m[32mPASSED[0m tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_manual_dropdown_change_applies_filter[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_automatic_filtering_on_input_change[chromium]
+[gw1][36m [ 25%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_search_functionality_with_roles[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_statistics_display[chromium]
+[gw3][36m [ 25%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_url_parameter_filter_population[chromium]
+tests/e2e/test_tables.py::TestTables::test_traceroute_route_data_display[chromium]
+[gw1][36m [ 25%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_statistics_display[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_responsive_design_mobile[chromium]
+[gw1][36m [ 25%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_responsive_design_mobile[chromium]
+tests/e2e/test_map_layout.py::TestMapLayout::test_error_handling[chromium]
+[gw2][36m [ 26%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_automatic_filtering_on_input_change[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_gateway_filter_input[chromium]
+[gw0][36m [ 26%] [0m[32mPASSED[0m tests/e2e/test_graph.py::TestGraphInteractivity::test_center_graph_button_stability[chromium]
+tests/e2e/test_graph.py::TestGraphAdvancedFeatures::test_geographical_positioning[chromium]
+[gw1][36m [ 26%] [0m[32mPASSED[0m tests/e2e/test_map_layout.py::TestMapLayout::test_error_handling[chromium]
+tests/integration/test_api_endpoints.py::TestUtilityEndpoints::test_gateways_search_endpoint
+[gw1][36m [ 26%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestUtilityEndpoints::test_gateways_search_endpoint
+tests/integration/test_api_endpoints.py::TestErrorHandling::test_invalid_node_id_format
+[gw1][36m [ 26%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestErrorHandling::test_invalid_node_id_format
+tests/integration/test_api_endpoints.py::TestErrorHandling::test_malformed_api_request
+[gw1][36m [ 27%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestErrorHandling::test_malformed_api_request
+tests/integration/test_api_endpoints.py::TestErrorHandling::test_pagination_edge_cases
+[gw1][36m [ 27%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestErrorHandling::test_pagination_edge_cases
+tests/integration/test_api_endpoints.py::TestDataConsistency::test_node_count_consistency
+[gw1][36m [ 27%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestDataConsistency::test_node_count_consistency
+tests/integration/test_api_endpoints.py::TestDataConsistency::test_packet_count_consistency
+[gw1][36m [ 27%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestDataConsistency::test_packet_count_consistency
+tests/integration/test_api_endpoints.py::TestDataConsistency::test_node_data_consistency
+[gw1][36m [ 27%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestDataConsistency::test_node_data_consistency
+tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_basic
+[gw3][36m [ 28%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_traceroute_route_data_display[chromium]
+tests/e2e/test_tables.py::TestTables::test_traceroute_grouped_vs_ungrouped_route_data[chromium]
+[gw1][36m [ 28%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_basic
+tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_with_filters
+[gw1][36m [ 28%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_with_filters
+tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_with_snr_filter
+[gw1][36m [ 28%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_with_snr_filter
+tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_with_max_results
+[gw1][36m [ 29%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_with_max_results
+tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_direct_link_structure
+[gw1][36m [ 29%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_direct_link_structure
+tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_indirect_link_structure
+[gw1][36m [ 29%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_indirect_link_structure
+tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_sorting
+[gw1][36m [ 29%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_sorting
+tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_error_handling
+[gw1][36m [ 29%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_error_handling
+tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_empty_results
+[gw2][36m [ 30%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_gateway_filter_input[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_form_field_listeners_active[chromium]
+[gw1][36m [ 30%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_empty_results
+tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_summary_accuracy
+[gw1][36m [ 30%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLongestLinksEndpoint::test_longest_links_summary_accuracy
+tests/integration/test_api_routes.py::TestAPIRoutes::test_api_traceroute_endpoint
+[gw1][36m [ 30%] [0m[32mPASSED[0m tests/integration/test_api_routes.py::TestAPIRoutes::test_api_traceroute_endpoint
+tests/integration/test_api_routes.py::TestAPIRoutes::test_api_traceroute_graph_endpoint
+[gw1][36m [ 30%] [0m[32mPASSED[0m tests/integration/test_api_routes.py::TestAPIRoutes::test_api_traceroute_graph_endpoint
+tests/integration/test_api_routes.py::TestAPIRoutes::test_api_traceroute_graph_location_data
+[gw1][36m [ 31%] [0m[32mPASSED[0m tests/integration/test_api_routes.py::TestAPIRoutes::test_api_traceroute_graph_location_data
+tests/integration/test_api_routes.py::TestAPIRoutes::test_api_traceroute_graph_with_filters
+[gw1][36m [ 31%] [0m[32mPASSED[0m tests/integration/test_api_routes.py::TestAPIRoutes::test_api_traceroute_graph_with_filters
+tests/integration/test_api_text_decoding.py::TestAPITextDecoding::test_text_message_decoding_with_real_data
+[gw1][36m [ 31%] [0m[32mPASSED[0m tests/integration/test_api_text_decoding.py::TestAPITextDecoding::test_text_message_decoding_with_real_data
+tests/integration/test_api_text_decoding.py::TestAPITextDecoding::test_non_text_messages_have_null_text_content
+[gw3][36m [ 31%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_traceroute_grouped_vs_ungrouped_route_data[chromium]
+tests/e2e/test_tables.py::TestTables::test_traceroute_gateway_and_route_formatting[chromium]
+[gw1][36m [ 31%] [0m[32mPASSED[0m tests/integration/test_api_text_decoding.py::TestAPITextDecoding::test_non_text_messages_have_null_text_content
+tests/integration/test_api_text_decoding.py::TestAPITextDecoding::test_channel_information_always_present
+[gw1][36m [ 32%] [0m[32mPASSED[0m tests/integration/test_api_text_decoding.py::TestAPITextDecoding::test_channel_information_always_present
+tests/integration/test_api_text_decoding.py::TestAPITextDecoding::test_sqlite_row_to_dict_conversion
+[gw1][36m [ 32%] [0m[32mPASSED[0m tests/integration/test_api_text_decoding.py::TestAPITextDecoding::test_sqlite_row_to_dict_conversion
+tests/integration/test_api_text_decoding.py::TestAPITextDecoding::test_api_backwards_compatibility
+[gw1][36m [ 32%] [0m[32mPASSED[0m tests/integration/test_api_text_decoding.py::TestAPITextDecoding::test_api_backwards_compatibility
+tests/integration/test_api_text_decoding.py::TestAPITextDecoding::test_text_message_content_truncation
+[gw1][36m [ 32%] [0m[32mPASSED[0m tests/integration/test_api_text_decoding.py::TestAPITextDecoding::test_text_message_content_truncation
+tests/integration/test_api_text_decoding.py::TestAPITextDecoding::test_text_message_encoding_edge_cases
+[gw1][36m [ 33%] [0m[32mPASSED[0m tests/integration/test_api_text_decoding.py::TestAPITextDecoding::test_text_message_encoding_edge_cases
+tests/integration/test_chat_feature.py::TestChatFeature::test_chat_page_loads
+[gw1][36m [ 33%] [0m[32mPASSED[0m tests/integration/test_chat_feature.py::TestChatFeature::test_chat_page_loads
+tests/integration/test_chat_feature.py::TestChatFeature::test_chat_messages_api
+[gw1][36m [ 33%] [0m[32mPASSED[0m tests/integration/test_chat_feature.py::TestChatFeature::test_chat_messages_api
+tests/integration/test_chat_feature.py::TestChatFeature::test_chat_filters_iso_timestamp_messages
+[gw1][36m [ 33%] [0m[32mPASSED[0m tests/integration/test_chat_feature.py::TestChatFeature::test_chat_filters_iso_timestamp_messages
+tests/integration/test_chat_feature.py::TestChatFeature::test_chat_message_search
+[gw1][36m [ 33%] [0m[32mPASSED[0m tests/integration/test_chat_feature.py::TestChatFeature::test_chat_message_search
+tests/integration/test_comprehensive_routes.py::TestMainRoutes::test_dashboard_route
+[gw1][36m [ 34%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestMainRoutes::test_dashboard_route
+tests/integration/test_comprehensive_routes.py::TestMainRoutes::test_map_route
+[gw1][36m [ 34%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestMainRoutes::test_map_route
+tests/integration/test_comprehensive_routes.py::TestMainRoutes::test_longest_links_route
+[gw1][36m [ 34%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestMainRoutes::test_longest_links_route
+tests/integration/test_comprehensive_routes.py::TestPacketRoutes::test_packets_list_route
+[gw1][36m [ 34%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestPacketRoutes::test_packets_list_route
+tests/integration/test_comprehensive_routes.py::TestPacketRoutes::test_packet_detail_route
+[gw1][36m [ 34%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestPacketRoutes::test_packet_detail_route
+tests/integration/test_comprehensive_routes.py::TestPacketRoutes::test_packet_detail_not_found
+[gw1][36m [ 35%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestPacketRoutes::test_packet_detail_not_found
+tests/integration/test_comprehensive_routes.py::TestNodeRoutes::test_nodes_list_route
+[gw1][36m [ 35%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestNodeRoutes::test_nodes_list_route
+tests/integration/test_comprehensive_routes.py::TestNodeRoutes::test_node_detail_route
+[gw1][36m [ 35%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestNodeRoutes::test_node_detail_route
+tests/integration/test_comprehensive_routes.py::TestNodeRoutes::test_node_detail_hex_format
+[gw1][36m [ 35%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestNodeRoutes::test_node_detail_hex_format
+tests/integration/test_comprehensive_routes.py::TestNodeRoutes::test_node_detail_not_found
+[gw1][36m [ 36%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestNodeRoutes::test_node_detail_not_found
+tests/integration/test_comprehensive_routes.py::TestNodeRoutes::test_node_detail_invalid_format
+[gw1][36m [ 36%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestNodeRoutes::test_node_detail_invalid_format
+tests/integration/test_comprehensive_routes.py::TestTracerouteRoutes::test_traceroute_route
+[gw3][36m [ 36%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_traceroute_gateway_and_route_formatting[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_filters_load_correctly[chromium]
+[gw2][36m [ 36%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_form_field_listeners_active[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_url_manager_initialization[chromium]
+[gw1][36m [ 36%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestTracerouteRoutes::test_traceroute_route
+tests/integration/test_comprehensive_routes.py::TestTracerouteRoutes::test_traceroute_hops_route
+[gw1][36m [ 37%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestTracerouteRoutes::test_traceroute_hops_route
+tests/integration/test_comprehensive_routes.py::TestTracerouteRoutes::test_traceroute_with_filters
+[gw1][36m [ 37%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestTracerouteRoutes::test_traceroute_with_filters
+tests/integration/test_comprehensive_routes.py::TestUtilityRoutes::test_health_endpoint
+[gw1][36m [ 37%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestUtilityRoutes::test_health_endpoint
+tests/integration/test_comprehensive_routes.py::TestUtilityRoutes::test_info_endpoint
+[gw1][36m [ 37%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestUtilityRoutes::test_info_endpoint
+tests/integration/test_comprehensive_routes.py::TestAPIStatsEndpoints::test_api_stats_endpoint
+[gw1][36m [ 37%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPIStatsEndpoints::test_api_stats_endpoint
+tests/integration/test_comprehensive_routes.py::TestAPIStatsEndpoints::test_api_stats_with_gateway_filter
+[gw1][36m [ 38%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPIStatsEndpoints::test_api_stats_with_gateway_filter
+tests/integration/test_comprehensive_routes.py::TestAPIStatsEndpoints::test_api_analytics_endpoint
+[gw1][36m [ 38%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPIStatsEndpoints::test_api_analytics_endpoint
+tests/integration/test_comprehensive_routes.py::TestAPIStatsEndpoints::test_api_analytics_with_filters
+[gw1][36m [ 38%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPIStatsEndpoints::test_api_analytics_with_filters
+tests/integration/test_comprehensive_routes.py::TestAPIPacketEndpoints::test_api_packets_endpoint
+[gw1][36m [ 38%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPIPacketEndpoints::test_api_packets_endpoint
+tests/integration/test_comprehensive_routes.py::TestAPIPacketEndpoints::test_api_packets_pagination
+[gw1][36m [ 38%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPIPacketEndpoints::test_api_packets_pagination
+tests/integration/test_comprehensive_routes.py::TestAPIPacketEndpoints::test_api_packets_filters
+[gw1][36m [ 39%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPIPacketEndpoints::test_api_packets_filters
+tests/integration/test_comprehensive_routes.py::TestAPIPacketEndpoints::test_api_packets_signal_endpoint
+[gw1][36m [ 39%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPIPacketEndpoints::test_api_packets_signal_endpoint
+tests/integration/test_comprehensive_routes.py::TestAPINodeEndpoints::test_api_nodes_endpoint
+[gw1][36m [ 39%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPINodeEndpoints::test_api_nodes_endpoint
+tests/integration/test_comprehensive_routes.py::TestAPINodeEndpoints::test_api_node_info_endpoint
+[gw1][36m [ 39%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPINodeEndpoints::test_api_node_info_endpoint
+tests/integration/test_comprehensive_routes.py::TestAPINodeEndpoints::test_api_node_info_hex_format
+[gw1][36m [ 40%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPINodeEndpoints::test_api_node_info_hex_format
+tests/integration/test_comprehensive_routes.py::TestAPINodeEndpoints::test_api_node_info_not_found
+[gw1][36m [ 40%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPINodeEndpoints::test_api_node_info_not_found
+tests/integration/test_comprehensive_routes.py::TestAPINodeEndpoints::test_api_node_location_history
+[gw1][36m [ 40%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPINodeEndpoints::test_api_node_location_history
+tests/integration/test_comprehensive_routes.py::TestAPINodeEndpoints::test_api_node_location_history_with_limit
+[gw0][36m [ 40%] [0m[32mPASSED[0m tests/e2e/test_graph.py::TestGraphAdvancedFeatures::test_geographical_positioning[chromium]
+tests/e2e/test_graph.py::TestGraphAdvancedFeatures::test_search_and_center_functionality[chromium]
+[gw1][36m [ 40%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPINodeEndpoints::test_api_node_location_history_with_limit
+tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_endpoint
+[gw3][36m [ 41%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_filters_load_correctly[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_console_logs_and_debugging[chromium]
+[gw1][36m [ 41%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_endpoint
+tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_pagination
+[gw1][36m [ 41%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_pagination
+tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_filters
+[gw1][36m [ 41%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_filters
+tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_analytics
+[gw1][36m [ 41%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_analytics
+tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_analytics_with_hours
+[gw1][36m [ 42%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_analytics_with_hours
+tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_details
+[gw1][36m [ 42%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_details
+tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_details_not_found
+[gw1][36m [ 42%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_details_not_found
+tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_patterns
+[gw1][36m [ 42%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_patterns
+tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_hops_nodes
+[gw1][36m [ 43%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPITracerouteEndpoints::test_api_traceroute_hops_nodes
+tests/integration/test_comprehensive_routes.py::TestAPILocationEndpoints::test_api_locations_endpoint
+[gw1][36m [ 43%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPILocationEndpoints::test_api_locations_endpoint
+tests/integration/test_comprehensive_routes.py::TestAPILocationEndpoints::test_api_location_statistics
+[gw1][36m [ 43%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPILocationEndpoints::test_api_location_statistics
+tests/integration/test_comprehensive_routes.py::TestAPILocationEndpoints::test_api_location_hop_distances
+[gw1][36m [ 43%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPILocationEndpoints::test_api_location_hop_distances
+tests/integration/test_comprehensive_routes.py::TestAPIUtilityEndpoints::test_api_gateways_endpoint
+[gw1][36m [ 43%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPIUtilityEndpoints::test_api_gateways_endpoint
+tests/integration/test_comprehensive_routes.py::TestAPIUtilityEndpoints::test_api_longest_links_endpoint
+[gw2][36m [ 44%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_url_manager_initialization[chromium]
+tests/e2e/test_traceroute_url_filters.py::TestTracerouteURLFilters::test_traceroute_url_filter_no_duplicate_requests[chromium]
+[gw1][36m [ 44%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPIUtilityEndpoints::test_api_longest_links_endpoint
+tests/integration/test_comprehensive_routes.py::TestAPIUtilityEndpoints::test_api_longest_links_with_filters
+[gw1][36m [ 44%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestAPIUtilityEndpoints::test_api_longest_links_with_filters
+tests/integration/test_comprehensive_routes.py::TestErrorHandling::test_404_for_nonexistent_routes
+[gw1][36m [ 44%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestErrorHandling::test_404_for_nonexistent_routes
+tests/integration/test_comprehensive_routes.py::TestErrorHandling::test_api_error_handling
+[gw1][36m [ 44%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestErrorHandling::test_api_error_handling
+tests/integration/test_comprehensive_routes.py::TestErrorHandling::test_route_parameter_validation
+[gw1][36m [ 45%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestErrorHandling::test_route_parameter_validation
+tests/integration/test_comprehensive_routes.py::TestDataConsistency::test_node_count_consistency
+[gw1][36m [ 45%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestDataConsistency::test_node_count_consistency
+tests/integration/test_comprehensive_routes.py::TestDataConsistency::test_packet_count_consistency
+[gw1][36m [ 45%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestDataConsistency::test_packet_count_consistency
+tests/integration/test_comprehensive_routes.py::TestPerformance::test_endpoint_response_times
+[gw1][36m [ 45%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestPerformance::test_endpoint_response_times
+tests/integration/test_comprehensive_routes.py::TestContentTypes::test_html_endpoints_content_type
+[gw1][36m [ 45%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestContentTypes::test_html_endpoints_content_type
+tests/integration/test_comprehensive_routes.py::TestContentTypes::test_json_endpoints_content_type
+[gw1][36m [ 46%] [0m[32mPASSED[0m tests/integration/test_comprehensive_routes.py::TestContentTypes::test_json_endpoints_content_type
+tests/integration/test_direct_receptions_api.py::TestDirectReceptionsAPI::test_direct_receptions_endpoint
+[gw1][36m [ 46%] [0m[32mPASSED[0m tests/integration/test_direct_receptions_api.py::TestDirectReceptionsAPI::test_direct_receptions_endpoint
+tests/integration/test_direct_receptions_api.py::TestDirectReceptionsAPI::test_direct_receptions_received_direction
+[gw1][36m [ 46%] [0m[32mPASSED[0m tests/integration/test_direct_receptions_api.py::TestDirectReceptionsAPI::test_direct_receptions_received_direction
+tests/integration/test_direct_receptions_api.py::TestDirectReceptionsAPI::test_direct_receptions_transmitted_direction
+[gw1][36m [ 46%] [0m[32mPASSED[0m tests/integration/test_direct_receptions_api.py::TestDirectReceptionsAPI::test_direct_receptions_transmitted_direction
+tests/integration/test_direct_receptions_api.py::TestDirectReceptionsAPI::test_direct_receptions_invalid_direction
+[gw1][36m [ 47%] [0m[32mPASSED[0m tests/integration/test_direct_receptions_api.py::TestDirectReceptionsAPI::test_direct_receptions_invalid_direction
+tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_api_basic_functionality
+[gw1][36m [ 47%] [0m[32mPASSED[0m tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_api_basic_functionality
+tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_api_validation
+[gw1][36m [ 47%] [0m[32mPASSED[0m tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_api_validation
+tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_data_structure
+[gw1][36m [ 47%] [0m[32mPASSED[0m tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_data_structure
+tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_limit_parameter
+[gw1][36m [ 47%] [0m[32mPASSED[0m tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_limit_parameter
+tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_self_exclusion_logic
+[gw1][36m [ 48%] [0m[32mPASSED[0m tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_self_exclusion_logic
+tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_node_detail_page_integration
+[gw1][36m [ 48%] [0m[32mPASSED[0m tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_node_detail_page_integration
+tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_chart_toggles
+[gw1][36m [ 48%] [0m[32mPASSED[0m tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_chart_toggles
+tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_api_performance
+[gw1][36m [ 48%] [0m[32mPASSED[0m tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_api_performance
+tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_data_consistency
+[gw1][36m [ 48%] [0m[32mPASSED[0m tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_data_consistency
+tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_hex_node_id_support
+[gw1][36m [ 49%] [0m[32mPASSED[0m tests/integration/test_direct_receptions_e2e.py::TestDirectReceptionsE2E::test_direct_receptions_hex_node_id_support
+tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_from_filter_api
+[gw1][36m [ 49%] [0m[32mPASSED[0m tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_from_filter_api
+tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_to_filter_api
+[gw1][36m [ 49%] [0m[32mPASSED[0m tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_to_filter_api
+tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_broadcast_packets_api
+[gw1][36m [ 49%] [0m[32mPASSED[0m tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_broadcast_packets_api
+tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_combined_exclude_filters_api
+[gw1][36m [ 50%] [0m[32mPASSED[0m tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_combined_exclude_filters_api
+tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_filters_with_other_filters_api
+[gw1][36m [ 50%] [0m[32mPASSED[0m tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_filters_with_other_filters_api
+tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_nonexistent_node_api
+[gw1][36m [ 50%] [0m[32mPASSED[0m tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_nonexistent_node_api
+tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_filters_boundary_conditions_api
+[gw1][36m [ 50%] [0m[32mPASSED[0m tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_filters_boundary_conditions_api
+tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_filters_performance_api
+[gw1][36m [ 50%] [0m[32mPASSED[0m tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_filters_performance_api
+tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_filters_total_count_consistency_api
+[gw1][36m [ 51%] [0m[32mPASSED[0m tests/integration/test_exclude_filters_api.py::TestExcludeFiltersAPI::test_exclude_filters_total_count_consistency_api
+tests/integration/test_exclude_self_api.py::TestExcludeSelfAPI::test_exclude_self_filter_works
+[gw1][36m [ 51%] [0m[33mSKIPPED[0m tests/integration/test_exclude_self_api.py::TestExcludeSelfAPI::test_exclude_self_filter_works
+tests/integration/test_exclude_self_api.py::TestExcludeSelfAPI::test_exclude_self_with_no_gateway_filter
+[gw1][36m [ 51%] [0m[32mPASSED[0m tests/integration/test_exclude_self_api.py::TestExcludeSelfAPI::test_exclude_self_with_no_gateway_filter
+tests/integration/test_exclude_self_api.py::TestExcludeSelfAPI::test_exclude_self_false_includes_self_packets
+[gw1][36m [ 51%] [0m[33mSKIPPED[0m tests/integration/test_exclude_self_api.py::TestExcludeSelfAPI::test_exclude_self_false_includes_self_packets
+tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_compare_page_loads
+[gw1][36m [ 51%] [0m[32mPASSED[0m tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_compare_page_loads
+tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_compare_with_valid_gateways
+[gw1][36m [ 52%] [0m[32mPASSED[0m tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_compare_with_valid_gateways
+tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_compare_with_same_gateway
+[gw1][36m [ 52%] [0m[32mPASSED[0m tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_compare_with_same_gateway
+tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_compare_with_invalid_gateway
+[gw1][36m [ 52%] [0m[32mPASSED[0m tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_compare_with_invalid_gateway
+tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_api_compare_endpoint
+[gw1][36m [ 52%] [0m[32mPASSED[0m tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_api_compare_endpoint
+tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_api_compare_with_filters
+[gw1][36m [ 52%] [0m[32mPASSED[0m tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_api_compare_with_filters
+tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_api_compare_error_handling
+[gw1][36m [ 53%] [0m[32mPASSED[0m tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_api_compare_error_handling
+tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_api_gateways_endpoint
+[gw3][36m [ 53%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_console_logs_and_debugging[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_automatic_filtering_triggers[chromium]
+[gw1][36m [ 53%] [0m[32mPASSED[0m tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_api_gateways_endpoint
+tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_comparison_statistics_structure
+[gw1][36m [ 53%] [0m[32mPASSED[0m tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_comparison_statistics_structure
+tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_comparison_chart_data_structure
+[gw1][36m [ 54%] [0m[32mPASSED[0m tests/integration/test_gateway_routes.py::TestGatewayComparisonRoutes::test_gateway_comparison_chart_data_structure
+tests/integration/test_gateway_routes.py::TestGatewayComparisonWithData::test_gateway_comparison_with_common_packets
+[gw1][36m [ 54%] [0m[32mPASSED[0m tests/integration/test_gateway_routes.py::TestGatewayComparisonWithData::test_gateway_comparison_with_common_packets
+tests/integration/test_gateway_routes.py::TestGatewayComparisonWithData::test_gateway_comparison_no_common_packets
+[gw1][36m [ 54%] [0m[32mPASSED[0m tests/integration/test_gateway_routes.py::TestGatewayComparisonWithData::test_gateway_comparison_no_common_packets
+tests/integration/test_gateway_routes.py::TestGatewayComparisonWithData::test_gateway_comparison_hop_limit_filtering
+[gw1][36m [ 54%] [0m[32mPASSED[0m tests/integration/test_gateway_routes.py::TestGatewayComparisonWithData::test_gateway_comparison_hop_limit_filtering
+tests/integration/test_neighborinfo_packet_integration.py::TestNeighborInfoPacketIntegration::test_neighborinfo_packet_creation_and_display
+[gw1][36m [ 54%] [0m[32mPASSED[0m tests/integration/test_neighborinfo_packet_integration.py::TestNeighborInfoPacketIntegration::test_neighborinfo_packet_creation_and_display
+tests/integration/test_neighborinfo_packet_integration.py::TestNeighborInfoPacketIntegration::test_neighborinfo_packet_empty_neighbors
+[gw2][36m [ 55%] [0m[32mPASSED[0m tests/e2e/test_traceroute_url_filters.py::TestTracerouteURLFilters::test_traceroute_url_filter_no_duplicate_requests[chromium]
+tests/e2e/test_traceroute_url_filters.py::TestTracerouteURLFilters::test_traceroute_url_filter_applied_immediately[chromium]
+[gw1][36m [ 55%] [0m[32mPASSED[0m tests/integration/test_neighborinfo_packet_integration.py::TestNeighborInfoPacketIntegration::test_neighborinfo_packet_empty_neighbors
+tests/integration/test_neighborinfo_packet_integration.py::TestNeighborInfoPacketIntegration::test_neighborinfo_packet_with_unknown_nodes
+[gw1][36m [ 55%] [0m[32mPASSED[0m tests/integration/test_neighborinfo_packet_integration.py::TestNeighborInfoPacketIntegration::test_neighborinfo_packet_with_unknown_nodes
+tests/integration/test_neighborinfo_packet_integration.py::TestNeighborInfoPacketIntegration::test_neighborinfo_packet_decode_error
+[gw0][36m [ 55%] [0m[32mPASSED[0m tests/e2e/test_graph.py::TestGraphAdvancedFeatures::test_search_and_center_functionality[chromium]
+tests/e2e/test_graph.py::TestGraphResolutions::test_graph_centering_at_1920x1080[chromium]
+[gw1][36m [ 55%] [0m[32mPASSED[0m tests/integration/test_neighborinfo_packet_integration.py::TestNeighborInfoPacketIntegration::test_neighborinfo_packet_decode_error
+tests/integration/test_neighborinfo_packet_integration.py::TestNeighborInfoPacketIntegration::test_neighborinfo_packet_various_snr_levels
+[gw1][36m [ 56%] [0m[32mPASSED[0m tests/integration/test_neighborinfo_packet_integration.py::TestNeighborInfoPacketIntegration::test_neighborinfo_packet_various_snr_levels
+tests/integration/test_neighborinfo_packet_integration.py::TestNeighborInfoPacketListIntegration::test_neighborinfo_packets_in_list
+[gw1][36m [ 56%] [0m[32mPASSED[0m tests/integration/test_neighborinfo_packet_integration.py::TestNeighborInfoPacketListIntegration::test_neighborinfo_packets_in_list
+tests/integration/test_node_routes.py::TestNodeRoutes::test_nodes_page_loads
+[gw1][36m [ 56%] [0m[32mPASSED[0m tests/integration/test_node_routes.py::TestNodeRoutes::test_nodes_page_loads
+tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_with_valid_node_id
+[gw1][36m [ 56%] [0m[32mPASSED[0m tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_with_valid_node_id
+tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_with_hex_node_id
+[gw1][36m [ 56%] [0m[32mPASSED[0m tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_with_hex_node_id
+tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_with_decimal_hex_node_id
+[gw1][36m [ 57%] [0m[32mPASSED[0m tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_with_decimal_hex_node_id
+tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_with_mobile_node
+[gw1][36m [ 57%] [0m[32mPASSED[0m tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_with_mobile_node
+tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_with_repeater_node
+[gw1][36m [ 57%] [0m[32mPASSED[0m tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_with_repeater_node
+tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_with_nonexistent_node
+[gw1][36m [ 57%] [0m[32mPASSED[0m tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_with_nonexistent_node
+tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_with_invalid_node_id
+[gw1][36m [ 58%] [0m[32mPASSED[0m tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_with_invalid_node_id
+tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_contains_required_sections
+[gw3][36m [ 58%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_automatic_filtering_triggers[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_node_filter_basic_functionality[chromium]
+[gw1][36m [ 58%] [0m[32mPASSED[0m tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_contains_required_sections
+tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_packet_data_display
+[gw1][36m [ 58%] [0m[32mPASSED[0m tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_packet_data_display
+tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_navigation_links
+[gw1][36m [ 58%] [0m[32mPASSED[0m tests/integration/test_node_routes.py::TestNodeRoutes::test_node_detail_navigation_links
+tests/integration/test_packet_routes.py::TestPacketRoutes::test_packets_page_renders
+[gw1][36m [ 59%] [0m[32mPASSED[0m tests/integration/test_packet_routes.py::TestPacketRoutes::test_packets_page_renders
+tests/integration/test_packet_routes.py::TestPacketRoutes::test_packet_detail_page_renders
+[gw2][36m [ 59%] [0m[32mPASSED[0m tests/e2e/test_traceroute_url_filters.py::TestTracerouteURLFilters::test_traceroute_url_filter_applied_immediately[chromium]
+tests/e2e/test_traceroute_url_filters.py::TestTracerouteURLFilters::test_traceroute_url_filter_multiple_parameters[chromium]
+[gw1][36m [ 59%] [0m[32mPASSED[0m tests/integration/test_packet_routes.py::TestPacketRoutes::test_packet_detail_page_renders
+tests/integration/test_packet_routes.py::TestPacketRoutes::test_packet_detail_not_found
+[gw1][36m [ 59%] [0m[32mPASSED[0m tests/integration/test_packet_routes.py::TestPacketRoutes::test_packet_detail_not_found
+tests/integration/test_packets_exclude_self.py::TestPacketsExcludeSelf::test_legacy_endpoint_exclude_self
+[gw1][36m [ 59%] [0m[32mPASSED[0m tests/integration/test_packets_exclude_self.py::TestPacketsExcludeSelf::test_legacy_endpoint_exclude_self
+tests/integration/test_packets_exclude_self.py::TestPacketsExcludeSelf::test_modern_endpoint_exclude_self
+[gw1][36m [ 60%] [0m[32mPASSED[0m tests/integration/test_packets_exclude_self.py::TestPacketsExcludeSelf::test_modern_endpoint_exclude_self
+tests/integration/test_protocol_diversity_fix.py::TestProtocolDiversityFix::test_protocol_diversity_shows_all_types_not_limited_to_10
+[gw1][36m [ 60%] [0m[32mPASSED[0m tests/integration/test_protocol_diversity_fix.py::TestProtocolDiversityFix::test_protocol_diversity_shows_all_types_not_limited_to_10
+tests/integration/test_sorting_endpoints.py::test_packets_sorting[from_node-from_node_id]
+[gw1][36m [ 60%] [0m[32mPASSED[0m tests/integration/test_sorting_endpoints.py::test_packets_sorting[from_node-from_node_id]
+tests/integration/test_sorting_endpoints.py::test_packets_sorting[to_node-to_node_id]
+[gw1][36m [ 60%] [0m[32mPASSED[0m tests/integration/test_sorting_endpoints.py::test_packets_sorting[to_node-to_node_id]
+tests/integration/test_sorting_endpoints.py::test_packets_sorting[hops-hops]
+[gw1][36m [ 61%] [0m[32mPASSED[0m tests/integration/test_sorting_endpoints.py::test_packets_sorting[hops-hops]
+tests/integration/test_sorting_endpoints.py::test_traceroute_sorting[from_node-from_node_id]
+[gw1][36m [ 61%] [0m[32mPASSED[0m tests/integration/test_sorting_endpoints.py::test_traceroute_sorting[from_node-from_node_id]
+tests/integration/test_sorting_endpoints.py::test_traceroute_sorting[to_node-to_node_id]
+[gw1][36m [ 61%] [0m[32mPASSED[0m tests/integration/test_sorting_endpoints.py::test_traceroute_sorting[to_node-to_node_id]
+tests/integration/test_sorting_endpoints.py::test_traceroute_sorting[hops-hops]
+[gw1][36m [ 61%] [0m[32mPASSED[0m tests/integration/test_sorting_endpoints.py::test_traceroute_sorting[hops-hops]
+tests/integration/test_traceroute_filters.py::TestTracerouteFilters::test_traceroute_data_api_node_filters
+[gw1][36m [ 61%] [0m[32mPASSED[0m tests/integration/test_traceroute_filters.py::TestTracerouteFilters::test_traceroute_data_api_node_filters
+tests/integration/test_traceroute_filters.py::TestTracerouteFilters::test_traceroute_data_api_time_filters
+[gw1][36m [ 62%] [0m[32mPASSED[0m tests/integration/test_traceroute_filters.py::TestTracerouteFilters::test_traceroute_data_api_time_filters
+tests/integration/test_traceroute_filters.py::TestTracerouteFilters::test_traceroute_data_api_gateway_filter
+[gw1][36m [ 62%] [0m[32mPASSED[0m tests/integration/test_traceroute_filters.py::TestTracerouteFilters::test_traceroute_data_api_gateway_filter
+tests/integration/test_traceroute_filters.py::TestTracerouteFilters::test_traceroute_data_api_return_path_filter
+[gw1][36m [ 62%] [0m[32mPASSED[0m tests/integration/test_traceroute_filters.py::TestTracerouteFilters::test_traceroute_data_api_return_path_filter
+tests/integration/test_traceroute_filters.py::TestTracerouteFilters::test_traceroute_data_api_combined_filters
+[gw1][36m [ 62%] [0m[32mPASSED[0m tests/integration/test_traceroute_filters.py::TestTracerouteFilters::test_traceroute_data_api_combined_filters
+tests/integration/test_traceroute_filters.py::TestTracerouteFilters::test_traceroute_data_api_response_structure
+[gw1][36m [ 62%] [0m[32mPASSED[0m tests/integration/test_traceroute_filters.py::TestTracerouteFilters::test_traceroute_data_api_response_structure
+tests/integration/test_traceroute_route_node_grouped.py::TestTracerouteRouteNodeGrouped::test_grouped_route_node_filter_returns_correct_packets
+[gw1][36m [ 63%] [0m[32mPASSED[0m tests/integration/test_traceroute_route_node_grouped.py::TestTracerouteRouteNodeGrouped::test_grouped_route_node_filter_returns_correct_packets
+tests/integration/test_traceroute_route_node_pagination.py::TestTracerouteRouteNodePagination::test_route_node_filter_pagination_fix
+[gw1][36m [ 63%] [0m[32mPASSED[0m tests/integration/test_traceroute_route_node_pagination.py::TestTracerouteRouteNodePagination::test_route_node_filter_pagination_fix
+tests/integration/test_traceroute_route_node_pagination.py::TestTracerouteRouteNodePagination::test_route_node_filter_response_structure
+[gw1][36m [ 63%] [0m[32mPASSED[0m tests/integration/test_traceroute_route_node_pagination.py::TestTracerouteRouteNodePagination::test_route_node_filter_response_structure
+tests/integration/test_traceroute_route_node_pagination.py::TestTracerouteRouteNodePagination::test_route_node_filter_with_other_filters
+[gw1][36m [ 63%] [0m[32mPASSED[0m tests/integration/test_traceroute_route_node_pagination.py::TestTracerouteRouteNodePagination::test_route_node_filter_with_other_filters
+tests/integration/test_traceroute_route_node_pagination.py::TestTracerouteRouteNodePagination::test_route_node_filter_pagination_consistency
+[gw1][36m [ 63%] [0m[32mPASSED[0m tests/integration/test_traceroute_route_node_pagination.py::TestTracerouteRouteNodePagination::test_route_node_filter_pagination_consistency
+tests/integration/test_traceroute_route_node_pagination.py::TestTracerouteRouteNodePagination::test_route_node_filter_nonexistent_node
+[gw1][36m [ 64%] [0m[32mPASSED[0m tests/integration/test_traceroute_route_node_pagination.py::TestTracerouteRouteNodePagination::test_route_node_filter_nonexistent_node
+tests/integration/test_traceroute_route_node_pagination.py::TestTracerouteRouteNodePagination::test_route_node_filter_invalid_input
+[gw0][36m [ 64%] [0m[32mPASSED[0m tests/e2e/test_graph.py::TestGraphResolutions::test_graph_centering_at_1920x1080[chromium]
+tests/e2e/test_graph.py::TestGraphResolutions::test_graph_centering_at_1366x768[chromium]
+[gw1][36m [ 64%] [0m[32mPASSED[0m tests/integration/test_traceroute_route_node_pagination.py::TestTracerouteRouteNodePagination::test_route_node_filter_invalid_input
+tests/integration/test_traceroute_route_node_pagination.py::TestTracerouteRouteNodePagination::test_route_node_filter_performance_optimization
+[gw1][36m [ 64%] [0m[32mPASSED[0m tests/integration/test_traceroute_route_node_pagination.py::TestTracerouteRouteNodePagination::test_route_node_filter_performance_optimization
+tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_page_loads
+[gw1][36m [ 65%] [0m[32mPASSED[0m tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_page_loads
+tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_page_with_filters
+[gw3][36m [ 65%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_node_filter_basic_functionality[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_api_requests_include_filters[chromium]
+[gw1][36m [ 65%] [0m[32mPASSED[0m tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_page_with_filters
+tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_node_dropdown_format
+[gw1][36m [ 65%] [0m[32mPASSED[0m tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_node_dropdown_format
+tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_node_dropdown_empty_data
+[gw1][36m [ 65%] [0m[32mPASSED[0m tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_node_dropdown_empty_data
+tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_node_selection_preserved
+[gw1][36m [ 66%] [0m[32mPASSED[0m tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_node_selection_preserved
+tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_hops_page_loads
+[gw1][36m [ 66%] [0m[32mPASSED[0m tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_hops_page_loads
+tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_graph_page_loads
+[gw1][36m [ 66%] [0m[32mPASSED[0m tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_graph_page_loads
+tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_graph_with_parameters
+[gw1][36m [ 66%] [0m[32mPASSED[0m tests/integration/test_traceroute_routes.py::TestTracerouteRoutes::test_traceroute_graph_with_parameters
+tests/integration/test_traceroute_routes.py::TestTracerouteRouteErrorHandling::test_traceroute_handles_repository_error
+[gw1][36m [ 66%] [0m[32mPASSED[0m tests/integration/test_traceroute_routes.py::TestTracerouteRouteErrorHandling::test_traceroute_handles_repository_error
+tests/integration/test_traceroute_routes.py::TestTracerouteRouteErrorHandling::test_traceroute_invalid_filter_values
+[gw1][36m [ 67%] [0m[32mPASSED[0m tests/integration/test_traceroute_routes.py::TestTracerouteRouteErrorHandling::test_traceroute_invalid_filter_values
+tests/integration/test_traceroute_routes.py::TestTracerouteTemplateIntegration::test_all_dropdown_types_use_correct_format
+[gw1][36m [ 67%] [0m[32mPASSED[0m tests/integration/test_traceroute_routes.py::TestTracerouteTemplateIntegration::test_all_dropdown_types_use_correct_format
+tests/unit/test_gateway_sorting.py::TestJavaScriptSortingLogic::test_gateway_list_fallback_counting
+[gw1][36m [ 67%] [0m[32mPASSED[0m tests/unit/test_gateway_sorting.py::TestJavaScriptSortingLogic::test_gateway_list_fallback_counting
+tests/unit/test_gateway_sorting.py::TestJavaScriptSortingLogic::test_individual_packet_gateway_sorting_value
+[gw1][36m [ 67%] [0m[32mPASSED[0m tests/unit/test_gateway_sorting.py::TestJavaScriptSortingLogic::test_individual_packet_gateway_sorting_value
+tests/unit/test_gateway_sorting.py::TestIntegrationGatewaySorting::test_complete_gateway_sorting_flow
+[gw1][36m [ 68%] [0m[32mPASSED[0m tests/unit/test_gateway_sorting.py::TestIntegrationGatewaySorting::test_complete_gateway_sorting_flow
+tests/unit/test_generate_screenshots.py::test_find_free_port
+[gw1][36m [ 68%] [0m[32mPASSED[0m tests/unit/test_generate_screenshots.py::test_find_free_port
+tests/unit/test_generate_screenshots.py::test_build_demo_database
+[gw1][36m [ 68%] [0m[32mPASSED[0m tests/unit/test_generate_screenshots.py::test_build_demo_database
+tests/unit/test_mqtt_capture_reconnection.py::TestMQTTReconnection::test_on_disconnect_callback_signature
+[gw1][36m [ 68%] [0m[32mPASSED[0m tests/unit/test_mqtt_capture_reconnection.py::TestMQTTReconnection::test_on_disconnect_callback_signature
+tests/unit/test_mqtt_capture_reconnection.py::TestMQTTReconnection::test_clean_disconnect_no_retry
+[gw1][36m [ 68%] [0m[32mPASSED[0m tests/unit/test_mqtt_capture_reconnection.py::TestMQTTReconnection::test_clean_disconnect_no_retry
+tests/unit/test_mqtt_capture_reconnection.py::TestMQTTReconnection::test_unexpected_disconnect_triggers_retry
+[gw1][36m [ 69%] [0m[32mPASSED[0m tests/unit/test_mqtt_capture_reconnection.py::TestMQTTReconnection::test_unexpected_disconnect_triggers_retry
+tests/unit/test_mqtt_capture_reconnection.py::TestMQTTReconnection::test_reconnection_exponential_backoff
+[gw1][36m [ 69%] [0m[32mPASSED[0m tests/unit/test_mqtt_capture_reconnection.py::TestMQTTReconnection::test_reconnection_exponential_backoff
+tests/unit/test_mqtt_capture_reconnection.py::TestMQTTReconnection::test_reconnection_max_delay_cap
+[gw1][36m [ 69%] [0m[32mPASSED[0m tests/unit/test_mqtt_capture_reconnection.py::TestMQTTReconnection::test_reconnection_max_delay_cap
+tests/unit/test_mqtt_capture_reconnection.py::TestMQTTReconnection::test_reconnection_different_error_types
+[gw1][36m [ 69%] [0m[32mPASSED[0m tests/unit/test_mqtt_capture_reconnection.py::TestMQTTReconnection::test_reconnection_different_error_types
+tests/unit/test_mqtt_capture_reconnection.py::TestMQTTReconnection::test_reconnection_with_mqtt_broker_config
+[gw1][36m [ 69%] [0m[32mPASSED[0m tests/unit/test_mqtt_capture_reconnection.py::TestMQTTReconnection::test_reconnection_with_mqtt_broker_config
+tests/unit/test_node_direct_receptions.py::TestNodeRepositoryDirectReceptions::test_get_direct_receptions_returns_expected_structure
+[gw1][36m [ 70%] [0m[32mPASSED[0m tests/unit/test_node_direct_receptions.py::TestNodeRepositoryDirectReceptions::test_get_direct_receptions_returns_expected_structure
+tests/unit/test_node_picker_broadcast.py::TestNodePickerBroadcast::test_from_node_dropdown_includes_broadcast
+[gw1][36m [ 70%] [0m[32mPASSED[0m tests/unit/test_node_picker_broadcast.py::TestNodePickerBroadcast::test_from_node_dropdown_includes_broadcast
+tests/unit/test_node_picker_broadcast.py::TestNodePickerBroadcast::test_exclude_from_dropdown_includes_broadcast
+[gw1][36m [ 70%] [0m[32mPASSED[0m tests/unit/test_node_picker_broadcast.py::TestNodePickerBroadcast::test_exclude_from_dropdown_includes_broadcast
+tests/unit/test_node_picker_broadcast.py::TestNodePickerBroadcast::test_exclude_to_dropdown_includes_broadcast
+[gw2][36m [ 70%] [0m[32mPASSED[0m tests/e2e/test_traceroute_url_filters.py::TestTracerouteURLFilters::test_traceroute_url_filter_multiple_parameters[chromium]
+tests/e2e/test_traceroute_url_filters.py::TestTracerouteURLFilters::test_traceroute_no_url_parameters_single_request[chromium]
+[gw1][36m [ 70%] [0m[32mPASSED[0m tests/unit/test_node_picker_broadcast.py::TestNodePickerBroadcast::test_exclude_to_dropdown_includes_broadcast
+tests/unit/test_node_picker_broadcast.py::TestNodePickerBroadcast::test_node_picker_structure_is_correct
+[gw1][36m [ 71%] [0m[32mPASSED[0m tests/unit/test_node_picker_broadcast.py::TestNodePickerBroadcast::test_node_picker_structure_is_correct
+tests/unit/test_node_repository.py::TestNodeRepository::test_get_node_details_with_valid_node_id
+[gw1][36m [ 71%] [0m[32mPASSED[0m tests/unit/test_node_repository.py::TestNodeRepository::test_get_node_details_with_valid_node_id
+tests/unit/test_node_repository.py::TestNodeRepository::test_get_node_details_with_hex_node_id
+[gw1][36m [ 71%] [0m[32mPASSED[0m tests/unit/test_node_repository.py::TestNodeRepository::test_get_node_details_with_hex_node_id
+tests/unit/test_node_repository.py::TestNodeRepository::test_get_node_details_with_nonexistent_node
+[gw1][36m [ 71%] [0m[32mPASSED[0m tests/unit/test_node_repository.py::TestNodeRepository::test_get_node_details_with_nonexistent_node
+tests/unit/test_node_repository.py::TestNodeRepository::test_get_node_details_node_exists_but_no_packets
+[gw1][36m [ 72%] [0m[32mPASSED[0m tests/unit/test_node_repository.py::TestNodeRepository::test_get_node_details_node_exists_but_no_packets
+tests/unit/test_node_repository.py::TestNodeRepository::test_get_node_details_with_invalid_node_id
+[gw1][36m [ 72%] [0m[32mPASSED[0m tests/unit/test_node_repository.py::TestNodeRepository::test_get_node_details_with_invalid_node_id
+tests/unit/test_node_repository.py::TestNodeRepository::test_get_bulk_node_names
+[gw1][36m [ 72%] [0m[32mPASSED[0m tests/unit/test_node_repository.py::TestNodeRepository::test_get_bulk_node_names
+tests/unit/test_node_repository.py::TestNodeRepository::test_get_bulk_node_names_empty_list
+[gw1][36m [ 72%] [0m[32mPASSED[0m tests/unit/test_node_repository.py::TestNodeRepository::test_get_bulk_node_names_empty_list
+tests/unit/test_node_utils.py::TestTransformNodesForTemplate::test_transform_with_long_name
+[gw1][36m [ 72%] [0m[32mPASSED[0m tests/unit/test_node_utils.py::TestTransformNodesForTemplate::test_transform_with_long_name
+tests/unit/test_node_utils.py::TestTransformNodesForTemplate::test_transform_with_short_name_fallback
+[gw1][36m [ 73%] [0m[32mPASSED[0m tests/unit/test_node_utils.py::TestTransformNodesForTemplate::test_transform_with_short_name_fallback
+tests/unit/test_node_utils.py::TestTransformNodesForTemplate::test_transform_with_hex_fallback
+[gw1][36m [ 73%] [0m[32mPASSED[0m tests/unit/test_node_utils.py::TestTransformNodesForTemplate::test_transform_with_hex_fallback
+tests/unit/test_node_utils.py::TestTransformNodesForTemplate::test_transform_mixed_name_scenarios
+[gw1][36m [ 73%] [0m[32mPASSED[0m tests/unit/test_node_utils.py::TestTransformNodesForTemplate::test_transform_mixed_name_scenarios
+tests/unit/test_node_utils.py::TestTransformNodesForTemplate::test_transform_empty_list
+[gw1][36m [ 73%] [0m[32mPASSED[0m tests/unit/test_node_utils.py::TestTransformNodesForTemplate::test_transform_empty_list
+tests/unit/test_node_utils.py::TestTransformNodesForTemplate::test_transform_preserves_packet_count
+[gw1][36m [ 73%] [0m[32mPASSED[0m tests/unit/test_node_utils.py::TestTransformNodesForTemplate::test_transform_preserves_packet_count
+tests/unit/test_node_utils.py::TestNodeUtilsOtherFunctions::test_convert_node_id_decimal
+[gw1][36m [ 74%] [0m[32mPASSED[0m tests/unit/test_node_utils.py::TestNodeUtilsOtherFunctions::test_convert_node_id_decimal
+tests/unit/test_node_utils.py::TestNodeUtilsOtherFunctions::test_convert_node_id_hex
+[gw1][36m [ 74%] [0m[32mPASSED[0m tests/unit/test_node_utils.py::TestNodeUtilsOtherFunctions::test_convert_node_id_hex
+tests/unit/test_node_utils.py::TestNodeUtilsOtherFunctions::test_convert_node_id_invalid
+[gw1][36m [ 74%] [0m[32mPASSED[0m tests/unit/test_node_utils.py::TestNodeUtilsOtherFunctions::test_convert_node_id_invalid
+tests/unit/test_node_utils.py::TestNodeUtilsOtherFunctions::test_convert_node_id_ambiguous_decimal_hex
+[gw1][36m [ 74%] [0m[32mPASSED[0m tests/unit/test_node_utils.py::TestNodeUtilsOtherFunctions::test_convert_node_id_ambiguous_decimal_hex
+tests/unit/test_node_utils.py::TestCacheCleanupFunctionality::test_start_stop_cache_cleanup
+[gw1][36m [ 75%] [0m[32mPASSED[0m tests/unit/test_node_utils.py::TestCacheCleanupFunctionality::test_start_stop_cache_cleanup
+tests/unit/test_node_utils.py::TestCacheCleanupFunctionality::test_cache_cleanup_clears_cache
+[gw1][36m [ 75%] [0m[32mPASSED[0m tests/unit/test_node_utils.py::TestCacheCleanupFunctionality::test_cache_cleanup_clears_cache
+tests/unit/test_node_utils.py::TestCacheCleanupFunctionality::test_start_cache_cleanup_idempotent
+[gw1][36m [ 75%] [0m[32mPASSED[0m tests/unit/test_node_utils.py::TestCacheCleanupFunctionality::test_start_cache_cleanup_idempotent
+tests/unit/test_node_utils.py::TestCacheCleanupFunctionality::test_stop_cache_cleanup_when_not_running
+[gw1][36m [ 75%] [0m[32mPASSED[0m tests/unit/test_node_utils.py::TestCacheCleanupFunctionality::test_stop_cache_cleanup_when_not_running
+tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_packet_payload_no_raw_payload
+[gw1][36m [ 75%] [0m[32mPASSED[0m tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_packet_payload_no_raw_payload
+tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_text_message_app_success
+[gw1][36m [ 76%] [0m[32mPASSED[0m tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_text_message_app_success
+tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_text_message_app_unicode_error
+[gw1][36m [ 76%] [0m[32mPASSED[0m tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_text_message_app_unicode_error
+tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_neighborinfo_app_success
+[gw1][36m [ 76%] [0m[32mPASSED[0m tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_neighborinfo_app_success
+tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_neighborinfo_app_empty_neighbors
+[gw1][36m [ 76%] [0m[32mPASSED[0m tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_neighborinfo_app_empty_neighbors
+tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_neighborinfo_app_invalid_protobuf
+[gw1][36m [ 76%] [0m[32mPASSED[0m tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_neighborinfo_app_invalid_protobuf
+tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_neighborinfo_app_invalid_timestamp
+[gw1][36m [ 77%] [0m[32mPASSED[0m tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_neighborinfo_app_invalid_timestamp
+tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_neighborinfo_app_no_node_names
+[gw1][36m [ 77%] [0m[32mPASSED[0m tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_neighborinfo_app_no_node_names
+tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_unknown_portnum
+[gw1][36m [ 77%] [0m[32mPASSED[0m tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_unknown_portnum
+tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_packet_payload_exception
+[gw1][36m [ 77%] [0m[32mPASSED[0m tests/unit/test_packet_routes.py::TestDecodePacketPayload::test_decode_packet_payload_exception
+tests/unit/test_packet_routes.py::TestNeighborInfoDataStructure::test_neighbor_data_completeness
+[gw1][36m [ 77%] [0m[32mPASSED[0m tests/unit/test_packet_routes.py::TestNeighborInfoDataStructure::test_neighbor_data_completeness
+tests/unit/test_packet_routes.py::TestNeighborInfoDataStructure::test_snr_value_types
+[gw1][36m [ 78%] [0m[32mPASSED[0m tests/unit/test_packet_routes.py::TestNeighborInfoDataStructure::test_snr_value_types
+tests/unit/test_packet_routes.py::TestNeighborInfoDataStructure::test_neighborinfo_app_real_packet_data
+[gw1][36m [ 78%] [0m[32mPASSED[0m tests/unit/test_packet_routes.py::TestNeighborInfoDataStructure::test_neighborinfo_app_real_packet_data
+tests/unit/test_sanitize_floats.py::test_sanitize_floats_basic
+[gw1][36m [ 78%] [0m[32mPASSED[0m tests/unit/test_sanitize_floats.py::test_sanitize_floats_basic
+tests/unit/test_sanitize_floats.py::test_safe_jsonify
+[gw1][36m [ 78%] [0m[32mPASSED[0m tests/unit/test_sanitize_floats.py::test_safe_jsonify
+tests/unit/test_traceroute_distance_cache.py::TestTracerouteDistanceCache::test_location_cache_reduces_db_calls
+[gw1][36m [ 79%] [0m[32mPASSED[0m tests/unit/test_traceroute_distance_cache.py::TestTracerouteDistanceCache::test_location_cache_reduces_db_calls
+tests/unit/test_traceroute_distance_cache.py::TestTracerouteDistanceCache::test_location_cache_with_shared_cache
+[gw1][36m [ 79%] [0m[32mPASSED[0m tests/unit/test_traceroute_distance_cache.py::TestTracerouteDistanceCache::test_location_cache_with_shared_cache
+tests/unit/test_traceroute_distance_cache.py::TestTracerouteDistanceCache::test_cache_persists_across_multiple_packets
+[gw1][36m [ 79%] [0m[32mPASSED[0m tests/unit/test_traceroute_distance_cache.py::TestTracerouteDistanceCache::test_cache_persists_across_multiple_packets
+tests/unit/test_traceroute_distance_cache.py::TestTracerouteDistanceCache::test_cache_handles_missing_locations
+[gw1][36m [ 79%] [0m[32mPASSED[0m tests/unit/test_traceroute_distance_cache.py::TestTracerouteDistanceCache::test_cache_handles_missing_locations
+tests/unit/test_traceroute_graph_utils.py::test_build_combined_graph_basic
+[gw1][36m [ 79%] [0m[32mPASSED[0m tests/unit/test_traceroute_graph_utils.py::test_build_combined_graph_basic
+tests/unit/test_traceroute_link_endpoint.py::TestTracerouteLinkEndpoint::test_no_direct_rf_hops_returns_zero_traceroutes
+[gw1][36m [ 80%] [0m[32mPASSED[0m tests/unit/test_traceroute_link_endpoint.py::TestTracerouteLinkEndpoint::test_no_direct_rf_hops_returns_zero_traceroutes
+tests/unit/test_traceroute_link_endpoint.py::TestTracerouteLinkEndpoint::test_direct_rf_hop_returns_traceroutes
+[gw1][36m [ 80%] [0m[32mPASSED[0m tests/unit/test_traceroute_link_endpoint.py::TestTracerouteLinkEndpoint::test_direct_rf_hop_returns_traceroutes
+tests/unit/test_traceroute_link_endpoint.py::TestTracerouteLinkEndpoint::test_multi_hop_traceroute_with_target_hop_in_middle
+[gw1][36m [ 80%] [0m[32mPASSED[0m tests/unit/test_traceroute_link_endpoint.py::TestTracerouteLinkEndpoint::test_multi_hop_traceroute_with_target_hop_in_middle
+tests/unit/test_traceroute_link_endpoint.py::TestTracerouteLinkEndpoint::test_traceroute_packet_actual_rf_path_analysis
+[gw1][36m [ 80%] [0m[32mPASSED[0m tests/unit/test_traceroute_link_endpoint.py::TestTracerouteLinkEndpoint::test_traceroute_packet_actual_rf_path_analysis
+tests/unit/test_traceroute_link_endpoint.py::TestTracerouteLinkEndpoint::test_endpoint_integration_scenario
+[gw1][36m [ 80%] [0m[32mPASSED[0m tests/unit/test_traceroute_link_endpoint.py::TestTracerouteLinkEndpoint::test_endpoint_integration_scenario
+tests/unit/test_traceroute_link_endpoint_fix.py::TestTracerouteLinkEndpointFix::test_endpoint_returns_rf_hops_without_gateway_node_name_error
+[gw1][36m [ 81%] [0m[32mPASSED[0m tests/unit/test_traceroute_link_endpoint_fix.py::TestTracerouteLinkEndpointFix::test_endpoint_returns_rf_hops_without_gateway_node_name_error
+tests/unit/test_traceroute_link_endpoint_fix.py::TestTracerouteLinkEndpointFix::test_endpoint_handles_no_rf_hops_gracefully
+[gw1][36m [ 81%] [0m[32mPASSED[0m tests/unit/test_traceroute_link_endpoint_fix.py::TestTracerouteLinkEndpointFix::test_endpoint_handles_no_rf_hops_gracefully
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketBasic::test_simple_forward_traceroute
+[gw1][36m [ 81%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketBasic::test_simple_forward_traceroute
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketBasic::test_traceroute_with_return_path
+[gw1][36m [ 81%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketBasic::test_traceroute_with_return_path
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketBasic::test_direct_hop_traceroute
+[gw1][36m [ 81%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketBasic::test_direct_hop_traceroute
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketRFAnalysis::test_actual_rf_path_forward
+[gw1][36m [ 82%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketRFAnalysis::test_actual_rf_path_forward
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketRFAnalysis::test_actual_rf_path_return
+[gw1][36m [ 82%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketRFAnalysis::test_actual_rf_path_return
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketRFAnalysis::test_actual_rf_path_return_only
+[gw1][36m [ 82%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketRFAnalysis::test_actual_rf_path_return_only
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketRFAnalysis::test_contains_hop_method
+[gw1][36m [ 82%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketRFAnalysis::test_contains_hop_method
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketRFAnalysis::test_get_hop_snr_method
+[gw1][36m [ 83%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketRFAnalysis::test_get_hop_snr_method
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketUtilities::test_path_summary
+[gw1][36m [ 83%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketUtilities::test_path_summary
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketUtilities::test_format_path_display
+[gw1][36m [ 83%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketUtilities::test_format_path_display
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketUtilities::test_template_context
+[gw1][36m [ 83%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketUtilities::test_template_context
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketEdgeCases::test_empty_payload
+[gw1][36m [ 83%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketEdgeCases::test_empty_payload
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketEdgeCases::test_malformed_payload
+[gw1][36m [ 84%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketEdgeCases::test_malformed_payload
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketEdgeCases::test_incomplete_traceroute
+[gw1][36m [ 84%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketEdgeCases::test_incomplete_traceroute
+tests/unit/test_traceroute_packet.py::TestTraceroutePacketEdgeCases::test_snr_conversion_from_scaled_integers
+[gw1][36m [ 84%] [0m[32mPASSED[0m tests/unit/test_traceroute_packet.py::TestTraceroutePacketEdgeCases::test_snr_conversion_from_scaled_integers
+tests/unit/test_traceroute_service.py::TestTracerouteServiceLongestLinks::test_longest_links_analysis_basic
+[gw1][36m [ 84%] [0m[32mPASSED[0m tests/unit/test_traceroute_service.py::TestTracerouteServiceLongestLinks::test_longest_links_analysis_basic
+tests/unit/test_traceroute_service.py::TestTracerouteServiceLongestLinks::test_longest_links_analysis_empty_data
+[gw1][36m [ 84%] [0m[32mPASSED[0m tests/unit/test_traceroute_service.py::TestTracerouteServiceLongestLinks::test_longest_links_analysis_empty_data
+tests/unit/test_wsgi.py::TestWSGIApplication::test_create_wsgi_app_returns_flask_app
+[gw1][36m [ 85%] [0m[32mPASSED[0m tests/unit/test_wsgi.py::TestWSGIApplication::test_create_wsgi_app_returns_flask_app
+tests/unit/test_wsgi.py::TestWSGIApplication::test_get_application_returns_flask_app
+[gw1][36m [ 85%] [0m[32mPASSED[0m tests/unit/test_wsgi.py::TestWSGIApplication::test_get_application_returns_flask_app
+tests/unit/test_wsgi.py::TestWSGIApplication::test_wsgi_app_has_health_endpoint
+[gw1][36m [ 85%] [0m[32mPASSED[0m tests/unit/test_wsgi.py::TestWSGIApplication::test_wsgi_app_has_health_endpoint
+tests/unit/test_wsgi.py::TestWSGIApplication::test_create_wsgi_app_uses_config
+[gw1][36m [ 85%] [0m[32mPASSED[0m tests/unit/test_wsgi.py::TestWSGIApplication::test_create_wsgi_app_uses_config
+[gw3][36m [ 86%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_api_requests_include_filters[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_direct_hidden_input_event_trigger[chromium]
+[gw0][36m [ 86%] [0m[32mPASSED[0m tests/e2e/test_graph.py::TestGraphResolutions::test_graph_centering_at_1366x768[chromium]
+tests/integration/test_traceroute_routes.py::TestTracerouteRouteNodeFilter::test_route_node_filter_api_endpoint
+[gw0][36m [ 86%] [0m[32mPASSED[0m tests/integration/test_traceroute_routes.py::TestTracerouteRouteNodeFilter::test_route_node_filter_api_endpoint
+tests/unit/test_config.py::test_yaml_loading
+[gw0][36m [ 86%] [0m[32mPASSED[0m tests/unit/test_config.py::test_yaml_loading
+tests/unit/test_config.py::test_env_override
+[gw0][36m [ 86%] [0m[32mPASSED[0m tests/unit/test_config.py::test_env_override
+tests/unit/test_exclude_fields_ui.py::TestExcludeFieldsUI::test_exclude_fields_present_in_packets_template
+[gw0][36m [ 87%] [0m[32mPASSED[0m tests/unit/test_exclude_fields_ui.py::TestExcludeFieldsUI::test_exclude_fields_present_in_packets_template
+tests/unit/test_exclude_fields_ui.py::TestExcludeFieldsUI::test_exclude_parameters_accepted_by_api
+[gw0][36m [ 87%] [0m[32mPASSED[0m tests/unit/test_exclude_fields_ui.py::TestExcludeFieldsUI::test_exclude_parameters_accepted_by_api
+tests/unit/test_exclude_fields_ui.py::TestExcludeFieldsUI::test_exclude_parameters_with_broadcast_node
+[gw0][36m [ 87%] [0m[32mPASSED[0m tests/unit/test_exclude_fields_ui.py::TestExcludeFieldsUI::test_exclude_parameters_with_broadcast_node
+tests/unit/test_gateway_sorting.py::TestGatewaySortingAPI::test_packet_repository_gateway_sorting_asc
+[gw0][36m [ 87%] [0m[32mPASSED[0m tests/unit/test_gateway_sorting.py::TestGatewaySortingAPI::test_packet_repository_gateway_sorting_asc
+tests/unit/test_gateway_sorting.py::TestGatewaySortingAPI::test_packet_repository_gateway_sorting_desc
+[gw0][36m [ 87%] [0m[32mPASSED[0m tests/unit/test_gateway_sorting.py::TestGatewaySortingAPI::test_packet_repository_gateway_sorting_desc
+tests/unit/test_gateway_sorting.py::TestGatewaySortingAPI::test_traceroute_repository_gateway_sorting_asc
+[gw0][36m [ 88%] [0m[32mPASSED[0m tests/unit/test_gateway_sorting.py::TestGatewaySortingAPI::test_traceroute_repository_gateway_sorting_asc
+tests/unit/test_gateway_sorting.py::TestGatewaySortingDataFormat::test_api_returns_correct_gateway_format_for_grouped_packets
+[gw0][36m [ 88%] [0m[32mPASSED[0m tests/unit/test_gateway_sorting.py::TestGatewaySortingDataFormat::test_api_returns_correct_gateway_format_for_grouped_packets
+tests/unit/test_gateway_sorting.py::TestJavaScriptSortingLogic::test_gateway_count_extraction_from_string
+[gw0][36m [ 88%] [0m[32mPASSED[0m tests/unit/test_gateway_sorting.py::TestJavaScriptSortingLogic::test_gateway_count_extraction_from_string
+[gw2][36m [ 88%] [0m[32mPASSED[0m tests/e2e/test_traceroute_url_filters.py::TestTracerouteURLFilters::test_traceroute_no_url_parameters_single_request[chromium]
+tests/e2e/test_traceroute_url_filters.py::TestTracerouteURLFilters::test_traceroute_route_node_filter_url[chromium]
+[gw3][36m [ 88%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_direct_hidden_input_event_trigger[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_event_listener_debugging[chromium]
+[gw2][36m [ 89%] [0m[32mPASSED[0m tests/e2e/test_traceroute_url_filters.py::TestTracerouteURLFilters::test_traceroute_route_node_filter_url[chromium]
+tests/e2e/test_traceroute_url_filters.py::TestTracerouteURLFilters::test_traceroute_gateway_filter_url[chromium]
+[gw3][36m [ 89%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_event_listener_debugging[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_form_data_extraction_debug[chromium]
+[gw2][36m [ 89%] [0m[32mPASSED[0m tests/e2e/test_traceroute_url_filters.py::TestTracerouteURLFilters::test_traceroute_gateway_filter_url[chromium]
+tests/e2e/test_traceroute_url_filters.py::TestTracerouteURLFilters::test_traceroute_time_range_filter_url[chromium]
+[gw3][36m [ 89%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_form_data_extraction_debug[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_actual_form_listeners_debugging[chromium]
+[gw2][36m [ 90%] [0m[32mPASSED[0m tests/e2e/test_traceroute_url_filters.py::TestTracerouteURLFilters::test_traceroute_time_range_filter_url[chromium]
+tests/e2e/test_tables.py::TestTables::test_api_traceroute_includes_short_names
+[gw2][36m [ 90%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_api_traceroute_includes_short_names
+tests/e2e/test_tables.py::TestTables::test_api_packets_includes_short_names
+[gw2][36m [ 90%] [0m[32mPASSED[0m tests/e2e/test_tables.py::TestTables::test_api_packets_includes_short_names
+tests/integration/test_api_endpoints.py::TestStatsEndpoint::test_stats_endpoint_basic
+[gw2][36m [ 90%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestStatsEndpoint::test_stats_endpoint_basic
+tests/integration/test_api_endpoints.py::TestStatsEndpoint::test_stats_endpoint_with_gateway_filter
+[gw2][36m [ 90%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestStatsEndpoint::test_stats_endpoint_with_gateway_filter
+tests/integration/test_api_endpoints.py::TestPacketsEndpoint::test_packets_endpoint_basic
+[gw2][36m [ 91%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestPacketsEndpoint::test_packets_endpoint_basic
+tests/integration/test_api_endpoints.py::TestPacketsEndpoint::test_packets_endpoint_pagination
+[gw2][36m [ 91%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestPacketsEndpoint::test_packets_endpoint_pagination
+tests/integration/test_api_endpoints.py::TestPacketsEndpoint::test_packets_endpoint_filters
+[gw2][36m [ 91%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestPacketsEndpoint::test_packets_endpoint_filters
+tests/integration/test_api_endpoints.py::TestNodesEndpoint::test_nodes_endpoint_basic
+[gw2][36m [ 91%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestNodesEndpoint::test_nodes_endpoint_basic
+tests/integration/test_api_endpoints.py::TestNodesEndpoint::test_nodes_search_endpoint
+[gw2][36m [ 91%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestNodesEndpoint::test_nodes_search_endpoint
+tests/integration/test_api_endpoints.py::TestTracerouteEndpoints::test_traceroute_endpoint_basic
+[gw2][36m [ 92%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestTracerouteEndpoints::test_traceroute_endpoint_basic
+tests/integration/test_api_endpoints.py::TestTracerouteEndpoints::test_traceroute_patterns_endpoint
+[gw2][36m [ 92%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestTracerouteEndpoints::test_traceroute_patterns_endpoint
+tests/integration/test_api_endpoints.py::TestTracerouteEndpoints::test_traceroute_related_nodes_endpoint
+[gw2][36m [ 92%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestTracerouteEndpoints::test_traceroute_related_nodes_endpoint
+tests/integration/test_api_endpoints.py::TestTracerouteEndpoints::test_traceroute_related_nodes_hex_format
+[gw2][36m [ 92%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestTracerouteEndpoints::test_traceroute_related_nodes_hex_format
+tests/integration/test_api_endpoints.py::TestTracerouteEndpoints::test_traceroute_related_nodes_not_found
+[gw2][36m [ 93%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestTracerouteEndpoints::test_traceroute_related_nodes_not_found
+tests/integration/test_api_endpoints.py::TestTracerouteEndpoints::test_traceroute_related_nodes_invalid_format
+[gw2][36m [ 93%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestTracerouteEndpoints::test_traceroute_related_nodes_invalid_format
+tests/integration/test_api_endpoints.py::TestTracerouteEndpoints::test_traceroute_hops_nodes_endpoint
+[gw2][36m [ 93%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestTracerouteEndpoints::test_traceroute_hops_nodes_endpoint
+tests/integration/test_api_endpoints.py::TestLocationEndpoints::test_locations_endpoint
+[gw2][36m [ 93%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLocationEndpoints::test_locations_endpoint
+tests/integration/test_api_endpoints.py::TestLocationEndpoints::test_locations_endpoint_enhanced_fields
+[gw2][36m [ 93%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLocationEndpoints::test_locations_endpoint_enhanced_fields
+tests/integration/test_api_endpoints.py::TestLocationEndpoints::test_location_statistics_endpoint
+[gw2][36m [ 94%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLocationEndpoints::test_location_statistics_endpoint
+tests/integration/test_api_endpoints.py::TestLocationEndpoints::test_location_hop_distances_endpoint
+[gw2][36m [ 94%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLocationEndpoints::test_location_hop_distances_endpoint
+tests/integration/test_api_endpoints.py::TestLocationEndpoints::test_locations_endpoint_returns_14_day_data
+[gw2][36m [ 94%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestLocationEndpoints::test_locations_endpoint_returns_14_day_data
+tests/integration/test_api_endpoints.py::TestNodeSpecificEndpoints::test_node_info_endpoint
+[gw2][36m [ 94%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestNodeSpecificEndpoints::test_node_info_endpoint
+tests/integration/test_api_endpoints.py::TestNodeSpecificEndpoints::test_node_info_endpoint_not_found
+[gw2][36m [ 94%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestNodeSpecificEndpoints::test_node_info_endpoint_not_found
+tests/integration/test_api_endpoints.py::TestNodeSpecificEndpoints::test_node_location_history_endpoint
+[gw2][36m [ 95%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestNodeSpecificEndpoints::test_node_location_history_endpoint
+tests/integration/test_api_endpoints.py::TestNodeSpecificEndpoints::test_node_neighbors_endpoint
+[gw2][36m [ 95%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestNodeSpecificEndpoints::test_node_neighbors_endpoint
+tests/integration/test_api_endpoints.py::TestUtilityEndpoints::test_gateways_endpoint
+[gw2][36m [ 95%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestUtilityEndpoints::test_gateways_endpoint
+tests/integration/test_api_endpoints.py::TestUtilityEndpoints::test_packets_signal_endpoint
+[gw2][36m [ 95%] [0m[32mPASSED[0m tests/integration/test_api_endpoints.py::TestUtilityEndpoints::test_packets_signal_endpoint
+[gw3][36m [ 95%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_actual_form_listeners_debugging[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_manual_event_trigger_debugging[chromium]
+[gw3][36m [ 96%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_manual_event_trigger_debugging[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_form_structure_debugging[chromium]
+[gw3][36m [ 96%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_form_structure_debugging[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_node_picker_initialization_debugging[chromium]
+[gw3][36m [ 96%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_node_picker_initialization_debugging[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_event_listeners_attachment_debugging[chromium]
+[gw3][36m [ 96%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_event_listeners_attachment_debugging[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_manual_applyCurrentFilters_call[chromium]
+[gw3][36m [ 97%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_manual_applyCurrentFilters_call[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_search_results_and_click_debugging[chromium]
+[gw3][36m [ 97%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_search_results_and_click_debugging[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_addFormFieldListeners_function_debugging[chromium]
+[gw3][36m [ 97%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_addFormFieldListeners_function_debugging[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_applyCurrentFilters_step_by_step_debugging[chromium]
+[gw3][36m [ 97%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_applyCurrentFilters_step_by_step_debugging[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_from_node_filter_e2e[chromium]
+[gw3][36m [ 97%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_from_node_filter_e2e[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_to_node_filter_e2e[chromium]
+[gw3][36m [ 98%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_to_node_filter_e2e[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_route_node_filter_e2e[chromium]
+[gw3][36m [ 98%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_route_node_filter_e2e[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_gateway_filter_e2e[chromium]
+[gw3][36m [ 98%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_gateway_filter_e2e[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_return_path_filter_e2e[chromium]
+[gw3][36m [ 98%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_return_path_filter_e2e[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_time_filters_e2e[chromium]
+[gw3][36m [ 98%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_time_filters_e2e[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_combined_filters_e2e[chromium]
+[gw3][36m [ 99%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_combined_filters_e2e[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_filter_url_parameters_e2e[chromium]
+[gw3][36m [ 99%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_filter_url_parameters_e2e[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_node_picker_integration_e2e[chromium]
+[gw3][36m [ 99%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_node_picker_integration_e2e[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_apply_filters_button_e2e[chromium]
+[gw3][36m [ 99%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_apply_filters_button_e2e[chromium]
+tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_clear_filters_button_e2e[chromium]
+[gw3][36m [100%] [0m[32mPASSED[0m tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_clear_filters_button_e2e[chromium]
+
+============================= slowest 10 durations =============================
+24.11s call     tests/e2e/test_packets_filters_e2e.py::TestPacketsFilters::test_packet_type_filter_timing_issue_debug[chromium]
+23.61s call     tests/e2e/test_graph.py::TestGraphBasicFunctionality::test_node_selection_and_centering[chromium]
+22.94s call     tests/e2e/test_map_layout.py::TestMapLayout::test_combined_filters_functionality[chromium]
+22.88s call     tests/e2e/test_map_filters.py::TestMapFilters::test_client_side_age_filtering[chromium]
+22.54s call     tests/e2e/test_tables.py::TestTables::test_traceroute_gateway_display[chromium]
+21.93s call     tests/e2e/test_map_layout.py::TestMapLayout::test_node_list_displays_roles[chromium]
+21.62s call     tests/e2e/test_tables.py::TestTables::test_packets_gateway_sorting_grouped[chromium]
+17.24s call     tests/e2e/test_graph.py::TestGraphResolutions::test_center_graph_button_at_different_resolutions[chromium]
+12.46s call     tests/e2e/test_map_filters.py::TestMapFilters::test_multiple_filter_combinations[chromium]
+12.36s call     tests/e2e/test_traceroute_filters_e2e.py::TestTracerouteFilters::test_traceroute_return_path_filter_e2e[chromium]
+[32m================== [32m[1m470 passed[0m, [33m2 skipped[0m[32m in 268.59s (0:04:28)[0m[32m ==================[0m
