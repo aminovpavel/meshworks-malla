@@ -6,7 +6,8 @@ import functools
 import hashlib
 import logging
 import pickle
-from typing import Any, Callable, TypeVar, cast
+from collections.abc import Callable
+from typing import Any, TypeVar, cast
 
 import redis
 
@@ -49,7 +50,7 @@ class CacheService:
         try:
             data = cls._redis_client.get(key)
             if data:
-                return pickle.loads(data)
+                return pickle.loads(cast(bytes, data))
         except Exception as e:
             logger.warning(f"Cache get error for {key}: {e}")
         return None
@@ -74,7 +75,7 @@ class CacheService:
         try:
             keys = cls._redis_client.keys(pattern)
             if keys:
-                cls._redis_client.delete(*keys)
+                cls._redis_client.delete(*cast(list[str], keys))
         except Exception as e:
             logger.warning(f"Cache delete pattern error for {pattern}: {e}")
 

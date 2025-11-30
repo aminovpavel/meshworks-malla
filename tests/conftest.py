@@ -87,7 +87,11 @@ class TestFlaskApp:
 
         def run_server():
             self.app.run(
-                host="127.0.0.1", port=self.port, debug=False, use_reloader=False
+                host="127.0.0.1",
+                port=self.port,
+                debug=False,
+                use_reloader=False,
+                threaded=True,
             )
 
         self.server_thread = threading.Thread(target=run_server, daemon=True)
