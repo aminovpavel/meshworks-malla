@@ -4,12 +4,14 @@ Main routes for the Meshtastic Mesh Health Web UI
 
 import logging
 import os
+from typing import Any
 
 from flask import Blueprint, current_app, render_template, request, send_from_directory
 
 # Import from the new modular architecture
 from ..config import get_config
 from ..database.repositories import ChatRepository, DashboardRepository
+from ..services.cache_service import CacheService
 from ..utils.node_utils import convert_node_id
 
 logger = logging.getLogger(__name__)
@@ -20,13 +22,12 @@ main_bp = Blueprint("main", __name__)
 def dashboard():
     """Dashboard route with network statistics."""
     try:
-        # Get basic dashboard stats
-        stats = DashboardRepository.get_stats()
+        stats = _get_cached_dashboard_stats()
 
         # Get gateway statistics from the new cached service
         from ..services.gateway_service import GatewayService
 
-        gateway_stats = GatewayService.get_gateway_statistics(hours=24)
+        gateway_stats = _get_cached_gateway_stats(GatewayService, hours=24)
         gateway_count = gateway_stats.get("total_gateways", 0)
 
         return render_template(
@@ -139,6 +140,32 @@ def favicon():
         return send_from_directory(icons_dir, "favicon.png", mimetype="image/png")
     # Nothing to serve
     return ("", 404)
+
+
+def _get_cached_dashboard_stats() -> dict[str, Any]:
+    """Fetch dashboard stats with Redis caching fallback."""
+
+    cache_key = "dashboard:stats"
+    cached_stats = CacheService.get(cache_key)
+    if cached_stats is not None:
+        return cached_stats
+
+    stats = DashboardRepository.get_stats()
+    CacheService.set(cache_key, stats, ttl=30)
+    return stats
+
+
+def _get_cached_gateway_stats(gateway_service, hours: int = 24) -> dict[str, Any]:
+    """Fetch gateway statistics with Redis caching, mirroring in-memory TTL."""
+
+    cache_key = f"dashboard:gateway_stats:{hours}"
+    cached_stats = CacheService.get(cache_key)
+    if cached_stats is not None:
+        return cached_stats
+
+    gateway_stats = gateway_service.get_gateway_statistics(hours=hours)
+    CacheService.set(cache_key, gateway_stats, ttl=300)
+    return gateway_stats
 
 
 @main_bp.route("/map")

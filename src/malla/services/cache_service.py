@@ -7,7 +7,10 @@ import hashlib
 import logging
 import pickle
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any, TypeVar, cast
+
+from flask import Response
 
 import redis
 
@@ -16,6 +19,14 @@ from ..config import get_config
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
+
+@dataclass
+class CachedFlaskResponse:
+    data: bytes
+    status: int
+    headers: list[tuple[str, str]]
+    mimetype: str | None
 
 
 class CacheService:
@@ -113,6 +124,16 @@ def cache_response(ttl: int = 60, prefix: str = "view") -> Callable[[Callable[..
 
                 # Try to get from cache
                 cached_result = CacheService.get(cache_key)
+                if isinstance(cached_result, CachedFlaskResponse):
+                    return cast(
+                        T,
+                        Response(
+                            cached_result.data,
+                            status=cached_result.status,
+                            headers=cached_result.headers,
+                            mimetype=cached_result.mimetype,
+                        ),
+                    )
                 if cached_result is not None:
                     return cast(T, cached_result)
             except Exception as e:
@@ -124,7 +145,17 @@ def cache_response(ttl: int = 60, prefix: str = "view") -> Callable[[Callable[..
 
             # Store in cache
             try:
-                CacheService.set(cache_key, result, ttl)
+                if isinstance(result, Response):
+                    cached_value: CachedFlaskResponse | Any = CachedFlaskResponse(
+                        data=result.get_data(),
+                        status=result.status_code,
+                        headers=[(k, v) for k, v in result.headers.items()],
+                        mimetype=result.mimetype,
+                    )
+                else:
+                    cached_value = result
+
+                CacheService.set(cache_key, cached_value, ttl)
             except Exception:
                 pass
 

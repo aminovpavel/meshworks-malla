@@ -52,6 +52,7 @@ def api_stats():
 
 
 @api_bp.route("/chat/messages")
+@cache_response(ttl=10, prefix="api_chat_messages")
 def api_chat_messages():
     """Return recent chat messages decoded from text packets."""
     logger.info("API chat messages endpoint accessed")
@@ -122,6 +123,7 @@ def api_chat_messages():
 
 
 @api_bp.route("/meshtastic/hardware-models")
+@cache_response(ttl=3600, prefix="api_meshtastic_hardware_models")
 def api_hardware_models():
     """API endpoint for available hardware models from Meshtastic protobuf."""
     logger.info("API hardware models endpoint accessed")
@@ -134,6 +136,7 @@ def api_hardware_models():
 
 
 @api_bp.route("/meshtastic/packet-types")
+@cache_response(ttl=3600, prefix="api_meshtastic_packet_types")
 def api_packet_types():
     """API endpoint for available packet types from Meshtastic protobuf."""
     logger.info("API packet types endpoint accessed")
@@ -146,6 +149,7 @@ def api_packet_types():
 
 
 @api_bp.route("/meshtastic/node-roles")
+@cache_response(ttl=3600, prefix="api_meshtastic_node_roles")
 def api_node_roles():
     """API endpoint for available node roles from Meshtastic protobuf."""
     logger.info("API node roles endpoint accessed")
@@ -158,6 +162,7 @@ def api_node_roles():
 
 
 @api_bp.route("/analytics")
+@cache_response(ttl=30, prefix="api_analytics")
 def api_analytics():
     """API endpoint for analytics data."""
     logger.info("API analytics endpoint accessed")
@@ -321,6 +326,7 @@ def api_nodes():
 
 
 @api_bp.route("/nodes/search")
+@cache_response(ttl=30, prefix="api_nodes_search")
 def api_nodes_search():
     """API endpoint for searching nodes by name or ID."""
     logger.info("API nodes search endpoint accessed")
@@ -415,6 +421,7 @@ def api_nodes_search():
 
 
 @api_bp.route("/gateways")
+@cache_response(ttl=60, prefix="api_gateways")
 def api_gateways():
     """API endpoint for gateway list."""
     logger.info("API gateways endpoint accessed")
@@ -427,6 +434,7 @@ def api_gateways():
 
 
 @api_bp.route("/gateways/search")
+@cache_response(ttl=30, prefix="api_gateways_search")
 def api_gateways_search():
     """API endpoint for searching gateways by name or ID."""
     logger.info("API gateways search endpoint accessed")
@@ -566,6 +574,7 @@ def api_gateways_search():
 
 
 @api_bp.route("/packets/signal")
+@cache_response(ttl=30, prefix="api_packets_signal")
 def api_packets_signal():
     """API endpoint for packet signal quality data."""
     logger.info("API packets signal endpoint accessed")
@@ -646,6 +655,7 @@ def api_traceroute():
 
 
 @api_bp.route("/traceroute/analytics")
+@cache_response(ttl=60, prefix="api_traceroute_analytics")
 def api_traceroute_analytics():
     """API endpoint for traceroute analytics."""
     logger.info("API traceroute analytics endpoint accessed")
@@ -659,6 +669,7 @@ def api_traceroute_analytics():
 
 
 @api_bp.route("/traceroute/<int:packet_id>")
+@cache_response(ttl=60, prefix="api_traceroute_details")
 def api_traceroute_details(packet_id):
     """API endpoint for specific traceroute details."""
     logger.info(f"API traceroute details endpoint accessed for packet {packet_id}")
@@ -679,6 +690,7 @@ def api_traceroute_details(packet_id):
 
 
 @api_bp.route("/locations")
+@cache_response(ttl=60, prefix="api_locations")
 def api_locations():
     """
     API endpoint for node location data with network topology.
@@ -737,6 +749,7 @@ def api_locations():
 
 
 @api_bp.route("/traceroute/patterns")
+@cache_response(ttl=120, prefix="api_traceroute_patterns")
 def api_traceroute_patterns():
     """API endpoint for traceroute route patterns."""
     logger.info("API traceroute patterns endpoint accessed")
@@ -749,6 +762,7 @@ def api_traceroute_patterns():
 
 
 @api_bp.route("/node/<node_id>/info")
+@cache_response(ttl=60, prefix="api_node_info")
 def api_node_info(node_id):
     """API endpoint for basic node information (optimized for tooltips and pickers)."""
     logger.info(f"API node info endpoint accessed for node {node_id}")
@@ -798,6 +812,7 @@ def api_node_info(node_id):
 
 
 @api_bp.route("/node/<node_id>/location-history")
+@cache_response(ttl=30, prefix="api_node_location_history")
 def api_node_location_history(node_id):
     """API endpoint for node location history."""
     logger.info(f"API node location history endpoint accessed for node {node_id}")
@@ -813,6 +828,7 @@ def api_node_location_history(node_id):
 
 
 @api_bp.route("/node/<node_id>/direct-receptions")
+@cache_response(ttl=30, prefix="api_node_direct_receptions")
 def api_node_direct_receptions(node_id):
     """API endpoint for bidirectional direct receptions (0-hop packets)."""
     logger.info(f"API direct receptions endpoint accessed for node {node_id}")
@@ -849,6 +865,7 @@ def api_node_direct_receptions(node_id):
 
 
 @api_bp.route("/location/statistics")
+@cache_response(ttl=60, prefix="api_location_statistics")
 def api_location_statistics():
     """API endpoint for location statistics."""
     logger.info("API location statistics endpoint accessed")
@@ -861,6 +878,7 @@ def api_location_statistics():
 
 
 @api_bp.route("/location/hop-distances")
+@cache_response(ttl=60, prefix="api_location_hop_distances")
 def api_location_hop_distances():
     """API endpoint for hop distances between nodes."""
     logger.info("API location hop distances endpoint accessed")
@@ -873,6 +891,7 @@ def api_location_hop_distances():
 
 
 @api_bp.route("/node/<node_id>/neighbors")
+@cache_response(ttl=30, prefix="api_node_neighbors")
 def api_node_neighbors(node_id):
     """API endpoint for node neighbors within a certain distance."""
     logger.info(f"API node neighbors endpoint accessed for node {node_id}")
@@ -888,6 +907,7 @@ def api_node_neighbors(node_id):
 
 
 @api_bp.route("/longest-links")
+@cache_response(ttl=60, prefix="api_longest_links")
 def api_longest_links():
     """API endpoint for longest links analysis."""
     logger.info("API longest links endpoint accessed")
@@ -909,6 +929,7 @@ def api_longest_links():
 
 
 @api_bp.route("/traceroute-hops/nodes")
+@cache_response(ttl=60, prefix="api_traceroute_hops_nodes")
 def api_traceroute_hops_nodes():
     """API endpoint for nodes involved in traceroutes with location data."""
     start_time = time.time()
@@ -995,6 +1016,7 @@ def api_traceroute_hops_nodes():
 
 
 @api_bp.route("/traceroute/related-nodes/<node_id>")
+@cache_response(ttl=60, prefix="api_traceroute_related_nodes")
 def api_traceroute_related_nodes(node_id):
     """API endpoint for nodes that have traceroute connections to the specified node."""
     logger.info(f"API traceroute/related-nodes endpoint accessed for node {node_id}")
@@ -1009,6 +1031,7 @@ def api_traceroute_related_nodes(node_id):
 
 
 @api_bp.route("/traceroute/link/<node1_id>/<node2_id>")
+@cache_response(ttl=60, prefix="api_traceroute_link")
 def api_traceroute_link(node1_id, node2_id):
     """API endpoint for traceroute link analysis between two specific nodes."""
     logger.info(
@@ -1905,6 +1928,7 @@ def api_traceroute_data():
 
 
 @api_bp.route("/meshtastic/channels")
+@cache_response(ttl=300, prefix="api_meshtastic_channels")
 def api_channels():
     """API endpoint for available primary channels (from node_info)."""
     logger.info("API channels endpoint accessed")
