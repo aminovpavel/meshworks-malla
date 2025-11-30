@@ -24,7 +24,7 @@ from ..services.location_service import LocationService
 from ..services.meshtastic_service import MeshtasticService
 from ..services.node_service import NodeService
 from ..services.traceroute_service import TracerouteService
-from ..services.cache_service import cache_response
+from ..services.cache_service import cache_response, CacheService
 from ..utils.node_utils import (
     convert_node_id,
     get_bulk_node_names,
@@ -36,6 +36,35 @@ from ..utils.traceroute_utils import parse_traceroute_payload
 logger = logging.getLogger(__name__)
 api_bp = Blueprint("api", __name__, url_prefix="/api")
 
+
+@api_bp.route("/debug/cache")
+def debug_cache():
+    """Debug endpoint for Redis cache."""
+    import os
+    from ..services.cache_service import CacheService
+
+    status = {
+        "enabled": CacheService._enabled,
+        "client_initialized": CacheService._redis_client is not None,
+        "pid": os.getpid(),
+        "test_result": "N/A"
+    }
+
+    # Try set/get
+    try:
+        if not CacheService._redis_client:
+            CacheService.initialize()
+            status["reinitialized"] = True
+
+        test_key = f"debug:test:{os.getpid()}"
+        CacheService.set(test_key, "ok", 10)
+        val = CacheService.get(test_key)
+        status["test_result"] = val
+        status["test_key"] = test_key
+    except Exception as e:
+        status["error"] = str(e)
+
+    return jsonify(status)
 
 @api_bp.route("/stats")
 @cache_response(ttl=30, prefix="api_stats")

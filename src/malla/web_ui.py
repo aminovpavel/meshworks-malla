@@ -235,8 +235,8 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
     init_database()
 
     # Initialize Redis cache
-    logger.info("Initializing Redis cache service")
-    CacheService.initialize()
+    # logger.info("Initializing Redis cache service")
+    # CacheService.initialize()
 
     # Start periodic cache cleanup for node names
     logger.info("Starting node name cache cleanup background thread")

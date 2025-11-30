@@ -6,6 +6,7 @@ import functools
 import hashlib
 import logging
 import pickle
+import os
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any, TypeVar, cast
@@ -41,29 +42,45 @@ class CacheService:
         config = get_config()
         if config.redis_url:
             try:
-                cls._redis_client = redis.from_url(config.redis_url)
+                # Always create a new client to ensure fresh connection parameters
+                client = redis.from_url(config.redis_url)
                 # Test connection
-                cls._redis_client.ping()
+                client.ping()
+
+                # Assign only if successful
+                cls._redis_client = client
                 cls._enabled = True
-                logger.info(f"Redis cache initialized at {config.redis_url}")
+                logger.info(f"Redis cache initialized successfully at {config.redis_url} (PID: {os.getpid()})")
             except Exception as e:
-                logger.error(f"Failed to initialize Redis cache: {e}")
+                # Ensure we reset to None so we can retry later
+                cls._redis_client = None
                 cls._enabled = False
+                # Log full exception for debugging
+                logger.error(f"Failed to initialize Redis cache: {e!r} (PID: {os.getpid()})", exc_info=True)
         else:
-            logger.info("Redis URL not configured, caching disabled")
+            logger.info(f"Redis URL not configured, caching disabled (PID: {os.getpid()})")
             cls._enabled = False
+            cls._redis_client = None
 
     @classmethod
     def get(cls, key: str) -> Any | None:
         """Get value from cache."""
         if not cls._enabled or not cls._redis_client:
-            return None
+            # Attempt lazy re-initialization if configured but not enabled
+            if cls._redis_client is None and get_config().redis_url:
+                 cls.initialize()
+
+            # If still not enabled, give up
+            if not cls._enabled or not cls._redis_client:
+                return None
+
         try:
+            # logger.info(f"Getting cache key {key} in PID {os.getpid()}")
             data = cls._redis_client.get(key)
             if data:
                 return pickle.loads(cast(bytes, data))
         except Exception as e:
-            logger.warning(f"Cache get error for {key}: {e}")
+            logger.warning(f"Cache get error for {key}: {e} (PID: {os.getpid()})")
         return None
 
     @classmethod
@@ -72,11 +89,13 @@ class CacheService:
         if not cls._enabled or not cls._redis_client:
             return
         try:
+            logger.info(f"Setting cache key {key} in PID {os.getpid()}")
             # Use pickle to handle complex Python objects
             data = pickle.dumps(value)
+            # Explicit cast to satisfy type checkers if needed, though redis-py types are usually handled
             cls._redis_client.setex(key, ttl, data)
         except Exception as e:
-            logger.warning(f"Cache set error for {key}: {e}")
+            logger.warning(f"Cache set error for {key}: {e} (PID: {os.getpid()})", exc_info=True)
 
     @classmethod
     def delete_pattern(cls, pattern: str) -> None:
@@ -88,7 +107,7 @@ class CacheService:
             if keys:
                 cls._redis_client.delete(*cast(list[str], keys))
         except Exception as e:
-            logger.warning(f"Cache delete pattern error for {pattern}: {e}")
+            logger.warning(f"Cache delete pattern error for {pattern}: {e} (PID: {os.getpid()})")
 
 
 def cache_response(ttl: int = 60, prefix: str = "view") -> Callable[[Callable[..., T]], Callable[..., T]]:
@@ -104,16 +123,20 @@ def cache_response(ttl: int = 60, prefix: str = "view") -> Callable[[Callable[..
             # Generate cache key based on function name and arguments
             key_parts = [prefix, func.__module__, func.__name__]
 
-            # Collect arguments for key generation
             try:
                 # Include Flask request parameters if available
                 request_data = ""
                 try:
                     from flask import request
                     # Check if we are in a request context (request.args will raise/fail if not)
-                    if request and hasattr(request, "args"):
-                        # Use sorted items to ensure consistency
-                        request_data = str(sorted(request.args.items()))
+                    if request:
+                        # Accessing request.args might trigger logic, be careful
+                        # We use sorted items to ensure consistency
+                        if hasattr(request, "args"):
+                            request_data += str(sorted(request.args.items()))
+
+                        # Also consider form data for POST requests if relevant?
+                        # For now, sticking to args as per original logic
                 except Exception:
                     # Not in Flask context or import failed, ignore
                     pass
@@ -135,10 +158,12 @@ def cache_response(ttl: int = 60, prefix: str = "view") -> Callable[[Callable[..
                         ),
                     )
                 if cached_result is not None:
+                    # Log cache hit at debug level
+                    logger.debug(f"Cache hit for {cache_key} (PID: {os.getpid()})")
                     return cast(T, cached_result)
             except Exception as e:
-                logger.warning(f"Cache key generation error: {e}")
-                return func(*args, **kwargs)
+                logger.warning(f"Cache key generation or retrieval error: {e} (PID: {os.getpid()})")
+                # Fallthrough to execute function
 
             # Execute function
             result = func(*args, **kwargs)
@@ -146,6 +171,7 @@ def cache_response(ttl: int = 60, prefix: str = "view") -> Callable[[Callable[..
             # Store in cache
             try:
                 if isinstance(result, Response):
+                    # Cache Flask Response objects specifically
                     cached_value: CachedFlaskResponse | Any = CachedFlaskResponse(
                         data=result.get_data(),
                         status=result.status_code,
@@ -155,9 +181,10 @@ def cache_response(ttl: int = 60, prefix: str = "view") -> Callable[[Callable[..
                 else:
                     cached_value = result
 
+                # Only cache successful responses if needed (optional logic, keeping simple for now)
                 CacheService.set(cache_key, cached_value, ttl)
-            except Exception:
-                pass
+            except Exception as e:
+                logger.error(f"Failed to cache response for {cache_key}: {e} (PID: {os.getpid()})", exc_info=True)
 
             return result
 
