@@ -309,7 +309,7 @@ class PacketRepository:
 
                 # Map sort keys to SQL aliases
                 sort_map = {
-                    "timestamp": "min_timestamp",
+                    "timestamp": "timestamp",
                     "gateway_id": "gateway_count",
                     "payload_length": "avg_payload_length",
                     "rssi": "min_rssi",
@@ -317,7 +317,7 @@ class PacketRepository:
                     "hop_count": "min_hops"
                 }
 
-                sql_order_col = sort_map.get(order_by, "min_timestamp")
+                sql_order_col = sort_map.get(order_by, "timestamp")
                 # Sanitize order direction
                 sql_order_dir = "DESC" if str(order_dir).upper() == "DESC" else "ASC"
 
