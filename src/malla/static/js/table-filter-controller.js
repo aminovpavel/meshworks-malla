@@ -98,6 +98,14 @@
                     cleaned.group_packets = this.groupingCheckbox.checked;
                 }
 
+                // Update columns based on initial filters if dynamic columns are supported
+                if (this.getDynamicColumns) {
+                    this._lastPortnum = cleaned.portnum;
+                    const cols = this.getDynamicColumns();
+                    this.table.options.columns = cols;
+                    this.table.updateTableHeader();
+                }
+
                 this.lastAppliedJson = this._stableJsonStringify(cleaned);
 
                 // Apply filters once manually
