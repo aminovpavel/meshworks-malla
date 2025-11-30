@@ -431,6 +431,7 @@ class PacketRepository:
                         payload_length, processed_successfully, raw_payload,
                         via_mqtt, want_ack, priority, delayed, channel_index, rx_time,
                         pki_encrypted, next_hop, relay_node, tx_after,
+                        topic, message_type,
                         datetime(timestamp, 'unixepoch') as timestamp_str,
                         (hop_start - hop_limit) as hop_count
                     FROM packet_history
