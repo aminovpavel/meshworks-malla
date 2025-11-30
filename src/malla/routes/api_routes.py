@@ -613,6 +613,7 @@ def api_packets_signal():
 
 
 @api_bp.route("/traceroute")
+@cache_response(ttl=30, prefix="api_traceroute")
 def api_traceroute():
     """API endpoint for traceroute data."""
     logger.info("API traceroute endpoint accessed")
@@ -1187,6 +1188,7 @@ def api_traceroute_link(node1_id, node2_id):
 
 
 @api_bp.route("/traceroute/graph")
+@cache_response(ttl=60, prefix="api_traceroute_graph")
 def api_traceroute_graph():
     """API endpoint for traceroute network graph data."""
     logger.info("API traceroute graph endpoint accessed")
