@@ -267,9 +267,9 @@ class PacketRepository:
             )
 
             if group_packets:
-                # OPTIMIZED GROUPED APPROACH
-                # Since grouped packets are usually within ~10 min of each other,
-                # we use a time-windowed approach instead of expensive GROUP BY + ORDER BY
+                # OPTIMIZED SQL GROUPED APPROACH
+                # Replaced Python-side grouping with SQL aggregation for Highload optimization.
+                # Uses a subquery with LIMIT to restrict the scan window, then groups in SQLite.
 
                 # Add mesh_packet_id filter (exclude 0 as it's often a special case)
                 if where_conditions:
@@ -282,229 +282,139 @@ class PacketRepository:
                     )
 
                 # Add time window to limit data scan (improves performance dramatically)
-                # If no explicit time filter, default to last 7 days for reasonable performance
                 if not filters.get("start_time") and not filters.get("end_time"):
                     recent_cutoff = time.time() - (7 * 24 * 3600)  # 7 days ago
                     where_clause += " AND timestamp >= ?"
                     params.append(recent_cutoff)
 
                 # PERFORMANCE FIX: Skip expensive total count for grouped queries
-                # The COUNT(DISTINCT ...) query was taking 9+ seconds on large datasets
-                # Instead, estimate total count based on results (much faster)
                 total_count = None  # Will be estimated after getting results
 
-                # ULTRA-OPTIMIZED: Use much smaller fetch limits for better performance
-                # The original approach was fetching 50k-1M records which is too expensive
-                # Instead, use a more reasonable approach with smaller multipliers
+                # ULTRA-OPTIMIZED: Use heuristic fetch limits for the inner scan
                 if offset == 0:
-                    # For first page, use a much smaller multiplier - most packets are unique anyway
-                    fetch_limit = min(
-                        limit * 10, 5000
-                    )  # Much smaller: 250-5000 instead of 50k-100k
+                    fetch_limit = min(limit * 10, 5000)
                 else:
-                    # For subsequent pages, use a reasonable multiplier
-                    grouping_ratio = 2.0  # More realistic estimate
+                    grouping_ratio = 2.0
                     estimated_individual_needed = (offset + limit) * grouping_ratio
+                    fetch_limit = min(max(estimated_individual_needed, limit * 5), 10000)
 
-                    # Cap at much smaller limits for performance
-                    fetch_limit = min(
-                        max(estimated_individual_needed, limit * 5), 10000
-                    )  # Max 10k instead of 1M
-
-                query = f"""
-                    SELECT
-                        id, timestamp, from_node_id, to_node_id, portnum, portnum_name,
-                        gateway_id, channel_id, mesh_packet_id, rssi, snr, hop_limit, hop_start,
-                        payload_length, processed_successfully, raw_payload,
-                        datetime(timestamp, 'unixepoch') as timestamp_str,
-                        (hop_start - hop_limit) as hop_count
+                # Inner query to scan the most recent packets
+                inner_query = f"""
+                    SELECT *
                     FROM packet_history
                     {where_clause}
                     ORDER BY timestamp DESC
                     LIMIT ?
                 """
 
-                cursor.execute(query, params + [fetch_limit])
-                individual_packets = cursor.fetchall()
+                # Map sort keys to SQL aliases
+                sort_map = {
+                    "timestamp": "min_timestamp",
+                    "gateway_id": "gateway_count",
+                    "payload_length": "avg_payload_length",
+                    "rssi": "min_rssi",
+                    "snr": "min_snr",
+                    "hop_count": "min_hops"
+                }
 
-                # Group packets in memory by (mesh_packet_id, from_node_id, to_node_id, portnum, portnum_name)
-                groups = {}
-                for packet in individual_packets:
-                    # Create group key
-                    group_key = (
-                        packet["mesh_packet_id"],
-                        packet["from_node_id"],
-                        packet["to_node_id"],
-                        packet["portnum"],
-                        packet["portnum_name"],
-                    )
+                sql_order_col = sort_map.get(order_by, "min_timestamp")
+                # Sanitize order direction
+                sql_order_dir = "DESC" if str(order_dir).upper() == "DESC" else "ASC"
 
-                    if group_key not in groups:
-                        groups[group_key] = {
-                            "packets": [],
-                            "min_timestamp": packet["timestamp"],
-                        }
+                # Outer query to group them efficiently in C++ (SQLite)
+                # Note: 'channel_id' is non-aggregate but consistent within a mesh_packet_id
+                query = f"""
+                    SELECT
+                        min(id) as id,
+                        min(timestamp) as timestamp,
+                        from_node_id,
+                        to_node_id,
+                        portnum,
+                        portnum_name,
+                        mesh_packet_id,
+                        channel_id,
 
-                    groups[group_key]["packets"].append(packet)
-                    groups[group_key]["min_timestamp"] = min(
-                        groups[group_key]["min_timestamp"], packet["timestamp"]
-                    )
+                        -- Aggregates
+                        count(distinct gateway_id) as gateway_count,
+                        group_concat(distinct gateway_id) as gateway_list,
 
-                # Convert groups to result format
+                        min(rssi) as min_rssi,
+                        max(rssi) as max_rssi,
+                        min(snr) as min_snr,
+                        max(snr) as max_snr,
+
+                        min(hop_start - hop_limit) as min_hops,
+                        max(hop_start - hop_limit) as max_hops,
+
+                        avg(payload_length) as avg_payload_length,
+                        min(processed_successfully) as processed_successfully,
+                        count(*) as reception_count,
+
+                        -- Pick payload from one packet (any is fine as they are identical)
+                        min(raw_payload) as raw_payload
+
+                    FROM ({inner_query}) t
+                    GROUP BY mesh_packet_id, from_node_id, to_node_id, portnum, portnum_name
+                    ORDER BY {sql_order_col} {sql_order_dir}
+                    LIMIT ? OFFSET ?
+                """
+
+                # Execute with params: inner params + fetch_limit + outer params (limit, offset)
+                query_params = params + [fetch_limit, limit, offset]
+                cursor.execute(query, query_params)
+
                 packets = []
-                for group_key, group_data in groups.items():
-                    mesh_packet_id, from_node_id, to_node_id, portnum, portnum_name = (
-                        group_key
-                    )
-                    packets_in_group = group_data["packets"]
+                for row in cursor.fetchall():
+                    packet = dict(row)
 
-                    # Calculate aggregated values
-                    gateway_ids = list(
-                        {p["gateway_id"] for p in packets_in_group if p["gateway_id"]}
-                    )
-                    rssi_values = [
-                        p["rssi"] for p in packets_in_group if p["rssi"] is not None
-                    ]
-                    snr_values = [
-                        p["snr"] for p in packets_in_group if p["snr"] is not None
-                    ]
-                    hop_values = [
-                        p["hop_count"]
-                        for p in packets_in_group
-                        if p["hop_count"] is not None
-                    ]
-                    payload_lengths = [
-                        p["payload_length"]
-                        for p in packets_in_group
-                        if p["payload_length"] is not None
-                    ]
+                    # Post-processing to match Python object structure
 
-                    # Use the earliest packet as the representative
-                    representative_packet = min(
-                        packets_in_group, key=lambda p: p["timestamp"]
-                    )
+                    # Format timestamp
+                    packet["timestamp_str"] = datetime.fromtimestamp(
+                        packet["timestamp"]
+                    ).strftime("%Y-%m-%d %H:%M:%S")
 
-                    packet = {
-                        "id": representative_packet["id"],
-                        "timestamp": group_data["min_timestamp"],
-                        "from_node_id": from_node_id,
-                        "to_node_id": to_node_id,
-                        "portnum": portnum,
-                        "portnum_name": portnum_name,
-                        "mesh_packet_id": mesh_packet_id,
-                        "channel_id": dict(representative_packet).get("channel_id"),
-                        "gateway_count": len(gateway_ids),
-                        "gateway_list": ",".join(gateway_ids),
-                        "min_rssi": min(rssi_values) if rssi_values else None,
-                        "max_rssi": max(rssi_values) if rssi_values else None,
-                        "min_snr": min(snr_values) if snr_values else None,
-                        "max_snr": max(snr_values) if snr_values else None,
-                        "min_hops": min(hop_values) if hop_values else None,
-                        "max_hops": max(hop_values) if hop_values else None,
-                        "avg_payload_length": sum(payload_lengths)
-                        / len(payload_lengths)
-                        if payload_lengths
-                        else None,
-                        "processed_successfully": min(
-                            p["processed_successfully"] for p in packets_in_group
-                        ),
-                        "timestamp_str": datetime.fromtimestamp(
-                            group_data["min_timestamp"]
-                        ).strftime("%Y-%m-%d %H:%M:%S"),
-                        "reception_count": len(packets_in_group),
-                        "is_grouped": True,
-                        "success": min(
-                            p["processed_successfully"] for p in packets_in_group
-                        ),
-                        # Decode text content from representative packet
-                        "text_content": PacketRepository._decode_text_content(
-                            dict(representative_packet)
-                        ),
-                    }
+                    packet["is_grouped"] = True
+                    packet["success"] = packet["processed_successfully"]
 
-                    # Format hop range
-                    if (
-                        packet["min_hops"] is not None
-                        and packet["max_hops"] is not None
-                    ):
+                    # Clean up gateway list (SQLite group_concat might leave comma if empty or single?)
+                    # And handle distinct constraint if SQLite version doesn't support it (it does in recent)
+                    if packet["gateway_list"]:
+                        # Ensure uniqueness just in case
+                        gws = set(packet["gateway_list"].split(","))
+                        packet["gateway_list"] = ",".join(sorted(gws))
+                    else:
+                        packet["gateway_list"] = ""
+
+                    # Format ranges
+                    if packet["min_hops"] is not None and packet["max_hops"] is not None:
                         if packet["min_hops"] == packet["max_hops"]:
                             packet["hop_range"] = str(packet["min_hops"])
                         else:
-                            packet["hop_range"] = (
-                                f"{packet['min_hops']}-{packet['max_hops']}"
-                            )
+                            packet["hop_range"] = f"{packet['min_hops']}-{packet['max_hops']}"
                     else:
                         packet["hop_range"] = None
 
-                    # Format RSSI range
-                    if (
-                        packet["min_rssi"] is not None
-                        and packet["max_rssi"] is not None
-                    ):
+                    if packet["min_rssi"] is not None and packet["max_rssi"] is not None:
                         if packet["min_rssi"] == packet["max_rssi"]:
                             packet["rssi_range"] = f"{packet['min_rssi']:.1f} dBm"
                         else:
-                            packet["rssi_range"] = (
-                                f"{packet['min_rssi']:.1f} to {packet['max_rssi']:.1f} dBm"
-                            )
+                            packet["rssi_range"] = f"{packet['min_rssi']:.1f} to {packet['max_rssi']:.1f} dBm"
                     else:
                         packet["rssi_range"] = None
 
-                    # Format SNR range
                     if packet["min_snr"] is not None and packet["max_snr"] is not None:
                         if packet["min_snr"] == packet["max_snr"]:
                             packet["snr_range"] = f"{packet['min_snr']:.2f} dB"
                         else:
-                            packet["snr_range"] = (
-                                f"{packet['min_snr']:.2f} to {packet['max_snr']:.2f} dB"
-                            )
+                            packet["snr_range"] = f"{packet['min_snr']:.2f} to {packet['max_snr']:.2f} dB"
                     else:
                         packet["snr_range"] = None
 
+                    # Decode text content
+                    packet["text_content"] = PacketRepository._decode_text_content(packet)
+
                     packets.append(packet)
-
-                # Sort by the requested field (fast in-memory sort)
-                if order_by == "gateway_id":
-                    # For gateway_id sorting in grouped mode, sort by gateway_count
-                    packets.sort(
-                        key=lambda x: x["gateway_count"],
-                        reverse=(order_dir.lower() == "desc"),
-                    )
-                elif order_by == "payload_length":
-                    # Sort by average payload length for grouped packets
-                    packets.sort(
-                        key=lambda x: x.get("avg_payload_length", 0) or 0,
-                        reverse=(order_dir.lower() == "desc"),
-                    )
-                elif order_by == "rssi":
-                    # Sort by minimum RSSI for grouped packets
-                    packets.sort(
-                        key=lambda x: x.get("min_rssi", -999) or -999,
-                        reverse=(order_dir.lower() == "desc"),
-                    )
-                elif order_by == "snr":
-                    # Sort by minimum SNR for grouped packets
-                    packets.sort(
-                        key=lambda x: x.get("min_snr", -999) or -999,
-                        reverse=(order_dir.lower() == "desc"),
-                    )
-                elif order_by == "hop_count":
-                    # Sort by minimum hop count for grouped packets
-                    packets.sort(
-                        key=lambda x: x.get("min_hops", 999) or 999,
-                        reverse=(order_dir.lower() == "desc"),
-                    )
-                else:
-                    # Default to timestamp sorting
-                    packets.sort(
-                        key=lambda x: x["timestamp"],
-                        reverse=(order_dir.lower() == "desc"),
-                    )
-
-                # Apply pagination
-                paginated_packets = packets[offset : offset + limit]
-
-                packets = paginated_packets
 
             else:
                 # Original ungrouped behavior

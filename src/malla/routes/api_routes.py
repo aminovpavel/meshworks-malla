@@ -24,6 +24,7 @@ from ..services.location_service import LocationService
 from ..services.meshtastic_service import MeshtasticService
 from ..services.node_service import NodeService
 from ..services.traceroute_service import TracerouteService
+from ..services.cache_service import cache_response
 from ..utils.node_utils import (
     convert_node_id,
     get_bulk_node_names,
@@ -37,6 +38,7 @@ api_bp = Blueprint("api", __name__, url_prefix="/api")
 
 
 @api_bp.route("/stats")
+@cache_response(ttl=30, prefix="api_stats")
 def api_stats():
     """API endpoint for dashboard statistics."""
     logger.info("API stats endpoint accessed")
@@ -174,6 +176,7 @@ def api_analytics():
 
 
 @api_bp.route("/packets")
+@cache_response(ttl=15, prefix="api_packets")
 def api_packets():
     """API endpoint for packet data."""
     logger.info("API packets endpoint accessed")
@@ -268,6 +271,7 @@ def api_packets():
 
 
 @api_bp.route("/nodes")
+@cache_response(ttl=60, prefix="api_nodes")
 def api_nodes():
     """API endpoint for node data (with optional search)."""
     logger.info("API nodes endpoint accessed")
@@ -1223,6 +1227,7 @@ def api_traceroute_graph():
 
 
 @api_bp.route("/packets/data", methods=["GET"])
+@cache_response(ttl=15, prefix="api_packets_data")
 def api_packets_data():
     """Modern table endpoint for packets with structured JSON response."""
     logger.info("API packets modern endpoint accessed")

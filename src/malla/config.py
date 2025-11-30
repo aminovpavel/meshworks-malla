@@ -26,6 +26,7 @@ class AppConfig:
 
     # Flask/server settings
     secret_key: str = "dev-secret-key-change-in-production"
+    redis_url: str | None = None  # e.g. "redis://localhost:6379/0"
     database_file: str = "meshtastic_history.db"
     database_read_only: bool = True
     trust_proxy_headers: bool = False

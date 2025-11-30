@@ -30,6 +30,7 @@ from .utils.node_utils import (
     start_cache_cleanup,
     stop_cache_cleanup,
 )
+from .services.cache_service import CacheService
 
 # Configure logging
 logging.basicConfig(
@@ -232,6 +233,10 @@ def create_app(cfg: AppConfig | None = None):  # noqa: D401
     # Initialize database
     logger.info("Initializing database connection")
     init_database()
+
+    # Initialize Redis cache
+    logger.info("Initializing Redis cache service")
+    CacheService.initialize()
 
     # Start periodic cache cleanup for node names
     logger.info("Starting node name cache cleanup background thread")
