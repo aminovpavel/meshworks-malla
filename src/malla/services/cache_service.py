@@ -92,9 +92,21 @@ def cache_response(ttl: int = 60, prefix: str = "view") -> Callable[[Callable[..
             # Generate cache key based on function name and arguments
             key_parts = [prefix, func.__module__, func.__name__]
 
-            # Simple serialization of args for key generation
+            # Collect arguments for key generation
             try:
-                key_data = str(args) + str(sorted(kwargs.items()))
+                # Include Flask request parameters if available
+                request_data = ""
+                try:
+                    from flask import request
+                    # Check if we are in a request context (request.args will raise/fail if not)
+                    if request and hasattr(request, "args"):
+                        # Use sorted items to ensure consistency
+                        request_data = str(sorted(request.args.items()))
+                except Exception:
+                    # Not in Flask context or import failed, ignore
+                    pass
+
+                key_data = str(args) + str(sorted(kwargs.items())) + request_data
                 key_hash = hashlib.md5(key_data.encode()).hexdigest()
                 cache_key = f"{':'.join(key_parts)}:{key_hash}"
 
