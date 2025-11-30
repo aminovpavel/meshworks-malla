@@ -50,13 +50,13 @@ class CacheService:
                 # Assign only if successful
                 cls._redis_client = client
                 cls._enabled = True
-                logger.info(f"Redis cache initialized successfully at {config.redis_url} (PID: {os.getpid()})")
+                logger.info(f"Redis cache initialized successfully at {config.redis_url}")
             except Exception as e:
                 # Ensure we reset to None so we can retry later
                 cls._redis_client = None
                 cls._enabled = False
                 # Log full exception for debugging
-                logger.error(f"Failed to initialize Redis cache: {e!r} (PID: {os.getpid()})", exc_info=True)
+                logger.error(f"Failed to initialize Redis cache: {e!r}", exc_info=True)
         else:
             logger.info(f"Redis URL not configured, caching disabled (PID: {os.getpid()})")
             cls._enabled = False
@@ -67,6 +67,7 @@ class CacheService:
         """Get value from cache."""
         if not cls._enabled or not cls._redis_client:
             # Attempt lazy re-initialization if configured but not enabled
+            # This handles cases where Redis was down at startup but came up later
             if cls._redis_client is None and get_config().redis_url:
                  cls.initialize()
 
@@ -95,7 +96,7 @@ class CacheService:
             # Explicit cast to satisfy type checkers if needed, though redis-py types are usually handled
             cls._redis_client.setex(key, ttl, data)
         except Exception as e:
-            logger.warning(f"Cache set error for {key}: {e} (PID: {os.getpid()})", exc_info=True)
+            logger.warning(f"Cache set error for {key}: {e}", exc_info=True)
 
     @classmethod
     def delete_pattern(cls, pattern: str) -> None:
@@ -159,10 +160,10 @@ def cache_response(ttl: int = 60, prefix: str = "view") -> Callable[[Callable[..
                     )
                 if cached_result is not None:
                     # Log cache hit at debug level
-                    logger.debug(f"Cache hit for {cache_key} (PID: {os.getpid()})")
+                    logger.debug(f"Cache hit for {cache_key}")
                     return cast(T, cached_result)
             except Exception as e:
-                logger.warning(f"Cache key generation or retrieval error: {e} (PID: {os.getpid()})")
+                logger.warning(f"Cache key generation or retrieval error: {e}")
                 # Fallthrough to execute function
 
             # Execute function
@@ -184,7 +185,7 @@ def cache_response(ttl: int = 60, prefix: str = "view") -> Callable[[Callable[..
                 # Only cache successful responses if needed (optional logic, keeping simple for now)
                 CacheService.set(cache_key, cached_value, ttl)
             except Exception as e:
-                logger.error(f"Failed to cache response for {cache_key}: {e} (PID: {os.getpid()})", exc_info=True)
+                logger.error(f"Failed to cache response for {cache_key}: {e}", exc_info=True)
 
             return result
 
